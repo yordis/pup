@@ -7,8 +7,10 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
+	"github.com/DataDog/fetch/pkg/auth/storage"
 	"github.com/DataDog/fetch/pkg/config"
 )
 
@@ -20,23 +22,51 @@ type Client struct {
 }
 
 // New creates a new Datadog API client
+// Authentication priority:
+//  1. OAuth2 tokens (if available and valid)
+//  2. API keys (DD_API_KEY and DD_APP_KEY)
 func New(cfg *config.Config) (*Client, error) {
-	ctx := context.WithValue(
-		context.Background(),
-		datadog.ContextAPIKeys,
-		map[string]datadog.APIKey{
-			"apiKeyAuth": {
-				Key: cfg.APIKey,
+	var ctx context.Context
+
+	// Try OAuth2 tokens first (preferred method)
+	store, err := storage.GetStorage(nil)
+	if err == nil {
+		tokens, err := store.LoadTokens(cfg.Site)
+		if err == nil && tokens != nil && !tokens.IsExpired() {
+			// Use OAuth2 Bearer token authentication
+			ctx = context.WithValue(
+				context.Background(),
+				datadog.ContextAccessToken,
+				tokens.AccessToken,
+			)
+		}
+	}
+
+	// Fall back to API keys if OAuth not available
+	if ctx == nil {
+		if cfg.APIKey == "" || cfg.AppKey == "" {
+			return nil, fmt.Errorf(
+				"authentication required: either run 'fetch auth login' for OAuth2 or set DD_API_KEY and DD_APP_KEY environment variables",
+			)
+		}
+
+		ctx = context.WithValue(
+			context.Background(),
+			datadog.ContextAPIKeys,
+			map[string]datadog.APIKey{
+				"apiKeyAuth": {
+					Key: cfg.APIKey,
+				},
+				"appKeyAuth": {
+					Key: cfg.AppKey,
+				},
 			},
-			"appKeyAuth": {
-				Key: cfg.AppKey,
-			},
-		},
-	)
+		)
+	}
 
 	// Configure the API client
 	configuration := datadog.NewConfiguration()
-	configuration.Host = cfg.Site
+	configuration.Host = fmt.Sprintf("https://api.%s", cfg.Site)
 	configuration.SetUnstableOperationEnabled("v2.QueryTimeseriesData", true)
 	configuration.SetUnstableOperationEnabled("v2.ListIncidents", true)
 	configuration.SetUnstableOperationEnabled("v2.GetIncident", true)

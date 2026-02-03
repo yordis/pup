@@ -31,12 +31,11 @@ func Load() (*Config, error) {
 }
 
 // Validate checks if required configuration is present
+// Note: This only validates the site. Authentication can be via OAuth2 or API keys,
+// which is checked in the client package.
 func (c *Config) Validate() error {
-	if c.APIKey == "" {
-		return fmt.Errorf("DD_API_KEY environment variable is required")
-	}
-	if c.AppKey == "" {
-		return fmt.Errorf("DD_APP_KEY environment variable is required")
+	if c.Site == "" {
+		return fmt.Errorf("DD_SITE is required")
 	}
 	return nil
 }

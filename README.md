@@ -25,16 +25,23 @@ go build -o fetch .
 go install
 ```
 
-## Configuration
+## Authentication
 
-### OAuth2 Authentication (Recommended)
+Fetch supports two authentication methods. **OAuth2 is preferred** and will be used automatically if you've logged in.
+
+### OAuth2 Authentication (Preferred)
+
+OAuth2 provides secure, browser-based authentication with automatic token refresh.
 
 ```bash
-# Set your Datadog site
-export DD_SITE="datadoghq.com"  # Optional, defaults to datadoghq.com
+# Set your Datadog site (optional)
+export DD_SITE="datadoghq.com"  # Defaults to datadoghq.com
 
 # Login via browser
 fetch auth login
+
+# Use any command - OAuth tokens are used automatically
+fetch monitors list
 
 # Check status
 fetch auth status
@@ -43,15 +50,30 @@ fetch auth status
 fetch auth logout
 ```
 
+**Token Storage**: Tokens are stored securely in your system's keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service). Set `DD_TOKEN_STORAGE=file` to use file-based storage instead.
+
+**Note**: OAuth2 requires Dynamic Client Registration (DCR) to be enabled on your Datadog site. If DCR is not available yet, use API key authentication.
+
 See [docs/OAUTH2.md](docs/OAUTH2.md) for detailed OAuth2 documentation.
 
-### API Key Authentication (Legacy)
+### API Key Authentication (Fallback)
+
+If OAuth2 tokens are not available, Fetch automatically falls back to API key authentication.
 
 ```bash
 export DD_API_KEY="your-datadog-api-key"
 export DD_APP_KEY="your-datadog-application-key"
 export DD_SITE="datadoghq.com"  # Optional, defaults to datadoghq.com
+
+# Use any command - API keys are used automatically
+fetch monitors list
 ```
+
+### Authentication Priority
+
+Fetch checks for authentication in this order:
+1. **OAuth2 tokens** (from `fetch auth login`) - Used if valid tokens exist
+2. **API keys** (from `DD_API_KEY` and `DD_APP_KEY`) - Used if OAuth tokens not available
 
 ## Usage
 
@@ -133,10 +155,11 @@ fetch incidents get abc-123-def
 
 ## Environment Variables
 
-- `DD_API_KEY`: Datadog API key (required)
-- `DD_APP_KEY`: Datadog Application key (required)
+- `DD_API_KEY`: Datadog API key (optional if using OAuth2)
+- `DD_APP_KEY`: Datadog Application key (optional if using OAuth2)
 - `DD_SITE`: Datadog site (default: datadoghq.com)
 - `DD_AUTO_APPROVE`: Auto-approve destructive operations (true/false)
+- `DD_TOKEN_STORAGE`: Token storage backend (keychain or file, default: auto-detect)
 
 ## Development
 
