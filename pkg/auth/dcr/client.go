@@ -52,7 +52,7 @@ func (c *Client) Register(redirectURI string, scopes []string) (*types.ClientCre
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("https://%s/oauth2/v1/register", c.site)
+	url := fmt.Sprintf("https://api.%s/api/v2/oauth2/register", c.site)
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -135,7 +135,7 @@ func (c *Client) requestTokens(req TokenRequest) (*types.TokenSet, error) {
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("https://%s/oauth2/v1/token", c.site)
+	url := fmt.Sprintf("https://api.%s/oauth2/v1/token", c.site)
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

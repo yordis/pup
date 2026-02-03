@@ -43,7 +43,7 @@ func (c *Client) BuildAuthorizationURL(
 		"code_challenge_method": {challenge.Method},
 	}
 
-	baseURL := fmt.Sprintf("https://%s/oauth2/v1/authorize", c.site)
+	baseURL := fmt.Sprintf("https://app.%s/oauth2/v1/authorize", c.site)
 	return fmt.Sprintf("%s?%s", baseURL, params.Encode())
 }
 

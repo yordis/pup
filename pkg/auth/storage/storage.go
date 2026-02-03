@@ -14,8 +14,22 @@ import (
 	"github.com/DataDog/fetch/pkg/auth/types"
 )
 
+// BackendType represents the type of storage backend
+type BackendType string
+
+const (
+	BackendKeychain BackendType = "keychain"
+	BackendFile     BackendType = "file"
+)
+
 // Storage interface for token and credential storage
 type Storage interface {
+	// GetBackendType returns the type of storage backend
+	GetBackendType() BackendType
+
+	// GetStorageLocation returns a human-readable description of storage location
+	GetStorageLocation() string
+
 	// SaveTokens saves OAuth2 tokens
 	SaveTokens(site string, tokens *types.TokenSet) error
 
@@ -57,6 +71,16 @@ func NewFileStorage() (*FileStorage, error) {
 	return &FileStorage{
 		baseDir: baseDir,
 	}, nil
+}
+
+// GetBackendType returns the backend type
+func (s *FileStorage) GetBackendType() BackendType {
+	return BackendFile
+}
+
+// GetStorageLocation returns the storage directory path
+func (s *FileStorage) GetStorageLocation() string {
+	return s.baseDir
 }
 
 // SaveTokens saves OAuth2 tokens to file

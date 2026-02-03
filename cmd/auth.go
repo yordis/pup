@@ -294,8 +294,8 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 	site := cfg.Site
 	fmt.Printf("🔐 Starting OAuth2 login for site: %s\n\n", site)
 
-	// Initialize storage
-	store, err := storage.NewFileStorage()
+	// Initialize storage (auto-detects keychain vs file)
+	store, err := storage.GetStorage(nil)
 	if err != nil {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
@@ -401,7 +401,7 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("\n✅ Login successful!")
 	fmt.Printf("   Access token expires: %s\n", tokens.ExpiresAt.Format(time.RFC3339))
-	fmt.Printf("   Token stored in: ~/.config/fetch/\n")
+	fmt.Printf("   Token stored in: %s\n", storage.GetStorageDescription())
 
 	return nil
 }
@@ -410,7 +410,7 @@ func runAuthStatus(cmd *cobra.Command, args []string) error {
 	site := cfg.Site
 
 	// Initialize storage
-	store, err := storage.NewFileStorage()
+	store, err := storage.GetStorage(nil)
 	if err != nil {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
@@ -462,7 +462,7 @@ func runAuthLogout(cmd *cobra.Command, args []string) error {
 	site := cfg.Site
 
 	// Initialize storage
-	store, err := storage.NewFileStorage()
+	store, err := storage.GetStorage(nil)
 	if err != nil {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
@@ -487,7 +487,7 @@ func runAuthRefresh(cmd *cobra.Command, args []string) error {
 	site := cfg.Site
 
 	// Initialize storage
-	store, err := storage.NewFileStorage()
+	store, err := storage.GetStorage(nil)
 	if err != nil {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
