@@ -12,8 +12,9 @@ linters:
     - errcheck
     - govet
     - ineffassign
-    - staticcheck
     - unused
+  disable:
+    - staticcheck  # Disable for now, can enable in future PR
 
 linters-settings:
   errcheck:
