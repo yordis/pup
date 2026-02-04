@@ -495,18 +495,15 @@ func runMetricsQuery(cmd *cobra.Command, args []string) error {
 	api := datadogV2.NewMetricsApi(client.V2())
 
 	// Build query request
+	metricsQuery := datadogV2.NewMetricsTimeseriesQuery(datadogV2.METRICSDATASOURCE_METRICS, queryString)
+	timeseriesQuery := datadogV2.MetricsTimeseriesQueryAsTimeseriesQuery(metricsQuery)
+
 	body := datadogV2.TimeseriesFormulaQueryRequest{
 		Data: datadogV2.TimeseriesFormulaRequest{
 			Attributes: datadogV2.TimeseriesFormulaRequestAttributes{
-				From: from.UnixMilli(),
-				To:   to.UnixMilli(),
-				Queries: []datadogV2.TimeseriesQuery{
-					{
-						TimeseriesQueryRequest: &datadogV2.TimeseriesQueryRequest{
-							Query: queryString,
-						},
-					},
-				},
+				From:    from.UnixMilli(),
+				To:      to.UnixMilli(),
+				Queries: []datadogV2.TimeseriesQuery{timeseriesQuery},
 			},
 			Type: datadogV2.TIMESERIESFORMULAREQUESTTYPE_TIMESERIES_REQUEST,
 		},
@@ -538,15 +535,15 @@ func runMetricsList(cmd *cobra.Command, args []string) error {
 
 	api := datadogV1.NewMetricsApi(client.V1())
 
-	opts := datadogV1.ListActiveMetricsOptionalParameters{}
+	// From time defaults to 1 hour ago
+	from := time.Now().Add(-1 * time.Hour).Unix()
+
+	opts := datadogV1.NewListActiveMetricsOptionalParameters()
 	if filterPattern != "" {
-		// Convert from time to unix timestamp
-		from := time.Now().Add(-1 * time.Hour).Unix()
-		opts.WithFrom(from)
-		opts.WithFilter(filterPattern)
+		opts = opts.WithTagFilter(filterPattern)
 	}
 
-	resp, r, err := api.ListActiveMetrics(client.Context(), time.Now().Unix(), opts)
+	resp, r, err := api.ListActiveMetrics(client.Context(), from, *opts)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to list metrics: %w (status: %d)", err, r.StatusCode)
@@ -689,9 +686,12 @@ func runMetricsSubmit(cmd *cobra.Command, args []string) error {
 		Value:     &submitValue,
 	}
 
+	// Convert MetricIntakeType to string for resource type
+	metricTypeStr := string(metricType)
+
 	resource := datadogV2.MetricResource{
-		Name: submitName,
-		Type: &metricType,
+		Name: &submitName,
+		Type: &metricTypeStr,
 	}
 
 	series := datadogV2.MetricSeries{
@@ -735,29 +735,8 @@ func runMetricsSubmit(cmd *cobra.Command, args []string) error {
 
 // runMetricsTagsList executes the tags list command
 func runMetricsTagsList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	metricName := args[0]
-	api := datadogV1.NewMetricsApi(client.V1())
-
-	resp, r, err := api.ListTagsByMetricName(client.Context(), metricName)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to list metric tags: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to list metric tags: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(output)
-	return nil
+	// NOTE: ListTagsByMetricName is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("listing tags by metric name is not supported in the current API client version")
 }
 
 // parseTimeParam parses a time parameter (relative or absolute)
