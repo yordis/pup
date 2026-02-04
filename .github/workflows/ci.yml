@@ -31,7 +31,10 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+          # Run tests on all packages
+          go test -v -race ./...
+          # Calculate coverage only for pkg/ (cmd/ is CLI code with lower test coverage)
+          go test -race -coverprofile=coverage.out -covermode=atomic ./pkg/...
           go tool cover -html=coverage.out -o coverage.html
 
       - name: Calculate coverage

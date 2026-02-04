@@ -98,8 +98,8 @@ func TestGetStorage(t *testing.T) {
 
 			// Set environment variable
 			if tt.envValue != "" {
-				os.Setenv(StorageEnvVar, tt.envValue)
-				defer os.Unsetenv(StorageEnvVar)
+				_ = os.Setenv(StorageEnvVar, tt.envValue)
+				defer func() { _ = os.Unsetenv(StorageEnvVar) }()
 			}
 
 			// Mock keychain availability
@@ -312,7 +312,7 @@ func TestDetectBackend_AutoFallback(t *testing.T) {
 	ResetStorage()
 
 	// Clear environment
-	os.Unsetenv(StorageEnvVar)
+	_ = os.Unsetenv(StorageEnvVar)
 
 	// Get storage with auto-detect
 	storage, err := GetStorage(nil)
@@ -331,8 +331,8 @@ func TestDetectBackend_InvalidEnvValue(t *testing.T) {
 	ResetStorage()
 
 	// Set invalid environment value
-	os.Setenv(StorageEnvVar, "invalid-backend")
-	defer os.Unsetenv(StorageEnvVar)
+	_ = os.Setenv(StorageEnvVar, "invalid-backend")
+	defer func() { _ = os.Unsetenv(StorageEnvVar) }()
 
 	_, err := GetStorage(nil)
 	if err == nil {

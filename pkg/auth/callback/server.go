@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"net"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -56,7 +57,9 @@ func NewServer() (*Server, error) {
 	if listener == nil {
 		return nil, fmt.Errorf("failed to bind to any DCR port (tried %v): %w", DCRRedirectPorts, lastErr)
 	}
-	listener.Close()
+	if err := listener.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close test listener: %w", err)
+	}
 
 	return &Server{
 		port:     port,
@@ -194,7 +197,10 @@ func (s *Server) renderSuccess(w http.ResponseWriter) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	template.Must(template.New("success").Parse(tmpl)).Execute(w, nil)
+	if err := template.Must(template.New("success").Parse(tmpl)).Execute(w, nil); err != nil {
+		// Log error but don't fail - response is already started
+		fmt.Fprintf(os.Stderr, "Failed to render success template: %v\n", err)
+	}
 }
 
 // renderError renders the error page
@@ -276,5 +282,8 @@ func (s *Server) renderError(w http.ResponseWriter, errorCode, errorDesc string)
 		ErrorDesc: errorDesc,
 	}
 
-	template.Must(template.New("error").Parse(tmpl)).Execute(w, data)
+	if err := template.Must(template.New("error").Parse(tmpl)).Execute(w, data); err != nil {
+		// Log error but don't fail - response is already started
+		fmt.Fprintf(os.Stderr, "Failed to render error template: %v\n", err)
+	}
 }
