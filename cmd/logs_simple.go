@@ -640,13 +640,14 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 
 	api := datadogV1.NewLogsApi(client.V1())
 
+	limit := int32(logsLimit)
+	fromTimeObj := time.Unix(fromTime, 0)
+	toTimeObj := time.Unix(toTime, 0)
+
 	body := datadogV1.LogsListRequest{
 		Query: &logsQuery,
-		Time: &datadogV1.LogsListRequestTime{
-			From: &fromTime,
-			To:   &toTime,
-		},
-		Limit: datadogV1.PtrInt32(int32(logsLimit)),
+		Time: *datadogV1.NewLogsListRequestTime(fromTimeObj, toTimeObj),
+		Limit: &limit,
 	}
 
 	if logsSort != "" {
@@ -655,7 +656,7 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	if logsIndex != "" {
-		body.Index = datadogV1.PtrString(logsIndex)
+		body.Index = &logsIndex
 	}
 
 	resp, r, err := api.ListLogs(client.Context(), body)
@@ -693,17 +694,23 @@ func runLogsList(cmd *cobra.Command, args []string) error {
 
 	api := datadogV2.NewLogsApi(client.V2())
 
+	query := logsQuery
+	from := fmt.Sprintf("%d", fromTime)
+	to := fmt.Sprintf("%d", toTime)
+	limit := int32(logsLimit)
+	sort := datadogV2.LogsSort(logsSort)
+
 	opts := datadogV2.ListLogsOptionalParameters{
 		Body: &datadogV2.LogsListRequest{
 			Filter: &datadogV2.LogsQueryFilter{
-				Query: datadogV2.PtrString(logsQuery),
-				From:  datadogV2.PtrString(fmt.Sprintf("%d", fromTime)),
-				To:    datadogV2.PtrString(fmt.Sprintf("%d", toTime)),
+				Query: &query,
+				From:  &from,
+				To:    &to,
 			},
 			Page: &datadogV2.LogsListRequestPage{
-				Limit: datadogV2.PtrInt32(int32(logsLimit)),
+				Limit: &limit,
 			},
-			Sort: datadogV2.PtrLogsSort(datadogV2.LogsSort(logsSort)),
+			Sort: &sort,
 		},
 	}
 
@@ -742,16 +749,22 @@ func runLogsQuery(cmd *cobra.Command, args []string) error {
 
 	api := datadogV2.NewLogsApi(client.V2())
 
+	query := logsQuery
+	from := fmt.Sprintf("%d", fromTime)
+	to := fmt.Sprintf("%d", toTime)
+	limit := int32(logsLimit)
+	sort := datadogV2.LogsSort(logsSort)
+
 	body := datadogV2.LogsListRequest{
 		Filter: &datadogV2.LogsQueryFilter{
-			Query: datadogV2.PtrString(logsQuery),
-			From:  datadogV2.PtrString(fmt.Sprintf("%d", fromTime)),
-			To:    datadogV2.PtrString(fmt.Sprintf("%d", toTime)),
+			Query: &query,
+			From:  &from,
+			To:    &to,
 		},
 		Page: &datadogV2.LogsListRequestPage{
-			Limit: datadogV2.PtrInt32(int32(logsLimit)),
+			Limit: &limit,
 		},
-		Sort: datadogV2.PtrLogsSort(datadogV2.LogsSort(logsSort)),
+		Sort: &sort,
 	}
 
 	opts := datadogV2.ListLogsOptionalParameters{
@@ -800,33 +813,35 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 
 	// Parse compute field if present (e.g., "avg(@duration)")
 	if logsCompute != "count" {
-		compute.Metric = datadogV2.PtrString("*")
+		metric := "*"
+		compute.Metric = &metric
 	}
+
+	query := logsQuery
+	from := fmt.Sprintf("%d", fromTime)
+	to := fmt.Sprintf("%d", toTime)
 
 	body := datadogV2.LogsAggregateRequest{
 		Compute: []datadogV2.LogsCompute{compute},
 		Filter: &datadogV2.LogsQueryFilter{
-			Query: datadogV2.PtrString(logsQuery),
-			From:  datadogV2.PtrString(fmt.Sprintf("%d", fromTime)),
-			To:    datadogV2.PtrString(fmt.Sprintf("%d", toTime)),
+			Query: &query,
+			From:  &from,
+			To:    &to,
 		},
 	}
 
 	// Add group by if specified
 	if logsGroupBy != "" {
+		limit := int64(logsLimit)
 		body.GroupBy = []datadogV2.LogsGroupBy{
 			{
 				Facet: logsGroupBy,
-				Limit: datadogV2.PtrInt64(int64(logsLimit)),
+				Limit: &limit,
 			},
 		}
 	}
 
-	opts := datadogV2.AggregateLogsOptionalParameters{
-		Body: &body,
-	}
-
-	resp, r, err := api.AggregateLogs(client.Context(), opts)
+	resp, r, err := api.AggregateLogs(client.Context(), body)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to aggregate logs: %w (status: %d)", err, r.StatusCode)
@@ -1066,52 +1081,11 @@ func runLogsMetricsDelete(cmd *cobra.Command, args []string) error {
 }
 
 func runLogsRestrictionQueriesList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	api := datadogV2.NewLogsRestrictionQueriesApi(client.V2())
-
-	resp, r, err := api.ListLogsRestrictionQueries(client.Context())
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to list restriction queries: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to list restriction queries: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(output)
-	return nil
+	// NOTE: LogsRestrictionQueriesApi is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("logs restriction queries API is not available in the current API client version")
 }
 
 func runLogsRestrictionQueriesGet(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	queryID := args[0]
-	api := datadogV2.NewLogsRestrictionQueriesApi(client.V2())
-
-	resp, r, err := api.GetLogsRestrictionQuery(client.Context(), queryID)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to get restriction query: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to get restriction query: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(output)
-	return nil
+	// NOTE: LogsRestrictionQueriesApi is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("logs restriction queries API is not available in the current API client version")
 }

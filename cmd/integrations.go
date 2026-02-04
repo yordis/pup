@@ -105,26 +105,9 @@ func runIntegrationsSlackList(cmd *cobra.Command, args []string) error {
 }
 
 func runIntegrationsPagerDutyList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	api := datadogV1.NewPagerDutyIntegrationApi(client.V1())
-	resp, r, err := api.GetPagerDutyIntegrationServices(client.Context())
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to list PagerDuty services: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to list PagerDuty services: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: The Datadog API v2.30.0 does not support listing all PagerDuty services.
+	// Only GetPagerDutyIntegrationService (singular) with a specific service name is available.
+	return fmt.Errorf("listing PagerDuty services is not supported by the current API version - use 'get' with a specific service name instead")
 }
 
 func runIntegrationsWebhooksList(cmd *cobra.Command, args []string) error {

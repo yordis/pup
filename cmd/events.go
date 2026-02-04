@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV1"
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
@@ -92,18 +93,23 @@ func runEventsList(cmd *cobra.Command, args []string) error {
 	}
 
 	api := datadogV1.NewEventsApi(client.V1())
-	opts := datadogV1.ListEventsOptionalParameters{}
-	if eventsStart > 0 {
-		opts.WithStart(eventsStart)
+
+	// Default to last hour if not specified
+	start := eventsStart
+	end := eventsEnd
+	if start == 0 {
+		start = time.Now().Add(-1 * time.Hour).Unix()
 	}
-	if eventsEnd > 0 {
-		opts.WithEnd(eventsEnd)
-	}
-	if eventsTags != "" {
-		opts.WithTags(eventsTags)
+	if end == 0 {
+		end = time.Now().Unix()
 	}
 
-	resp, r, err := api.ListEvents(client.Context(), opts)
+	opts := datadogV1.NewListEventsOptionalParameters()
+	if eventsTags != "" {
+		opts = opts.WithTags(eventsTags)
+	}
+
+	resp, r, err := api.ListEvents(client.Context(), start, end, *opts)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to list events: %w (status: %d)", err, r.StatusCode)
