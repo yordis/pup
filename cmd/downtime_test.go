@@ -37,7 +37,7 @@ func TestDowntimeCmd_Subcommands(t *testing.T) {
 
 	commandMap := make(map[string]bool)
 	for _, cmd := range commands {
-		commandMap[cmd.Use] = true
+		commandMap[cmd.Name()] = true
 	}
 
 	for _, expected := range expectedCommands {

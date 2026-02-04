@@ -138,7 +138,7 @@ func runTagsAdd(cmd *cobra.Command, args []string) error {
 
 	api := datadogV1.NewTagsApi(client.V1())
 	body := datadogV1.HostTags{
-		Tags: &tags,
+		Tags: tags,
 	}
 
 	resp, r, err := api.CreateHostTags(client.Context(), hostname, body)
@@ -168,7 +168,7 @@ func runTagsUpdate(cmd *cobra.Command, args []string) error {
 
 	api := datadogV1.NewTagsApi(client.V1())
 	body := datadogV1.HostTags{
-		Tags: &tags,
+		Tags: tags,
 	}
 
 	resp, r, err := api.UpdateHostTags(client.Context(), hostname, body)

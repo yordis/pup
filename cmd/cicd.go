@@ -140,17 +140,19 @@ func runCICDPipelinesList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	body := datadogV2.CIAppPipelinesQueryFilter{
+	filter := datadogV2.CIAppPipelinesQueryFilter{
 		From:  &cicdFrom,
 		To:    &cicdTo,
 		Query: &query,
 	}
 
-	opts := datadogV2.SearchCIAppPipelineEventsOptionalParameters{
-		Body: datadogV2.NewCIAppPipelineEventsRequest(body),
-	}
+	body := datadogV2.NewCIAppPipelineEventsRequest()
+	body.SetFilter(filter)
 
-	resp, r, err := api.SearchCIAppPipelineEvents(client.Context(), opts)
+	opts := datadogV2.NewSearchCIAppPipelineEventsOptionalParameters()
+	opts = opts.WithBody(*body)
+
+	resp, r, err := api.SearchCIAppPipelineEvents(client.Context(), *opts)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to list pipelines: %w (status: %d)", err, r.StatusCode)
@@ -173,7 +175,18 @@ func runCICDPipelinesGet(cmd *cobra.Command, args []string) error {
 	}
 
 	api := datadogV2.NewCIVisibilityPipelinesApi(client.V2())
-	resp, r, err := api.GetCIAppPipelineEvent(client.Context(), pipelineID)
+
+	// Search for the specific pipeline ID using filter
+	filter := datadogV2.CIAppPipelinesQueryFilter{
+		Query: &pipelineID,
+	}
+	body := datadogV2.NewCIAppPipelineEventsRequest()
+	body.SetFilter(filter)
+
+	opts := datadogV2.NewSearchCIAppPipelineEventsOptionalParameters()
+	opts = opts.WithBody(*body)
+
+	resp, r, err := api.SearchCIAppPipelineEvents(client.Context(), *opts)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to get pipeline: %w (status: %d)", err, r.StatusCode)
@@ -213,15 +226,15 @@ func runCICDEventsSearch(cmd *cobra.Command, args []string) error {
 		Query: &cicdQuery,
 	}
 
-	body := datadogV2.NewCIAppPipelineEventsRequest(filter)
+	body := datadogV2.NewCIAppPipelineEventsRequest()
+	body.SetFilter(filter)
 	body.SetPage(page)
 	body.SetSort(sort)
 
-	opts := datadogV2.SearchCIAppPipelineEventsOptionalParameters{
-		Body: body,
-	}
+	opts := datadogV2.NewSearchCIAppPipelineEventsOptionalParameters()
+	opts = opts.WithBody(*body)
 
-	resp, r, err := api.SearchCIAppPipelineEvents(client.Context(), opts)
+	resp, r, err := api.SearchCIAppPipelineEvents(client.Context(), *opts)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to search events: %w (status: %d)", err, r.StatusCode)
@@ -249,15 +262,15 @@ func runCICDEventsAggregate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var groupBy []datadogV2.CIAppGroupByTotal
+	var groupBy []datadogV2.CIAppPipelinesGroupBy
 	if cicdGroupBy != "" {
 		fields := strings.Split(cicdGroupBy, ",")
 		for _, field := range fields {
 			field = strings.TrimSpace(field)
-			groupBy = append(groupBy, datadogV2.CIAppGroupByTotal{
-				Facet: field,
-				Limit: &cicdLimit,
-			})
+			gb := datadogV2.NewCIAppPipelinesGroupBy(field)
+			limit := int64(cicdLimit)
+			gb.SetLimit(limit)
+			groupBy = append(groupBy, *gb)
 		}
 	}
 
@@ -267,20 +280,15 @@ func runCICDEventsAggregate(cmd *cobra.Command, args []string) error {
 		Query: &cicdQuery,
 	}
 
-	body := datadogV2.CIAppPipelinesAggregateRequest{
-		Compute: []datadogV2.CIAppCompute{*compute},
-		Filter:  &filter,
-	}
+	body := datadogV2.NewCIAppPipelinesAggregateRequest()
+	body.SetCompute([]datadogV2.CIAppCompute{*compute})
+	body.SetFilter(filter)
 
 	if len(groupBy) > 0 {
 		body.SetGroupBy(groupBy)
 	}
 
-	opts := datadogV2.AggregateCIAppPipelineEventsOptionalParameters{
-		Body: &body,
-	}
-
-	resp, r, err := api.AggregateCIAppPipelineEvents(client.Context(), opts)
+	resp, r, err := api.AggregateCIAppPipelineEvents(client.Context(), *body)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to aggregate events: %w (status: %d)", err, r.StatusCode)
@@ -305,18 +313,20 @@ func buildComputeAggregation(compute string) (*datadogV2.CIAppCompute, error) {
 
 	parts := strings.SplitN(compute, ":", 2)
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid compute format: %s", compute)
+		return nil, fmt.Errorf("invalid compute format: %s (expected format: function:field)", compute)
 	}
 
 	function := parts[0]
 	field := parts[1]
-	aggType := datadogV2.CIAPPAGGREGATIONFUNCTION_PERCENTILE
+	var aggType datadogV2.CIAppAggregationFunction
 
 	switch function {
 	case "count":
 		aggType = datadogV2.CIAPPAGGREGATIONFUNCTION_COUNT
 	case "cardinality":
 		aggType = datadogV2.CIAPPAGGREGATIONFUNCTION_CARDINALITY
+	default:
+		return nil, fmt.Errorf("unsupported aggregation function: %s (supported: count, cardinality)", function)
 	}
 
 	return &datadogV2.CIAppCompute{

@@ -6,7 +6,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -355,7 +354,7 @@ func runRumAppsList(cmd *cobra.Command, args []string) error {
 	}
 
 	api := datadogV2.NewRUMApi(client.V2())
-	resp, r, err := api.ListRUMApplications(client.Context())
+	resp, r, err := api.GetRUMApplications(client.Context())
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to list RUM applications: %w (status: %d)", err, r.StatusCode)
@@ -507,350 +506,54 @@ func runRumAppsDelete(cmd *cobra.Command, args []string) error {
 
 // RUM Metrics Implementation
 func runRumMetricsList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	api := datadogV2.NewRUMMetricsApi(client.V2())
-	resp, r, err := api.ListRUMMetrics(client.Context())
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to list RUM metrics: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to list RUM metrics: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUMMetricsApi is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM metrics API is not available in the current API client version")
 }
 
 func runRumMetricsGet(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	api := datadogV2.NewRUMMetricsApi(client.V2())
-	resp, r, err := api.GetRUMMetric(client.Context(), rumMetricID)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to get RUM metric: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to get RUM metric: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUMMetricsApi is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM metrics API is not available in the current API client version")
 }
 
 func runRumMetricsCreate(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	var compute datadogV2.RUMMetricCompute
-	if err := json.Unmarshal([]byte(rumCompute), &compute); err != nil {
-		return fmt.Errorf("invalid compute JSON: %w", err)
-	}
-
-	var groupBy []datadogV2.RUMMetricGroupBy
-	if rumGroupBy != "" {
-		if err := json.Unmarshal([]byte(rumGroupBy), &groupBy); err != nil {
-			return fmt.Errorf("invalid group-by JSON: %w", err)
-		}
-	}
-
-	validEventTypes := []string{"action", "error", "long_task", "resource", "view"}
-	if !contains(validEventTypes, rumEventType) {
-		return fmt.Errorf("invalid event type: %s", rumEventType)
-	}
-
-	api := datadogV2.NewRUMMetricsApi(client.V2())
-	body := datadogV2.RUMMetricCreateRequest{
-		Data: datadogV2.RUMMetricCreateData{
-			Attributes: datadogV2.RUMMetricCreateAttributes{
-				Compute:   compute,
-				EventType: datadogV2.RUMMetricEventType(rumEventType),
-			},
-			Id:   rumMetricName,
-			Type: datadogV2.RUMMETRICTYPE_RUM_METRICS,
-		},
-	}
-
-	if rumFilter != "" {
-		body.Data.Attributes.Filter = &datadogV2.RUMMetricFilter{Query: &rumFilter}
-	}
-	if len(groupBy) > 0 {
-		body.Data.Attributes.GroupBy = groupBy
-	}
-
-	resp, r, err := api.CreateRUMMetric(client.Context(), body)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to create RUM metric: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to create RUM metric: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUMMetricsApi is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM metrics API is not available in the current API client version")
 }
 
 func runRumMetricsUpdate(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	attrs := datadogV2.RUMMetricUpdateAttributes{}
-	if rumFilter != "" {
-		attrs.Filter = &datadogV2.RUMMetricFilter{Query: &rumFilter}
-	}
-	if rumCompute != "" {
-		var compute datadogV2.RUMMetricCompute
-		if err := json.Unmarshal([]byte(rumCompute), &compute); err != nil {
-			return fmt.Errorf("invalid compute JSON: %w", err)
-		}
-		attrs.Compute = &compute
-	}
-	if rumGroupBy != "" {
-		var groupBy []datadogV2.RUMMetricGroupBy
-		if err := json.Unmarshal([]byte(rumGroupBy), &groupBy); err != nil {
-			return fmt.Errorf("invalid group-by JSON: %w", err)
-		}
-		attrs.GroupBy = groupBy
-	}
-
-	api := datadogV2.NewRUMMetricsApi(client.V2())
-	body := datadogV2.RUMMetricUpdateRequest{
-		Data: datadogV2.RUMMetricUpdateData{
-			Attributes: attrs,
-			Type:       datadogV2.RUMMETRICTYPE_RUM_METRICS,
-		},
-	}
-
-	resp, r, err := api.UpdateRUMMetric(client.Context(), rumMetricID, body)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to update RUM metric: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to update RUM metric: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUMMetricsApi is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM metrics API is not available in the current API client version")
 }
 
 func runRumMetricsDelete(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if !cfg.AutoApprove {
-		fmt.Printf("⚠️  WARNING: This will permanently delete RUM metric %s\n", rumMetricID)
-		fmt.Print("Are you sure you want to continue? (y/N): ")
-		var response string
-		fmt.Scanln(&response)
-		if response != "y" && response != "Y" {
-			fmt.Println("Operation cancelled")
-			return nil
-		}
-	}
-
-	api := datadogV2.NewRUMMetricsApi(client.V2())
-	r, err := api.DeleteRUMMetric(client.Context(), rumMetricID)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to delete RUM metric: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to delete RUM metric: %w", err)
-	}
-
-	fmt.Printf("Successfully deleted RUM metric %s\n", rumMetricID)
-	return nil
+	// NOTE: RUMMetricsApi is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM metrics API is not available in the current API client version")
 }
 
 // RUM Retention Filters Implementation
 func runRumRetentionFiltersList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	api := datadogV2.NewRUMApi(client.V2())
-	resp, r, err := api.ListRUMRetentionFilters(client.Context())
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to list retention filters: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to list retention filters: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUM Retention Filters API is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM retention filters API is not available in the current API client version")
 }
 
 func runRumRetentionFiltersGet(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	api := datadogV2.NewRUMApi(client.V2())
-	resp, r, err := api.GetRUMRetentionFilter(client.Context(), rumFilterID)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to get retention filter: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to get retention filter: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUM Retention Filters API is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM retention filters API is not available in the current API client version")
 }
 
 func runRumRetentionFiltersCreate(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if rumFilterRate < 0 || rumFilterRate > 100 {
-		return fmt.Errorf("invalid sample rate: %d (must be 0-100)", rumFilterRate)
-	}
-
-	api := datadogV2.NewRUMApi(client.V2())
-	body := datadogV2.RUMRetentionFilterCreateRequest{
-		Data: datadogV2.RUMRetentionFilterCreate{
-			Attributes: datadogV2.RUMRetentionFilterCreateAttributes{
-				Enabled:    rumFilterEnabled,
-				FilterType: datadogV2.RUMRetentionFilterType(rumFilterType),
-				Name:       rumFilterName,
-				Rate:       rumFilterRate,
-				Filter:     rumFilterQuery,
-			},
-			Type: datadogV2.RUMRETENTIONFILTERTYPE_RETENTION_FILTER,
-		},
-	}
-
-	resp, r, err := api.CreateRUMRetentionFilter(client.Context(), body)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to create retention filter: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to create retention filter: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUM Retention Filters API is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM retention filters API is not available in the current API client version")
 }
 
 func runRumRetentionFiltersUpdate(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	attrs := datadogV2.RUMRetentionFilterUpdateAttributes{
-		Enabled: rumFilterEnabled,
-	}
-	if rumFilterName != "" {
-		attrs.Name = &rumFilterName
-	}
-	if rumFilterQuery != "" {
-		attrs.Filter = &rumFilterQuery
-	}
-	if rumFilterRate >= 0 {
-		if rumFilterRate > 100 {
-			return fmt.Errorf("invalid sample rate: %d (must be 0-100)", rumFilterRate)
-		}
-		attrs.Rate = &rumFilterRate
-	}
-
-	api := datadogV2.NewRUMApi(client.V2())
-	body := datadogV2.RUMRetentionFilterUpdateRequest{
-		Data: datadogV2.RUMRetentionFilterUpdate{
-			Attributes: attrs,
-			Id:         rumFilterID,
-			Type:       datadogV2.RUMRETENTIONFILTERTYPE_RETENTION_FILTER,
-		},
-	}
-
-	resp, r, err := api.UpdateRUMRetentionFilter(client.Context(), rumFilterID, body)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to update retention filter: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to update retention filter: %w", err)
-	}
-
-	output, err := formatter.ToJSON(resp)
-	if err != nil {
-		return err
-	}
-	fmt.Println(output)
-	return nil
+	// NOTE: RUM Retention Filters API is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM retention filters API is not available in the current API client version")
 }
 
 func runRumRetentionFiltersDelete(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	if !cfg.AutoApprove {
-		fmt.Printf("⚠️  WARNING: This will permanently delete retention filter %s\n", rumFilterID)
-		fmt.Print("Are you sure you want to continue? (y/N): ")
-		var response string
-		fmt.Scanln(&response)
-		if response != "y" && response != "Y" {
-			fmt.Println("Operation cancelled")
-			return nil
-		}
-	}
-
-	api := datadogV2.NewRUMApi(client.V2())
-	r, err := api.DeleteRUMRetentionFilter(client.Context(), rumFilterID)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to delete retention filter: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to delete retention filter: %w", err)
-	}
-
-	fmt.Printf("Successfully deleted retention filter %s\n", rumFilterID)
-	return nil
+	// NOTE: RUM Retention Filters API is not available in datadog-api-client-go v2.30.0
+	return fmt.Errorf("RUM retention filters API is not available in the current API client version")
 }
 
 // RUM Sessions Implementation

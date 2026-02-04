@@ -127,7 +127,10 @@ func runAuditLogsSearch(cmd *cobra.Command, args []string) error {
 	page.SetLimit(auditLogsLimit)
 	body.SetPage(page)
 
-	resp, r, err := api.SearchAuditLogs(client.Context(), datadogV2.SearchAuditLogsOptionalParameters{}.WithBody(body))
+	opts := datadogV2.SearchAuditLogsOptionalParameters{
+		Body: &body,
+	}
+	resp, r, err := api.SearchAuditLogs(client.Context(), opts)
 	if err != nil {
 		if r != nil {
 			return fmt.Errorf("failed to search audit logs: %w (status: %d)", err, r.StatusCode)
