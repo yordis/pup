@@ -8,5 +8,5 @@ Choose the top 3 largest or most complex files in the repo. For each one:
 - Provide a step-by-step refactor sequence that keeps the code runnable at each step.
 - Identify tests to add first as guardrails.
 
-Output: one “Bead” per file, plus a short “refactor checklist” I can hand to another agent.
+Output: one task in a plan in .claude/plans  per file, plus a short “refactor checklist” I can hand to another agent.
 

@@ -10,6 +10,6 @@ For each redundancy you find:
 
 - Map the competing systems (where they live, who calls them, why they differ).
 - Recommend a consolidation plan that minimizes risk: incremental migration steps, compatibility shims, and a kill switch.
-- File a “Bead” with a concrete epic breakdown (milestones, acceptance criteria).
+- File a task in a plan in .claude/plans with a concrete epic breakdown (milestones, acceptance criteria).
 
 Output should read like something we can execute next sprint.

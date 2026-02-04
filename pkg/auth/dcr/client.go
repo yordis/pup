@@ -26,11 +26,17 @@ type Client struct {
 
 // NewClient creates a new DCR client
 func NewClient(site string) *Client {
+	return NewClientWithHTTPClient(site, &http.Client{
+		Timeout: 30 * time.Second,
+	})
+}
+
+// NewClientWithHTTPClient creates a new DCR client with a custom HTTP client
+// This is primarily used for testing with mock servers
+func NewClientWithHTTPClient(site string, httpClient *http.Client) *Client {
 	return &Client{
-		site: site,
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		site:       site,
+		httpClient: httpClient,
 	}
 }
 

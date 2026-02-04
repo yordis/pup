@@ -15,4 +15,4 @@ For each gap:
 - Provide 2–5 specific test cases with inputs/expected outcomes
 - Call out existing tests that are flaky or misleading
 
-Output: “Beads” grouped by subsystem with severity and ROI.
+Output: A plan with tasks in .claude/plans grouped by subsystem with severity and ROI.

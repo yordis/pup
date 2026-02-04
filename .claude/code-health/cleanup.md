@@ -11,6 +11,6 @@ Hunt and propose fixes for:
 
 Output:
 
-- A list of small “Beads” that are safe to do quickly
+- A list of small tasks that are safe to do quickly documented in .claude/plans
 - A list of “batch cleanup” changes that should be done in one PR to avoid churn
 - Explicitly flag anything risky to delete and what to verify first

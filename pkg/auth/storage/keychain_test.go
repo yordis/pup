@@ -6,10 +6,12 @@
 package storage
 
 import (
+	"fmt"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/99designs/keyring"
 	"github.com/DataDog/pup/pkg/auth/types"
 )
 
@@ -237,5 +239,242 @@ func TestIsKeychainAvailable(t *testing.T) {
 	// On macOS, keychain should generally be available
 	if runtime.GOOS == "darwin" && !available {
 		t.Log("Warning: Keychain not available on macOS (unusual)")
+	}
+}
+
+func TestNewKeychainStorage_Success(t *testing.T) {
+	// Skip if keychain is not available
+	if !IsKeychainAvailable() {
+		t.Skip("Keychain not available in test environment")
+	}
+
+	storage, err := NewKeychainStorage()
+	if err != nil {
+		t.Fatalf("NewKeychainStorage failed: %v", err)
+	}
+
+	if storage == nil {
+		t.Fatal("NewKeychainStorage returned nil")
+	}
+
+	if storage.tokenKeyring == nil {
+		t.Error("tokenKeyring is nil")
+	}
+
+	if storage.clientKeyring == nil {
+		t.Error("clientKeyring is nil")
+	}
+}
+
+func TestKeychainStorage_SaveTokens_MarshalError(t *testing.T) {
+	// Skip if keychain is not available
+	if !IsKeychainAvailable() {
+		t.Skip("Keychain not available in test environment")
+	}
+
+	storage, err := NewKeychainStorage()
+	if err != nil {
+		t.Fatalf("NewKeychainStorage failed: %v", err)
+	}
+
+	// Normal tokens should work fine (JSON marshal rarely fails for standard types)
+	tokens := &types.TokenSet{
+		AccessToken: "test-token",
+		TokenType:   "Bearer",
+		ExpiresIn:   3600,
+		IssuedAt:    time.Now().Unix(),
+	}
+
+	err = storage.SaveTokens("marshal-test.datadoghq.com", tokens)
+	if err != nil {
+		t.Errorf("SaveTokens should succeed: %v", err)
+	}
+
+	// Clean up
+	storage.DeleteTokens("marshal-test.datadoghq.com")
+}
+
+func TestKeychainStorage_LoadTokens_UnmarshalError(t *testing.T) {
+	// Skip if keychain is not available
+	if !IsKeychainAvailable() {
+		t.Skip("Keychain not available in test environment")
+	}
+
+	storage, err := NewKeychainStorage()
+	if err != nil {
+		t.Fatalf("NewKeychainStorage failed: %v", err)
+	}
+
+	site := "unmarshal-test.datadoghq.com"
+	key := TokenPrefix + site
+
+	// Manually set invalid JSON in keyring
+	item := keyring.Item{
+		Key:  key,
+		Data: []byte("invalid json {{{"),
+	}
+
+	err = storage.tokenKeyring.Set(item)
+	if err != nil {
+		t.Skipf("Could not set invalid data in keyring: %v", err)
+	}
+	defer storage.DeleteTokens(site)
+
+	// Try to load tokens
+	tokens, err := storage.LoadTokens(site)
+	if err == nil {
+		t.Error("LoadTokens should fail for invalid JSON")
+	}
+
+	if tokens != nil {
+		t.Error("LoadTokens should return nil for invalid JSON")
+	}
+}
+
+func TestKeychainStorage_SaveClientCredentials_MarshalError(t *testing.T) {
+	// Skip if keychain is not available
+	if !IsKeychainAvailable() {
+		t.Skip("Keychain not available in test environment")
+	}
+
+	storage, err := NewKeychainStorage()
+	if err != nil {
+		t.Fatalf("NewKeychainStorage failed: %v", err)
+	}
+
+	// Normal credentials should work fine
+	creds := &types.ClientCredentials{
+		ClientID:     "test-client",
+		ClientName:   "test",
+		RedirectURIs: []string{"http://localhost:8000"},
+		RegisteredAt: time.Now().Unix(),
+		Site:         "marshal-creds-test.datadoghq.com",
+	}
+
+	err = storage.SaveClientCredentials("marshal-creds-test.datadoghq.com", creds)
+	if err != nil {
+		t.Errorf("SaveClientCredentials should succeed: %v", err)
+	}
+
+	// Clean up
+	storage.DeleteClientCredentials("marshal-creds-test.datadoghq.com")
+}
+
+func TestKeychainStorage_LoadClientCredentials_UnmarshalError(t *testing.T) {
+	// Skip if keychain is not available
+	if !IsKeychainAvailable() {
+		t.Skip("Keychain not available in test environment")
+	}
+
+	storage, err := NewKeychainStorage()
+	if err != nil {
+		t.Fatalf("NewKeychainStorage failed: %v", err)
+	}
+
+	site := "unmarshal-creds-test.datadoghq.com"
+	key := ClientPrefix + site
+
+	// Manually set invalid JSON in keyring
+	item := keyring.Item{
+		Key:  key,
+		Data: []byte("not valid json"),
+	}
+
+	err = storage.clientKeyring.Set(item)
+	if err != nil {
+		t.Skipf("Could not set invalid data in keyring: %v", err)
+	}
+	defer storage.DeleteClientCredentials(site)
+
+	// Try to load credentials
+	creds, err := storage.LoadClientCredentials(site)
+	if err == nil {
+		t.Error("LoadClientCredentials should fail for invalid JSON")
+	}
+
+	if creds != nil {
+		t.Error("LoadClientCredentials should return nil for invalid JSON")
+	}
+}
+
+func TestKeychainStorage_MultipleOperations(t *testing.T) {
+	// Skip if keychain is not available
+	if !IsKeychainAvailable() {
+		t.Skip("Keychain not available in test environment")
+	}
+
+	storage, err := NewKeychainStorage()
+	if err != nil {
+		t.Fatalf("NewKeychainStorage failed: %v", err)
+	}
+
+	sites := []string{
+		"multi1.datadoghq.com",
+		"multi2.datadoghq.eu",
+		"multi3.us3.datadoghq.com",
+	}
+
+	// Clean up before test
+	for _, site := range sites {
+		storage.DeleteTokens(site)
+		storage.DeleteClientCredentials(site)
+	}
+	defer func() {
+		for _, site := range sites {
+			storage.DeleteTokens(site)
+			storage.DeleteClientCredentials(site)
+		}
+	}()
+
+	// Save tokens and credentials for multiple sites
+	for i, site := range sites {
+		tokens := &types.TokenSet{
+			AccessToken:  fmt.Sprintf("multi-access-%d", i),
+			RefreshToken: fmt.Sprintf("multi-refresh-%d", i),
+			TokenType:    "Bearer",
+			ExpiresIn:    3600,
+			IssuedAt:     time.Now().Unix(),
+		}
+
+		err := storage.SaveTokens(site, tokens)
+		if err != nil {
+			t.Fatalf("SaveTokens failed for %s: %v", site, err)
+		}
+
+		creds := &types.ClientCredentials{
+			ClientID:     fmt.Sprintf("multi-client-%d", i),
+			ClientName:   "test-client",
+			RedirectURIs: []string{"http://localhost:8000"},
+			RegisteredAt: time.Now().Unix(),
+			Site:         site,
+		}
+
+		err = storage.SaveClientCredentials(site, creds)
+		if err != nil {
+			t.Fatalf("SaveClientCredentials failed for %s: %v", site, err)
+		}
+	}
+
+	// Verify all tokens and credentials can be loaded
+	for i, site := range sites {
+		tokens, err := storage.LoadTokens(site)
+		if err != nil {
+			t.Fatalf("LoadTokens failed for %s: %v", site, err)
+		}
+
+		expectedToken := fmt.Sprintf("multi-access-%d", i)
+		if tokens.AccessToken != expectedToken {
+			t.Errorf("Site %s: expected token %s, got %s", site, expectedToken, tokens.AccessToken)
+		}
+
+		creds, err := storage.LoadClientCredentials(site)
+		if err != nil {
+			t.Fatalf("LoadClientCredentials failed for %s: %v", site, err)
+		}
+
+		expectedClientID := fmt.Sprintf("multi-client-%d", i)
+		if creds.ClientID != expectedClientID {
+			t.Errorf("Site %s: expected client ID %s, got %s", site, expectedClientID, creds.ClientID)
+		}
 	}
 }

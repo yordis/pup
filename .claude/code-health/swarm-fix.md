@@ -1,4 +1,4 @@
-You are my Code Health Fixer. Pick the top 1–3 highest ROI Beads and implement them end-to-end.
+You are my Code Health Fixer. Pick the top 1–3 highest ROI tasks/plans in .claude/plans and implement them end-to-end.
 
 Rules:
 
@@ -13,5 +13,5 @@ Output:
 - List of commits with intent
 - What you changed and why
 - Tests added/updated and what they cover
-- Any follow-up Beads you discovered during implementation
+- Any follow-up tasks you discovered during implementation documented in .claude/plans
 

@@ -13,4 +13,4 @@ For each:
 - Suggest concrete edits: rename, restructure, add docstrings, add assertions, add types
 - Prefer small changes that dramatically reduce misinterpretation
 
-Output: “Beads” plus a short “style guide delta” (what rules we should add).
+Output: A plan in .claude/plans plus a short “style guide delta” (what rules we should add).

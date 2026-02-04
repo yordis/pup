@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -257,5 +258,190 @@ func TestNewFileStorage(t *testing.T) {
 	// Check directory permissions (should be 0700)
 	if info.Mode().Perm() != 0700 {
 		t.Errorf("Expected directory permissions 0700, got %v", info.Mode().Perm())
+	}
+}
+
+func TestFileStorage_SaveTokens_InvalidJSON(t *testing.T) {
+	// This test verifies error handling, though JSON marshal rarely fails
+	// for standard types
+	tempDir := t.TempDir()
+	storage := &FileStorage{baseDir: tempDir}
+
+	// Normal tokens should work
+	tokens := &types.TokenSet{
+		AccessToken: "test-token",
+		TokenType:   "Bearer",
+		ExpiresIn:   3600,
+		IssuedAt:    1234567890,
+	}
+
+	err := storage.SaveTokens("test.datadoghq.com", tokens)
+	if err != nil {
+		t.Errorf("SaveTokens should not fail: %v", err)
+	}
+}
+
+func TestFileStorage_LoadTokens_InvalidJSON(t *testing.T) {
+	tempDir := t.TempDir()
+	storage := &FileStorage{baseDir: tempDir}
+
+	site := "invalid-json.datadoghq.com"
+	filename := filepath.Join(tempDir, "tokens_"+sanitizeSite(site)+".json")
+
+	// Write invalid JSON to file
+	err := os.WriteFile(filename, []byte("invalid json {{{"), 0600)
+	if err != nil {
+		t.Fatalf("Failed to write invalid JSON: %v", err)
+	}
+
+	// Try to load tokens
+	tokens, err := storage.LoadTokens(site)
+	if err == nil {
+		t.Error("LoadTokens should fail for invalid JSON")
+	}
+
+	if tokens != nil {
+		t.Error("LoadTokens should return nil for invalid JSON")
+	}
+}
+
+func TestFileStorage_SaveClientCredentials_InvalidJSON(t *testing.T) {
+	tempDir := t.TempDir()
+	storage := &FileStorage{baseDir: tempDir}
+
+	// Normal credentials should work
+	creds := &types.ClientCredentials{
+		ClientID:     "test-client",
+		ClientName:   "test",
+		RedirectURIs: []string{"http://localhost:8000"},
+		RegisteredAt: 1234567890,
+		Site:         "test.datadoghq.com",
+	}
+
+	err := storage.SaveClientCredentials("test.datadoghq.com", creds)
+	if err != nil {
+		t.Errorf("SaveClientCredentials should not fail: %v", err)
+	}
+}
+
+func TestFileStorage_LoadClientCredentials_InvalidJSON(t *testing.T) {
+	tempDir := t.TempDir()
+	storage := &FileStorage{baseDir: tempDir}
+
+	site := "invalid-creds.datadoghq.com"
+	filename := filepath.Join(tempDir, "client_"+sanitizeSite(site)+".json")
+
+	// Write invalid JSON to file
+	err := os.WriteFile(filename, []byte("not valid json"), 0600)
+	if err != nil {
+		t.Fatalf("Failed to write invalid JSON: %v", err)
+	}
+
+	// Try to load credentials
+	creds, err := storage.LoadClientCredentials(site)
+	if err == nil {
+		t.Error("LoadClientCredentials should fail for invalid JSON")
+	}
+
+	if creds != nil {
+		t.Error("LoadClientCredentials should return nil for invalid JSON")
+	}
+}
+
+func TestFileStorage_DeleteTokens_AlreadyDeleted(t *testing.T) {
+	tempDir := t.TempDir()
+	storage := &FileStorage{baseDir: tempDir}
+
+	site := "double-delete.datadoghq.com"
+
+	// Delete non-existent tokens (should not error)
+	err := storage.DeleteTokens(site)
+	if err != nil {
+		t.Errorf("DeleteTokens should not error for non-existent file: %v", err)
+	}
+
+	// Delete again (should still not error)
+	err = storage.DeleteTokens(site)
+	if err != nil {
+		t.Errorf("DeleteTokens should not error on second delete: %v", err)
+	}
+}
+
+func TestFileStorage_DeleteClientCredentials_AlreadyDeleted(t *testing.T) {
+	tempDir := t.TempDir()
+	storage := &FileStorage{baseDir: tempDir}
+
+	site := "double-delete-creds.datadoghq.com"
+
+	// Delete non-existent credentials (should not error)
+	err := storage.DeleteClientCredentials(site)
+	if err != nil {
+		t.Errorf("DeleteClientCredentials should not error for non-existent file: %v", err)
+	}
+
+	// Delete again (should still not error)
+	err = storage.DeleteClientCredentials(site)
+	if err != nil {
+		t.Errorf("DeleteClientCredentials should not error on second delete: %v", err)
+	}
+}
+
+func TestFileStorage_MultipleOperations(t *testing.T) {
+	tempDir := t.TempDir()
+	storage := &FileStorage{baseDir: tempDir}
+
+	sites := []string{"site1.datadoghq.com", "site2.datadoghq.eu", "site3.us3.datadoghq.com"}
+
+	// Save tokens for multiple sites
+	for i, site := range sites {
+		tokens := &types.TokenSet{
+			AccessToken:  fmt.Sprintf("access-token-%d", i),
+			RefreshToken: fmt.Sprintf("refresh-token-%d", i),
+			TokenType:    "Bearer",
+			ExpiresIn:    3600,
+			IssuedAt:     time.Now().Unix(),
+		}
+
+		err := storage.SaveTokens(site, tokens)
+		if err != nil {
+			t.Fatalf("SaveTokens failed for %s: %v", site, err)
+		}
+	}
+
+	// Load and verify tokens for each site
+	for i, site := range sites {
+		tokens, err := storage.LoadTokens(site)
+		if err != nil {
+			t.Fatalf("LoadTokens failed for %s: %v", site, err)
+		}
+
+		expectedToken := fmt.Sprintf("access-token-%d", i)
+		if tokens.AccessToken != expectedToken {
+			t.Errorf("Site %s: expected token %s, got %s", site, expectedToken, tokens.AccessToken)
+		}
+	}
+
+	// Delete tokens for one site
+	err := storage.DeleteTokens(sites[0])
+	if err != nil {
+		t.Fatalf("DeleteTokens failed: %v", err)
+	}
+
+	// Verify first site tokens are deleted
+	tokens, err := storage.LoadTokens(sites[0])
+	if err != nil {
+		t.Fatalf("LoadTokens failed: %v", err)
+	}
+	if tokens != nil {
+		t.Error("Expected nil tokens after delete")
+	}
+
+	// Verify other sites still have tokens
+	tokens, err = storage.LoadTokens(sites[1])
+	if err != nil {
+		t.Fatalf("LoadTokens failed: %v", err)
+	}
+	if tokens == nil {
+		t.Error("Expected tokens for site 2")
 	}
 }

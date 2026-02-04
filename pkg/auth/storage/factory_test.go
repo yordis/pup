@@ -254,3 +254,169 @@ func TestResetStorage(t *testing.T) {
 		t.Errorf("Expected empty active backend after reset, got %v", GetActiveBackend())
 	}
 }
+
+func TestGetStorageDescription_Keychain(t *testing.T) {
+	// Skip if keychain is not available
+	if !IsKeychainAvailable() {
+		t.Skip("Keychain not available in test environment")
+	}
+
+	ResetStorage()
+
+	// Force keychain backend
+	opts := &StorageOptions{ForceBackend: BackendKeychain}
+	_, err := GetStorage(opts)
+	if err != nil {
+		t.Fatalf("Failed to get storage: %v", err)
+	}
+
+	desc := GetStorageDescription()
+	if desc == "" {
+		t.Error("Expected non-empty storage description")
+	}
+
+	// Keychain description should include "(secure)"
+	if !contains(desc, "(secure)") {
+		t.Errorf("Keychain description should contain '(secure)', got: %s", desc)
+	}
+}
+
+func TestGetStorageDescription_File(t *testing.T) {
+	ResetStorage()
+
+	// Force file backend
+	opts := &StorageOptions{ForceBackend: BackendFile}
+	_, err := GetStorage(opts)
+	if err != nil {
+		t.Fatalf("Failed to get storage: %v", err)
+	}
+
+	desc := GetStorageDescription()
+	if desc == "" {
+		t.Error("Expected non-empty storage description")
+	}
+
+	// File description should NOT include "(secure)"
+	if contains(desc, "(secure)") {
+		t.Errorf("File description should not contain '(secure)', got: %s", desc)
+	}
+}
+
+func TestDetectBackend_AutoFallback(t *testing.T) {
+	// This tests the auto-detect fallback warning path
+	ResetStorage()
+
+	// Clear environment
+	os.Unsetenv(StorageEnvVar)
+
+	// Get storage with auto-detect
+	storage, err := GetStorage(nil)
+	if err != nil {
+		t.Fatalf("GetStorage failed: %v", err)
+	}
+
+	// Should get a valid backend (either keychain or file)
+	backend := storage.GetBackendType()
+	if backend != BackendKeychain && backend != BackendFile {
+		t.Errorf("Expected valid backend, got %v", backend)
+	}
+}
+
+func TestDetectBackend_InvalidEnvValue(t *testing.T) {
+	ResetStorage()
+
+	// Set invalid environment value
+	os.Setenv(StorageEnvVar, "invalid-backend")
+	defer os.Unsetenv(StorageEnvVar)
+
+	_, err := GetStorage(nil)
+	if err == nil {
+		t.Error("Expected error for invalid DD_TOKEN_STORAGE value")
+	}
+
+	if !contains(err.Error(), "invalid DD_TOKEN_STORAGE value") {
+		t.Errorf("Error message should mention invalid value, got: %v", err)
+	}
+}
+
+func TestCreateStorage_UnknownBackend(t *testing.T) {
+	ResetStorage()
+
+	// Try to create storage with unknown backend
+	_, err := createStorage("unknown-backend")
+	if err == nil {
+		t.Error("Expected error for unknown backend type")
+	}
+
+	if !contains(err.Error(), "unknown backend type") {
+		t.Errorf("Error message should mention unknown backend, got: %v", err)
+	}
+}
+
+func TestGetStorage_CachedInstance(t *testing.T) {
+	ResetStorage()
+
+	// Get storage first time
+	storage1, err := GetStorage(&StorageOptions{ForceBackend: BackendFile})
+	if err != nil {
+		t.Fatalf("First GetStorage failed: %v", err)
+	}
+
+	// Get storage second time - should return cached instance
+	storage2, err := GetStorage(nil)
+	if err != nil {
+		t.Fatalf("Second GetStorage failed: %v", err)
+	}
+
+	// Should be the same instance
+	if storage1 != storage2 {
+		t.Error("GetStorage should return cached instance")
+	}
+}
+
+func TestGetStorage_ForceBackendOverridesCache(t *testing.T) {
+	ResetStorage()
+
+	// Get file storage first
+	storage1, err := GetStorage(&StorageOptions{ForceBackend: BackendFile})
+	if err != nil {
+		t.Fatalf("First GetStorage failed: %v", err)
+	}
+
+	if storage1.GetBackendType() != BackendFile {
+		t.Errorf("Expected file backend, got %v", storage1.GetBackendType())
+	}
+
+	// Force keychain backend (if available)
+	if IsKeychainAvailable() {
+		storage2, err := GetStorage(&StorageOptions{ForceBackend: BackendKeychain})
+		if err != nil {
+			t.Fatalf("Second GetStorage failed: %v", err)
+		}
+
+		// Should get keychain backend, not cached file backend
+		if storage2.GetBackendType() != BackendKeychain {
+			t.Errorf("Expected keychain backend, got %v", storage2.GetBackendType())
+		}
+
+		// Should be a different instance
+		if storage1 == storage2 {
+			t.Error("ForceBackend should override cached instance")
+		}
+	}
+}
+
+// Helper function to check if string contains substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && hasSubstring(s, substr)))
+}
+
+func hasSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

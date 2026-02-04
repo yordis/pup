@@ -6,4 +6,4 @@ Steps:
 - For each, evaluate whether replacing is worth it.
 - If yes, recommend categories of libraries (no need to pick a single one if uncertain), migration risk, and a staged rollout plan.
 
-Output: “Beads” with a decision rubric: keep/build/buy, plus why.
+Output: A plan in .claude/plans with a decision rubric: keep/build/buy, plus why. This should be a markdown format.

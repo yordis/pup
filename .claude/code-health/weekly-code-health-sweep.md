@@ -16,6 +16,6 @@ Tasks:
 
 Output:
 
-- Create a list of “Beads” with: Title, Severity (P0–P3), Impact, Evidence, Recommended fix (tight scope), Estimated effort (S/M/L), and Owner suggestion.
+- Create a list of tasks documented in a plan in .claude/plans with: Title, Severity (P0–P3), Impact, Evidence, Recommended fix (tight scope), Estimated effort (S/M/L), and Owner suggestion.
 - Then give a 1-page summary: top 5 highest ROI fixes and why.
 
