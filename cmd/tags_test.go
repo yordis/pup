@@ -37,7 +37,7 @@ func TestTagsCmd_Subcommands(t *testing.T) {
 
 	commandMap := make(map[string]bool)
 	for _, cmd := range commands {
-		commandMap[cmd.Use] = true
+		commandMap[cmd.Name()] = true
 	}
 
 	for _, expected := range expectedCommands {
@@ -92,8 +92,8 @@ func TestTagsAddCmd(t *testing.T) {
 		t.Fatal("tagsAddCmd is nil")
 	}
 
-	if tagsAddCmd.Use != "add [hostname]" {
-		t.Errorf("Use = %s, want 'add [hostname]'", tagsAddCmd.Use)
+	if tagsAddCmd.Use != "add [hostname] [tags...]" {
+		t.Errorf("Use = %s, want 'add [hostname] [tags...]'", tagsAddCmd.Use)
 	}
 
 	if tagsAddCmd.Short == "" {
@@ -114,8 +114,8 @@ func TestTagsUpdateCmd(t *testing.T) {
 		t.Fatal("tagsUpdateCmd is nil")
 	}
 
-	if tagsUpdateCmd.Use != "update [hostname]" {
-		t.Errorf("Use = %s, want 'update [hostname]'", tagsUpdateCmd.Use)
+	if tagsUpdateCmd.Use != "update [hostname] [tags...]" {
+		t.Errorf("Use = %s, want 'update [hostname] [tags...]'", tagsUpdateCmd.Use)
 	}
 
 	if tagsUpdateCmd.Short == "" {

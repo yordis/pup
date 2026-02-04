@@ -28,18 +28,18 @@ func TestDataGovernanceCmd(t *testing.T) {
 }
 
 func TestDataGovernanceCmd_Subcommands(t *testing.T) {
-	// Check that scanner-rules subcommand exists
+	// Check that scanner subcommand exists
 	commands := dataGovernanceCmd.Commands()
 
-	foundScannerRules := false
+	foundScanner := false
 	for _, cmd := range commands {
-		if cmd.Use == "scanner-rules" {
-			foundScannerRules = true
+		if cmd.Name() == "scanner" {
+			foundScanner = true
 		}
 	}
 
-	if !foundScannerRules {
-		t.Error("Missing scanner-rules subcommand")
+	if !foundScanner {
+		t.Error("Missing scanner subcommand")
 	}
 }
 
@@ -48,8 +48,8 @@ func TestDataGovernanceScannerRulesCmd(t *testing.T) {
 		t.Fatal("dataGovernanceScannerRulesCmd is nil")
 	}
 
-	if dataGovernanceScannerRulesCmd.Use != "scanner-rules" {
-		t.Errorf("Use = %s, want scanner-rules", dataGovernanceScannerRulesCmd.Use)
+	if dataGovernanceScannerRulesCmd.Use != "rules" {
+		t.Errorf("Use = %s, want rules", dataGovernanceScannerRulesCmd.Use)
 	}
 
 	if dataGovernanceScannerRulesCmd.Short == "" {
@@ -60,7 +60,7 @@ func TestDataGovernanceScannerRulesCmd(t *testing.T) {
 	commands := dataGovernanceScannerRulesCmd.Commands()
 	foundList := false
 	for _, cmd := range commands {
-		if cmd.Use == "list" {
+		if cmd.Name() == "list" {
 			foundList = true
 			if cmd.RunE == nil {
 				t.Error("Scanner rules list command RunE is nil")
@@ -68,7 +68,7 @@ func TestDataGovernanceScannerRulesCmd(t *testing.T) {
 		}
 	}
 	if !foundList {
-		t.Error("Missing scanner-rules list subcommand")
+		t.Error("Missing rules list subcommand")
 	}
 }
 
@@ -91,24 +91,39 @@ func TestDataGovernanceScannerRulesListCmd(t *testing.T) {
 }
 
 func TestDataGovernanceCmd_CommandHierarchy(t *testing.T) {
-	// Verify scanner-rules is a subcommand of data-governance
+	// Verify scanner is a subcommand of data-governance
 	commands := dataGovernanceCmd.Commands()
-	foundScannerRules := false
+	foundScanner := false
 	for _, cmd := range commands {
-		if cmd.Use == "scanner-rules" {
-			foundScannerRules = true
+		if cmd.Name() == "scanner" {
+			foundScanner = true
 			if cmd.Parent() != dataGovernanceCmd {
-				t.Error("scanner-rules parent is not dataGovernanceCmd")
+				t.Error("scanner parent is not dataGovernanceCmd")
 			}
 		}
 	}
-	if !foundScannerRules {
-		t.Error("scanner-rules subcommand not found in data-governance")
+	if !foundScanner {
+		t.Error("scanner subcommand not found in data-governance")
 	}
 
-	// Verify list is a subcommand of scanner-rules
-	scannerRulesCommands := dataGovernanceScannerRulesCmd.Commands()
-	for _, cmd := range scannerRulesCommands {
+	// Verify rules is a subcommand of scanner
+	scannerCommands := dataGovernanceScannerCmd.Commands()
+	foundRules := false
+	for _, cmd := range scannerCommands {
+		if cmd.Name() == "rules" {
+			foundRules = true
+			if cmd.Parent() != dataGovernanceScannerCmd {
+				t.Error("rules parent is not dataGovernanceScannerCmd")
+			}
+		}
+	}
+	if !foundRules {
+		t.Error("rules subcommand not found in scanner")
+	}
+
+	// Verify list is a subcommand of rules
+	rulesCommands := dataGovernanceScannerRulesCmd.Commands()
+	for _, cmd := range rulesCommands {
 		if cmd.Parent() != dataGovernanceScannerRulesCmd {
 			t.Errorf("Command %s parent is not dataGovernanceScannerRulesCmd", cmd.Use)
 		}
