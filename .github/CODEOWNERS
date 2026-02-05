@@ -1,0 +1,11 @@
+# CODEOWNERS file for Pup repository
+# These owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence, they will be requested for
+# review when someone opens a pull request.
+
+# Global owners - update with actual maintainer GitHub usernames
+* @DataDog/api-platform
+
+# Authentication and security-critical code
+/pkg/auth/ @DataDog/team-aaa
+/cmd/auth.go @DataDog/team-aaa

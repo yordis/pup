@@ -1,0 +1,21 @@
+Component,Origin,License,Copyright
+github.com/99designs/go-keychain,https://github.com/99designs/go-keychain,MIT,Copyright (c) 2019 99designs
+github.com/99designs/keyring,https://github.com/99designs/keyring,MIT,Copyright (c) 2019 99designs
+github.com/DataDog/datadog-api-client-go/v2,https://github.com/DataDog/datadog-api-client-go,Apache-2.0,Copyright 2019-Present Datadog Inc.
+github.com/DataDog/zstd,https://github.com/DataDog/zstd,BSD-3-Clause,Copyright (c) 2016-Present Datadog Inc.
+github.com/danieljoos/wincred,https://github.com/danieljoos/wincred,MIT,Copyright (c) 2018 Daniel Joos
+github.com/dvsekhvalnov/jose2go,https://github.com/dvsekhvalnov/jose2go,MIT,Copyright (c) 2015 Dmitry Vsekhvalnov
+github.com/goccy/go-json,https://github.com/goccy/go-json,MIT,Copyright (c) 2020 Masaaki Goshima
+github.com/godbus/dbus,https://github.com/godbus/dbus,BSD-2-Clause,Copyright (c) 2013-Present godbus contributors
+github.com/golang/protobuf,https://github.com/golang/protobuf,BSD-3-Clause,Copyright 2010 The Go Authors
+github.com/google/uuid,https://github.com/google/uuid,BSD-3-Clause,Copyright (c) 2009-2018 The Go Authors
+github.com/gsterjov/go-libsecret,https://github.com/gsterjov/go-libsecret,MIT,Copyright (c) 2016 Georgi Sterjov
+github.com/inconshreveable/mousetrap,https://github.com/inconshreveable/mousetrap,Apache-2.0,Copyright 2012 Alan Shreve
+github.com/mtibben/percent,https://github.com/mtibben/percent,MIT,Copyright (c) 2015 Michael Tibben
+github.com/spf13/cobra,https://github.com/spf13/cobra,Apache-2.0,Copyright 2013-Present Steve Francia
+github.com/spf13/pflag,https://github.com/spf13/pflag,BSD-3-Clause,Copyright (c) 2012 Alex Ogier / Copyright (c) 2012 The Go Authors
+golang.org/x/oauth2,https://pkg.go.dev/golang.org/x/oauth2,BSD-3-Clause,Copyright (c) 2009 The Go Authors
+golang.org/x/sys,https://pkg.go.dev/golang.org/x/sys,BSD-3-Clause,Copyright (c) 2009 The Go Authors
+golang.org/x/term,https://pkg.go.dev/golang.org/x/term,BSD-3-Clause,Copyright (c) 2009 The Go Authors
+google.golang.org/appengine,https://pkg.go.dev/google.golang.org/appengine,Apache-2.0,Copyright 2011 Google Inc.
+google.golang.org/protobuf,https://pkg.go.dev/google.golang.org/protobuf,BSD-3-Clause,Copyright (c) 2018 The Go Authors
