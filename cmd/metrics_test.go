@@ -1,0 +1,389 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2024-present Datadog, Inc.
+
+package cmd
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/DataDog/pup/pkg/client"
+	"github.com/DataDog/pup/pkg/config"
+)
+
+func TestMetricsCmd(t *testing.T) {
+	if metricsCmd == nil {
+		t.Fatal("metricsCmd is nil")
+	}
+
+	if metricsCmd.Use != "metrics" {
+		t.Errorf("Use = %s, want metrics", metricsCmd.Use)
+	}
+
+	if metricsCmd.Short == "" {
+		t.Error("Short description is empty")
+	}
+}
+
+// Helper function to setup metrics test client
+func setupMetricsTestClient(t *testing.T) func() {
+	t.Helper()
+
+	origClient := ddClient
+	origCfg := cfg
+	origFactory := clientFactory
+
+	cfg = &config.Config{
+		Site:        "datadoghq.com",
+		APIKey:      "test-api-key-12345678",
+		AppKey:      "test-app-key-12345678",
+		AutoApprove: false,
+	}
+
+	clientFactory = func(c *config.Config) (*client.Client, error) {
+		return nil, fmt.Errorf("mock client: no real API connection in tests")
+	}
+
+	ddClient = nil
+
+	return func() {
+		ddClient = origClient
+		cfg = origCfg
+		clientFactory = origFactory
+	}
+}
+
+func TestRunMetricsQuery(t *testing.T) {
+	cleanup := setupMetricsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name    string
+		query   string
+		from    string
+		to      string
+		wantErr bool
+	}{
+		{
+			name:    "valid query",
+			query:   "avg:system.cpu.user{*}",
+			from:    "1h",
+			to:      "now",
+			wantErr: true, // Mock client error
+		},
+		{
+			name:    "fails on client creation",
+			query:   "avg:system.cpu.user{*}",
+			from:    "1h",
+			to:      "now",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set command flags
+			queryString = tt.query
+			fromTime = tt.from
+			toTime = tt.to
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runMetricsQuery(metricsQueryCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runMetricsQuery() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunMetricsList(t *testing.T) {
+	cleanup := setupMetricsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name    string
+		filter  string
+		wantErr bool
+	}{
+		{
+			name:    "no filter",
+			filter:  "",
+			wantErr: true, // Mock client error
+		},
+		{
+			name:    "with filter",
+			filter:  "system.*",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filterPattern = tt.filter
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runMetricsList(metricsListCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runMetricsList() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunMetricsMetadataGet(t *testing.T) {
+	cleanup := setupMetricsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name       string
+		metricName string
+		wantErr    bool
+	}{
+		{
+			name:       "valid metric name",
+			metricName: "system.cpu.user",
+			wantErr:    true, // Mock client error
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runMetricsMetadataGet(metricsMetadataGetCmd, []string{tt.metricName})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runMetricsMetadataGet() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunMetricsMetadataUpdate(t *testing.T) {
+	cleanup := setupMetricsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name        string
+		metricName  string
+		description string
+		unit        string
+		metricType  string
+		wantErr     bool
+	}{
+		{
+			name:        "update description",
+			metricName:  "system.cpu.user",
+			description: "CPU user time",
+			unit:        "",
+			metricType:  "",
+			wantErr:     true, // Mock client error
+		},
+		{
+			name:        "update multiple fields",
+			metricName:  "system.cpu.user",
+			description: "CPU user time",
+			unit:        "percent",
+			metricType:  "gauge",
+			wantErr:     true,
+		},
+		{
+			name:        "no fields specified",
+			metricName:  "system.cpu.user",
+			description: "",
+			unit:        "",
+			metricType:  "",
+			wantErr:     true, // Should error: no fields specified
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metadataDescription = tt.description
+			metadataUnit = tt.unit
+			metadataType = tt.metricType
+			metadataPerUnit = ""
+			metadataShortName = ""
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runMetricsMetadataUpdate(metricsMetadataUpdateCmd, []string{tt.metricName})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runMetricsMetadataUpdate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunMetricsSubmit(t *testing.T) {
+	cleanup := setupMetricsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name      string
+		metricName string
+		value     float64
+		timestamp string
+		tags      string
+		metricType string
+		wantErr   bool
+	}{
+		{
+			name:       "submit gauge",
+			metricName: "custom.metric",
+			value:      123.45,
+			timestamp:  "now",
+			tags:       "env:prod,team:backend",
+			metricType: "gauge",
+			wantErr:    true, // Mock client error
+		},
+		{
+			name:       "submit count",
+			metricName: "custom.count",
+			value:      100,
+			timestamp:  "now",
+			tags:       "",
+			metricType: "count",
+			wantErr:    true,
+		},
+		{
+			name:       "invalid metric type",
+			metricName: "custom.metric",
+			value:      123,
+			timestamp:  "now",
+			tags:       "",
+			metricType: "invalid",
+			wantErr:    true, // Should error: invalid type
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			submitName = tt.metricName
+			submitValue = tt.value
+			submitTimestamp = tt.timestamp
+			submitTags = tt.tags
+			submitType = tt.metricType
+			submitInterval = 0
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runMetricsSubmit(metricsSubmitCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runMetricsSubmit() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// Check for specific error on invalid type
+			if tt.metricType == "invalid" && err != nil {
+				if !strings.Contains(err.Error(), "invalid metric type") {
+					t.Errorf("runMetricsSubmit() error = %v, want 'invalid metric type' error", err)
+				}
+			}
+		})
+	}
+}
+
+func TestRunMetricsTagsList(t *testing.T) {
+	cleanup := setupMetricsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name       string
+		metricName string
+		wantErr    bool
+	}{
+		{
+			name:       "not supported",
+			metricName: "system.cpu.user",
+			wantErr:    true, // Should return "not supported" error
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runMetricsTagsList(metricsTagsListCmd, []string{tt.metricName})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runMetricsTagsList() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err != nil && !strings.Contains(err.Error(), "not supported") {
+				t.Errorf("runMetricsTagsList() error = %v, want 'not supported' error", err)
+			}
+		})
+	}
+}
+
+func TestParseTimeParam(t *testing.T) {
+	tests := []struct {
+		name    string
+		timeStr string
+		wantErr bool
+	}{
+		{
+			name:    "now keyword",
+			timeStr: "now",
+			wantErr: false,
+		},
+		{
+			name:    "relative hours",
+			timeStr: "1h",
+			wantErr: false,
+		},
+		{
+			name:    "relative minutes",
+			timeStr: "30m",
+			wantErr: false,
+		},
+		{
+			name:    "relative days",
+			timeStr: "7d",
+			wantErr: false,
+		},
+		{
+			name:    "unix timestamp",
+			timeStr: "1640000000",
+			wantErr: false,
+		},
+		{
+			name:    "invalid format",
+			timeStr: "invalid",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseTimeParam(tt.timeStr)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseTimeParam() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

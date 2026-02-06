@@ -217,7 +217,7 @@ func runDashboardsList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -243,7 +243,7 @@ func runDashboardsGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -257,17 +257,17 @@ func runDashboardsDelete(cmd *cobra.Command, args []string) error {
 
 	// Check if auto-approve is enabled
 	if !cfg.AutoApprove {
-		fmt.Printf("⚠️  WARNING: This will permanently delete dashboard %s\n", dashboardID)
-		fmt.Print("Are you sure you want to continue? (y/N): ")
+		printOutput("⚠️  WARNING: This will permanently delete dashboard %s\n", dashboardID)
+		printOutput("Are you sure you want to continue? (y/N): ")
 
-		var response string
-		if _, err := fmt.Scanln(&response); err != nil {
+		response, err := readConfirmation()
+		if err != nil {
 			// User cancelled or error reading input
-			fmt.Println("\nOperation cancelled")
+			printOutput("\nOperation cancelled\n")
 			return nil
 		}
 		if response != "y" && response != "Y" {
-			fmt.Println("Operation cancelled")
+			printOutput("Operation cancelled\n")
 			return nil
 		}
 	}
@@ -287,6 +287,6 @@ func runDashboardsDelete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }

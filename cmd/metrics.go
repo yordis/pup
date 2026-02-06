@@ -528,7 +528,7 @@ func runMetricsQuery(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -562,7 +562,7 @@ func runMetricsList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -589,7 +589,7 @@ func runMetricsMetadataGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -640,7 +640,7 @@ func runMetricsMetadataUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -735,7 +735,7 @@ func runMetricsSubmit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 

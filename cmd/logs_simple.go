@@ -686,7 +686,7 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -741,7 +741,7 @@ func runLogsList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -798,7 +798,7 @@ func runLogsQuery(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -868,7 +868,7 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -893,7 +893,7 @@ func runLogsArchivesList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -919,7 +919,7 @@ func runLogsArchivesGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -983,7 +983,7 @@ func runLogsCustomDestinationsList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -1009,7 +1009,7 @@ func runLogsCustomDestinationsGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -1034,7 +1034,7 @@ func runLogsMetricsList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -1060,7 +1060,7 @@ func runLogsMetricsGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
