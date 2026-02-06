@@ -70,7 +70,7 @@ func runMiscIPRanges(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }
 
@@ -84,6 +84,6 @@ func runMiscStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(output)
+	printOutput("%s\n", output)
 	return nil
 }

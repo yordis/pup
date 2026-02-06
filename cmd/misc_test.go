@@ -6,8 +6,13 @@
 package cmd
 
 import (
+	"bytes"
+	"fmt"
+	"os"
 	"testing"
 
+	"github.com/DataDog/pup/pkg/client"
+	"github.com/DataDog/pup/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -145,5 +150,41 @@ func TestMiscCmd_ParentChild(t *testing.T) {
 		if cmd.Parent() != miscCmd {
 			t.Errorf("Command %s parent is not miscCmd", cmd.Use)
 		}
+	}
+}
+
+func setupMiscTestClient(t *testing.T) func() {
+	t.Helper()
+	origClient, origCfg, origFactory := ddClient, cfg, clientFactory
+	cfg = &config.Config{Site: "datadoghq.com", APIKey: "test-key-12345678", AppKey: "test-key-12345678"}
+	clientFactory = func(c *config.Config) (*client.Client, error) {
+		return nil, fmt.Errorf("mock client: no real API connection")
+	}
+	ddClient = nil
+	return func() { ddClient, cfg, clientFactory = origClient, origCfg, origFactory }
+}
+
+func TestRunMiscIPRanges(t *testing.T) {
+	cleanup := setupMiscTestClient(t)
+	defer cleanup()
+	var buf bytes.Buffer
+	outputWriter = &buf
+	defer func() { outputWriter = os.Stdout }()
+	err := runMiscIPRanges(miscIPRangesCmd, []string{})
+	if err == nil {
+		t.Error("Expected error with mock client")
+	}
+}
+
+func TestRunMiscStatus(t *testing.T) {
+	cleanup := setupMiscTestClient(t)
+	defer cleanup()
+	var buf bytes.Buffer
+	outputWriter = &buf
+	defer func() { outputWriter = os.Stdout }()
+	err := runMiscStatus(miscStatusCmd, []string{})
+	// Status command doesn't require client, so it should succeed
+	if err != nil {
+		t.Errorf("Expected success for status command, got error: %v", err)
 	}
 }
