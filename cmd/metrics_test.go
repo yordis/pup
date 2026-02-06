@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DataDog/pup/pkg/client"
 	"github.com/DataDog/pup/pkg/config"
@@ -354,8 +355,18 @@ func TestParseTimeParam(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "NOW uppercase",
+			timeStr: "NOW",
+			wantErr: false,
+		},
+		{
 			name:    "relative hours",
 			timeStr: "1h",
+			wantErr: false,
+		},
+		{
+			name:    "relative hours multiple digits",
+			timeStr: "24h",
 			wantErr: false,
 		},
 		{
@@ -369,6 +380,11 @@ func TestParseTimeParam(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "relative weeks",
+			timeStr: "2w",
+			wantErr: false,
+		},
+		{
 			name:    "unix timestamp",
 			timeStr: "1640000000",
 			wantErr: false,
@@ -378,15 +394,94 @@ func TestParseTimeParam(t *testing.T) {
 			timeStr: "invalid",
 			wantErr: true,
 		},
+		{
+			name:    "empty string",
+			timeStr: "",
+			wantErr: true,
+		},
+		{
+			name:    "single character",
+			timeStr: "h",
+			wantErr: true,
+		},
+		{
+			name:    "invalid unit",
+			timeStr: "5x",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseTimeParam(tt.timeStr)
+			result, err := parseTimeParam(tt.timeStr)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseTimeParam() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseTimeParam(%q) error = %v, wantErr %v", tt.timeStr, err, tt.wantErr)
+			}
+
+			// Validate result for successful cases
+			if err == nil {
+				if result.IsZero() {
+					t.Errorf("parseTimeParam(%q) returned zero time", tt.timeStr)
+				}
 			}
 		})
+	}
+}
+
+func TestParseTimeParam_RelativeTime(t *testing.T) {
+	tests := []struct {
+		name        string
+		timeStr     string
+		expectPast  bool
+		description string
+	}{
+		{
+			name:        "1 hour ago",
+			timeStr:     "1h",
+			expectPast:  true,
+			description: "should be ~1 hour before now",
+		},
+		{
+			name:        "30 minutes ago",
+			timeStr:     "30m",
+			expectPast:  true,
+			description: "should be ~30 minutes before now",
+		},
+		{
+			name:        "7 days ago",
+			timeStr:     "7d",
+			expectPast:  true,
+			description: "should be ~7 days before now",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseTimeParam(tt.timeStr)
+			if err != nil {
+				t.Fatalf("parseTimeParam(%q) unexpected error: %v", tt.timeStr, err)
+			}
+
+			now := time.Now()
+			if tt.expectPast && result.After(now) {
+				t.Errorf("parseTimeParam(%q) = %v, expected time in the past", tt.timeStr, result)
+			}
+		})
+	}
+}
+
+func TestParseTimeParam_NowKeyword(t *testing.T) {
+	result, err := parseTimeParam("now")
+	if err != nil {
+		t.Fatalf("parseTimeParam(\"now\") unexpected error: %v", err)
+	}
+
+	now := time.Now()
+	diff := now.Sub(result)
+
+	// Should be very close to current time (within 1 second)
+	if diff > time.Second || diff < -time.Second {
+		t.Errorf("parseTimeParam(\"now\") = %v, too far from current time %v (diff: %v)", result, now, diff)
 	}
 }
