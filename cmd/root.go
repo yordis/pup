@@ -130,16 +130,9 @@ func getClient() (*client.Client, error) {
 	return ddClient, nil
 }
 
-// setTestClient sets a mock client for testing and returns a cleanup function
-func setTestClient(mockClient *client.Client) func() {
-	original := ddClient
-	ddClient = mockClient
-	return func() { ddClient = original }
-}
-
 // printOutput writes formatted output (for testing)
 func printOutput(format string, a ...any) {
-	fmt.Fprintf(outputWriter, format, a...)
+	_, _ = fmt.Fprintf(outputWriter, format, a...)
 }
 
 // readConfirmation reads user confirmation from input

@@ -22,7 +22,6 @@ import (
 // MockClient provides a mock Datadog client for testing
 type MockClient struct {
 	*client.Client
-	server *httptest.Server
 }
 
 // NewMockClient creates a mock client that uses a test HTTP server
