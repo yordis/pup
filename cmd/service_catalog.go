@@ -70,7 +70,7 @@ func runServiceCatalogList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list services: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func runServiceCatalogGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get service: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

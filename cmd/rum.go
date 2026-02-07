@@ -400,7 +400,7 @@ func runRumAppsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list RUM applications: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -423,7 +423,7 @@ func runRumAppsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get RUM application: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -461,7 +461,7 @@ func runRumAppsCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create RUM application: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -504,7 +504,7 @@ func runRumAppsUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to update RUM application: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -624,7 +624,7 @@ func runRumSessionsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list RUM sessions: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -658,7 +658,7 @@ func runRumSessionsSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to search RUM sessions: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

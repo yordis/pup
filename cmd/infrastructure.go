@@ -97,7 +97,7 @@ func runInfrastructureHostsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list hosts: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func runInfrastructureHostsGet(cmd *cobra.Command, args []string) error {
 	}
 
 	_ = hostname // Use hostname for filtering in actual implementation
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

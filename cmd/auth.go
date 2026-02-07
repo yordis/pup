@@ -455,7 +455,7 @@ func runAuthStatus(cmd *cobra.Command, args []string) error {
 		fmt.Printf("   Token expires in: %s\n", timeLeft.Round(time.Second))
 	}
 
-	output, err := formatter.ToJSON(status)
+	output, err := formatter.FormatOutput(status, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

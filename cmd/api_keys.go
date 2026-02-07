@@ -111,7 +111,7 @@ func runAPIKeysList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list API keys: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func runAPIKeysGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get API key: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func runAPIKeysCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create API key: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

@@ -95,7 +95,7 @@ func runTagsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list host tags: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func runTagsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get host tags: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func runTagsAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to add host tags: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func runTagsUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to update host tags: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

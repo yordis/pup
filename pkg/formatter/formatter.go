@@ -6,8 +6,13 @@
 package formatter
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/olekukonko/tablewriter"
+	"gopkg.in/yaml.v3"
 )
 
 // OutputFormat represents the output format type
@@ -45,16 +50,223 @@ func ToJSON(data interface{}) (string, error) {
 	return string(bytes), nil
 }
 
-// ToTable formats data as a table (simplified for now)
+// ToTable formats data as a table
 func ToTable(data interface{}) (string, error) {
-	// For now, just use JSON. We can enhance this later with proper table formatting
-	return ToJSON(data)
+	if data == nil {
+		return "", nil
+	}
+
+	// Convert to JSON first to normalize the data structure
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	// Parse back to generic structure
+	var normalized interface{}
+	if err := json.Unmarshal(jsonBytes, &normalized); err != nil {
+		return "", fmt.Errorf("failed to unmarshal data: %w", err)
+	}
+
+	var buf bytes.Buffer
+	table := tablewriter.NewWriter(&buf)
+
+	// Handle different data types
+	switch v := normalized.(type) {
+	case []interface{}:
+		if len(v) == 0 {
+			// Empty slice - check if original data was also empty
+			return "No results found", nil
+		}
+		// Format as table with rows
+		if err := formatSliceAsTable(table, v); err != nil {
+			return "", err
+		}
+	case map[string]interface{}:
+		// Check if this is an API response wrapper with "data" field
+		// Common pattern: {"data": [...], "meta": {...}}
+		if dataField, hasData := v["data"]; hasData {
+			// Check if data is an array
+			if dataArray, isArray := dataField.([]interface{}); isArray {
+				if len(dataArray) == 0 {
+					return "No results found", nil
+				}
+				// Format the data array as table instead of the wrapper
+				if err := formatSliceAsTable(table, dataArray); err != nil {
+					return "", err
+				}
+			} else {
+				// data is a single object
+				if dataMap, isMap := dataField.(map[string]interface{}); isMap {
+					if err := formatMapAsTable(table, dataMap); err != nil {
+						return "", err
+					}
+				} else {
+					// Single object - format as key-value pairs
+					if err := formatMapAsTable(table, v); err != nil {
+						return "", err
+					}
+				}
+			}
+		} else {
+			// No "data" field - format as key-value pairs
+			if err := formatMapAsTable(table, v); err != nil {
+				return "", err
+			}
+		}
+	default:
+		// Fallback to JSON for unknown types
+		return fmt.Sprintf("Unsupported data type for table format: %T\nUse JSON format instead:\n%s", normalized, string(jsonBytes)), nil
+	}
+
+	if err := table.Render(); err != nil {
+		return "", fmt.Errorf("failed to render table: %w", err)
+	}
+	return buf.String(), nil
 }
 
-// ToYAML formats data as YAML (simplified for now)
+// formatSliceAsTable formats a slice of objects as a table
+func formatSliceAsTable(table *tablewriter.Table, data []interface{}) error {
+	if len(data) == 0 {
+		return nil
+	}
+
+	// Get headers from first object
+	if _, ok := data[0].(map[string]interface{}); !ok {
+		// If not a map, just display as a list
+		for _, item := range data {
+			if err := table.Append(fmt.Sprintf("%v", item)); err != nil {
+				return fmt.Errorf("failed to append row: %w", err)
+			}
+		}
+		return nil
+	}
+
+	// Collect all unique keys across all items
+	headerSet := make(map[string]bool)
+	var headers []string
+	for _, item := range data {
+		if itemMap, ok := item.(map[string]interface{}); ok {
+			for key := range itemMap {
+				if !headerSet[key] {
+					headerSet[key] = true
+					headers = append(headers, key)
+				}
+			}
+		}
+	}
+
+	// Limit columns for readability - prioritize common fields
+	priorityFields := []string{"id", "name", "type", "status", "state", "overall_state", "created", "modified"}
+	finalHeaders := []string{}
+	for _, field := range priorityFields {
+		if headerSet[field] {
+			finalHeaders = append(finalHeaders, field)
+		}
+	}
+	// Add remaining fields (up to 10 total columns)
+	for _, field := range headers {
+		if len(finalHeaders) >= 10 {
+			break
+		}
+		found := false
+		for _, f := range finalHeaders {
+			if f == field {
+				found = true
+				break
+			}
+		}
+		if !found {
+			finalHeaders = append(finalHeaders, field)
+		}
+	}
+
+	// Convert headers to interface{} slice
+	headerInts := make([]interface{}, len(finalHeaders))
+	for i, h := range finalHeaders {
+		headerInts[i] = h
+	}
+	table.Header(headerInts...)
+
+	// Add rows
+	for _, item := range data {
+		itemMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		row := make([]interface{}, len(finalHeaders))
+		for i, header := range finalHeaders {
+			val := itemMap[header]
+			row[i] = formatTableValue(val)
+		}
+		if err := table.Append(row...); err != nil {
+			return fmt.Errorf("failed to append row: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// formatMapAsTable formats a map as key-value pairs
+func formatMapAsTable(table *tablewriter.Table, data map[string]interface{}) error {
+	table.Header("Field", "Value")
+
+	for key, value := range data {
+		if err := table.Append(key, formatTableValue(value)); err != nil {
+			return fmt.Errorf("failed to append row: %w", err)
+		}
+	}
+	return nil
+}
+
+// formatTableValue formats a value for table display
+func formatTableValue(val interface{}) string {
+	if val == nil {
+		return ""
+	}
+
+	switch v := val.(type) {
+	case string:
+		// Truncate long strings
+		if len(v) > 50 {
+			return v[:47] + "..."
+		}
+		return v
+	case []interface{}:
+		// Format arrays compactly
+		if len(v) == 0 {
+			return "[]"
+		}
+		if len(v) <= 3 {
+			parts := make([]string, len(v))
+			for i, item := range v {
+				parts[i] = fmt.Sprintf("%v", item)
+			}
+			return "[" + strings.Join(parts, ", ") + "]"
+		}
+		return fmt.Sprintf("[%d items]", len(v))
+	case map[string]interface{}:
+		// Format objects compactly
+		return fmt.Sprintf("{%d fields}", len(v))
+	case float64:
+		// Format numbers cleanly
+		if v == float64(int64(v)) {
+			return fmt.Sprintf("%d", int64(v))
+		}
+		return fmt.Sprintf("%.2f", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+// ToYAML formats data as YAML
 func ToYAML(data interface{}) (string, error) {
-	// For now, just use JSON. We can add YAML library later
-	return ToJSON(data)
+	bytes, err := yaml.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal YAML: %w", err)
+	}
+	return string(bytes), nil
 }
 
 // FormatError formats an error message

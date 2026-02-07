@@ -78,7 +78,7 @@ func runNotebooksList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list notebooks: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func runNotebooksGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get notebook: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

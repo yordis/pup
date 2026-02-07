@@ -681,7 +681,7 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to search logs: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -736,7 +736,7 @@ func runLogsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list logs: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -793,7 +793,7 @@ func runLogsQuery(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to query logs: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -863,7 +863,7 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to aggregate logs: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -888,7 +888,7 @@ func runLogsArchivesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list log archives: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -914,7 +914,7 @@ func runLogsArchivesGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get log archive: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -978,7 +978,7 @@ func runLogsCustomDestinationsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list custom destinations: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -1004,7 +1004,7 @@ func runLogsCustomDestinationsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get custom destination: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -1029,7 +1029,7 @@ func runLogsMetricsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list log-based metrics: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -1055,7 +1055,7 @@ func runLogsMetricsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get log-based metric: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

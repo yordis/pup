@@ -67,9 +67,20 @@ func New(cfg *config.Config) (*Client, error) {
 	// Configure the API client
 	configuration := datadog.NewConfiguration()
 	configuration.Host = fmt.Sprintf("api.%s", cfg.Site)
-	configuration.SetUnstableOperationEnabled("v2.QueryTimeseriesData", true)
-	configuration.SetUnstableOperationEnabled("v2.ListIncidents", true)
-	configuration.SetUnstableOperationEnabled("v2.GetIncident", true)
+
+	// Enable all unstable operations to suppress warnings
+	// These are beta/preview features that we want to use
+	unstableOps := []string{
+		"v2.QueryTimeseriesData",
+		"v2.ListIncidents",
+		"v2.GetIncident",
+		"v2.CreateIncident",
+		"v2.UpdateIncident",
+		"v2.DeleteIncident",
+	}
+	for _, op := range unstableOps {
+		configuration.SetUnstableOperationEnabled(op, true)
+	}
 
 	api := datadog.NewAPIClient(configuration)
 

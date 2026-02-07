@@ -66,7 +66,7 @@ func runMiscIPRanges(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get IP ranges: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func runMiscStatus(cmd *cobra.Command, args []string) error {
 		"message": "API is operational",
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

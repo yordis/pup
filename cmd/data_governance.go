@@ -72,7 +72,7 @@ func runDataGovernanceScannerRulesList(cmd *cobra.Command, args []string) error 
 		return fmt.Errorf("failed to list scanning rules: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
