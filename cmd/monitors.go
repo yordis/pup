@@ -189,7 +189,7 @@ EXAMPLES:
   pup monitors delete 12345678 --yes
 
   # Delete monitor using global auto-approve
-  DD_AUTO_APPROVE=true fetch monitors delete 12345678
+  DD_AUTO_APPROVE=true pup monitors delete 12345678
 
 CONFIRMATION PROMPT:
   When run without --yes flag, you will see:
@@ -203,7 +203,7 @@ AUTOMATION:
   For scripts and CI/CD pipelines, use one of:
   • --yes flag: pup monitors delete 12345678 --yes
   • -y flag: pup monitors delete 12345678 -y
-  • Environment: DD_AUTO_APPROVE=true fetch monitors delete 12345678
+  • Environment: DD_AUTO_APPROVE=true pup monitors delete 12345678
 
 WARNING:
   Deletion is permanent and cannot be undone. The monitor and all its alert

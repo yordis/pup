@@ -46,7 +46,7 @@ func New(cfg *config.Config) (*Client, error) {
 	if ctx == nil {
 		if cfg.APIKey == "" || cfg.AppKey == "" {
 			return nil, fmt.Errorf(
-				"authentication required: either run 'fetch auth login' for OAuth2 or set DD_API_KEY and DD_APP_KEY environment variables",
+				"authentication required: either run 'pup auth login' for OAuth2 or set DD_API_KEY and DD_APP_KEY environment variables",
 			)
 		}
 
