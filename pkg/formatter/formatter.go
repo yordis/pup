@@ -125,6 +125,61 @@ func ToTable(data interface{}) (string, error) {
 	return buf.String(), nil
 }
 
+// flattenJSONAPIObject flattens JSON:API style objects with attributes and relationships
+func flattenJSONAPIObject(obj map[string]interface{}) map[string]interface{} {
+	flattened := make(map[string]interface{})
+
+	// Copy top-level fields (id, type, etc.)
+	for key, val := range obj {
+		if key != "attributes" && key != "relationships" {
+			flattened[key] = val
+		}
+	}
+
+	// Flatten attributes into top level
+	if attrs, hasAttrs := obj["attributes"].(map[string]interface{}); hasAttrs {
+		for key, val := range attrs {
+			flattened[key] = val
+		}
+	}
+
+	// Extract useful data from relationships
+	if rels, hasRels := obj["relationships"].(map[string]interface{}); hasRels {
+		for relName, relVal := range rels {
+			if relMap, ok := relVal.(map[string]interface{}); ok {
+				// Extract relationship data if present
+				if relData, hasData := relMap["data"]; hasData {
+					// Handle single relationship
+					if relDataMap, ok := relData.(map[string]interface{}); ok {
+						if id, hasID := relDataMap["id"]; hasID {
+							flattened[relName+"_id"] = id
+						}
+						if relType, hasType := relDataMap["type"]; hasType {
+							flattened[relName+"_type"] = relType
+						}
+					}
+					// Handle array of relationships
+					if relDataArray, ok := relData.([]interface{}); ok && len(relDataArray) > 0 {
+						ids := make([]string, 0, len(relDataArray))
+						for _, rel := range relDataArray {
+							if relMap, ok := rel.(map[string]interface{}); ok {
+								if id, ok := relMap["id"].(string); ok {
+									ids = append(ids, id)
+								}
+							}
+						}
+						if len(ids) > 0 {
+							flattened[relName+"_ids"] = strings.Join(ids, ",")
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return flattened
+}
+
 // formatSliceAsTable formats a slice of objects as a table
 func formatSliceAsTable(table *tablewriter.Table, data []interface{}) error {
 	if len(data) == 0 {
@@ -142,31 +197,42 @@ func formatSliceAsTable(table *tablewriter.Table, data []interface{}) error {
 		return nil
 	}
 
-	// Collect all unique keys across all items
+	// Flatten JSON:API style objects (with attributes and relationships)
+	flattenedData := make([]map[string]interface{}, len(data))
+	for i, item := range data {
+		if itemMap, ok := item.(map[string]interface{}); ok {
+			flattenedData[i] = flattenJSONAPIObject(itemMap)
+		} else {
+			flattenedData[i] = make(map[string]interface{})
+		}
+	}
+
+	// Collect all unique keys across all flattened items
 	headerSet := make(map[string]bool)
 	var headers []string
-	for _, item := range data {
-		if itemMap, ok := item.(map[string]interface{}); ok {
-			for key := range itemMap {
-				if !headerSet[key] {
-					headerSet[key] = true
-					headers = append(headers, key)
-				}
+	for _, itemMap := range flattenedData {
+		for key := range itemMap {
+			if !headerSet[key] {
+				headerSet[key] = true
+				headers = append(headers, key)
 			}
 		}
 	}
 
 	// Limit columns for readability - prioritize common fields
-	priorityFields := []string{"id", "name", "type", "status", "state", "overall_state", "created", "modified"}
+	priorityFields := []string{
+		"id", "title", "name", "type", "status", "state", "severity",
+		"created_at", "updated_at", "created", "modified",
+	}
 	finalHeaders := []string{}
 	for _, field := range priorityFields {
 		if headerSet[field] {
 			finalHeaders = append(finalHeaders, field)
 		}
 	}
-	// Add remaining fields (up to 10 total columns)
+	// Add remaining fields (up to 12 total columns for attributes-heavy responses)
 	for _, field := range headers {
-		if len(finalHeaders) >= 10 {
+		if len(finalHeaders) >= 12 {
 			break
 		}
 		found := false
@@ -188,13 +254,8 @@ func formatSliceAsTable(table *tablewriter.Table, data []interface{}) error {
 	}
 	table.Header(headerInts...)
 
-	// Add rows
-	for _, item := range data {
-		itemMap, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
+	// Add rows from flattened data
+	for _, itemMap := range flattenedData {
 		row := make([]interface{}, len(finalHeaders))
 		for i, header := range finalHeaders {
 			val := itemMap[header]

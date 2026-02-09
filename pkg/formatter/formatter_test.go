@@ -159,6 +159,49 @@ func TestToTable(t *testing.T) {
 			wantContains: []string{"id", "title", "status", "Single Incident", "active"},
 		},
 		{
+			name: "JSON:API format with attributes",
+			data: []interface{}{
+				map[string]interface{}{
+					"id":   "12345",
+					"type": "incident",
+					"attributes": map[string]interface{}{
+						"title":      "Database timeout",
+						"severity":   "SEV-2",
+						"status":     "active",
+						"created_at": "2024-01-15T10:30:00Z",
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"12345", "incident", "Database timeout", "SEV-2", "active",
+			},
+		},
+		{
+			name: "JSON:API format with relationships",
+			data: []interface{}{
+				map[string]interface{}{
+					"id":   "12345",
+					"type": "incident",
+					"attributes": map[string]interface{}{
+						"title": "API Error",
+					},
+					"relationships": map[string]interface{}{
+						"commander": map[string]interface{}{
+							"data": map[string]interface{}{
+								"id":   "user-123",
+								"type": "user",
+							},
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"12345", "incident", "API Error", "user-123",
+			},
+		},
+		{
 			name:         "nil data",
 			data:         nil,
 			wantError:    false,
