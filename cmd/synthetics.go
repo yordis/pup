@@ -92,7 +92,7 @@ func runSyntheticsTestsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list synthetic tests: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func runSyntheticsTestsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get synthetic test: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func runSyntheticsLocationsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list locations: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

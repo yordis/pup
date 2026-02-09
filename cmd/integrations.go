@@ -96,7 +96,7 @@ func runIntegrationsSlackList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list Slack channels: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func runIntegrationsWebhooksList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list webhooks: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

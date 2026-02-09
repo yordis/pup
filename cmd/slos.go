@@ -230,7 +230,7 @@ func runSlosList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list SLOs: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func runSlosGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get SLO: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func runSlosDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to delete SLO: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

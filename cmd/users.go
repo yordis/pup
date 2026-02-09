@@ -83,7 +83,7 @@ func runUsersList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list users: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func runUsersGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func runUsersRolesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list roles: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

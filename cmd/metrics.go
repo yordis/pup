@@ -523,7 +523,7 @@ func runMetricsQuery(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to query metrics: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -557,7 +557,7 @@ func runMetricsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list metrics: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -584,7 +584,7 @@ func runMetricsMetadataGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get metric metadata: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -635,7 +635,7 @@ func runMetricsMetadataUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to update metric metadata: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -730,7 +730,7 @@ func runMetricsSubmit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to submit metrics: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

@@ -236,7 +236,7 @@ func runIncidentsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list incidents: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func runIncidentsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get incident: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

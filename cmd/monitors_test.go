@@ -76,6 +76,9 @@ func TestMonitorsListCmd(t *testing.T) {
 	if flags.Lookup("tags") == nil {
 		t.Error("Missing --tags flag")
 	}
+	if flags.Lookup("limit") == nil {
+		t.Error("Missing --limit flag")
+	}
 }
 
 func TestMonitorsGetCmd(t *testing.T) {

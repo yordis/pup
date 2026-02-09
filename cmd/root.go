@@ -43,7 +43,8 @@ var rootCmd = &cobra.Command{
 	Short: "Pup - Datadog API CLI wrapper",
 	Long: `Pup is a Go-based command-line wrapper that provides easy interaction
 with Datadog APIs. It supports both API key and OAuth2 authentication.`,
-	Version: version.Version,
+	Version:      version.Version,
+	SilenceUsage: true, // Don't show usage on errors, only on --help or invalid args
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -142,6 +143,43 @@ func readConfirmation() (string, error) {
 		return scanner.Text(), nil
 	}
 	return "", scanner.Err()
+}
+
+// formatAPIError creates user-friendly error messages for API errors
+func formatAPIError(operation string, err error, response any) error {
+	type httpResponse interface {
+		StatusCode() int
+	}
+
+	if r, ok := response.(httpResponse); ok && r != nil {
+		statusCode := r.StatusCode()
+		baseMsg := fmt.Sprintf("failed to %s: %v (status: %d)", operation, err, statusCode)
+
+		switch {
+		case statusCode >= 500:
+			// 5xx Server errors
+			return fmt.Errorf("%s\n\nThe Datadog API is experiencing issues. Please try again later or check https://status.datadoghq.com/", baseMsg)
+		case statusCode == 429:
+			// Rate limiting
+			return fmt.Errorf("%s\n\nYou are being rate limited. Please wait a moment and try again.", baseMsg)
+		case statusCode == 403:
+			// Forbidden
+			return fmt.Errorf("%s\n\nAccess denied. Verify your API/App keys have the required permissions.", baseMsg)
+		case statusCode == 401:
+			// Unauthorized
+			return fmt.Errorf("%s\n\nAuthentication failed. Run 'pup auth login' or verify your DD_API_KEY and DD_APP_KEY.", baseMsg)
+		case statusCode == 404:
+			// Not found
+			return fmt.Errorf("%s\n\nResource not found. Verify the ID or check if the resource was deleted.", baseMsg)
+		case statusCode >= 400:
+			// Other 4xx client errors
+			return fmt.Errorf("%s\n\nInvalid request. Check your parameters and try again.", baseMsg)
+		default:
+			return fmt.Errorf("%s", baseMsg)
+		}
+	}
+
+	return fmt.Errorf("failed to %s: %v", operation, err)
 }
 
 // versionCmd represents the version command

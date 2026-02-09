@@ -212,7 +212,7 @@ func runDashboardsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list dashboards: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func runDashboardsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get dashboard: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -282,7 +282,7 @@ func runDashboardsDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to delete dashboard: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

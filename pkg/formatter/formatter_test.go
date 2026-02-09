@@ -85,46 +85,282 @@ func TestToJSON(t *testing.T) {
 }
 
 func TestToTable(t *testing.T) {
-	// ToTable currently delegates to ToJSON
-	data := map[string]interface{}{
-		"name": "test",
-		"value": 42,
+	tests := []struct {
+		name         string
+		data         interface{}
+		wantError    bool
+		wantContains []string
+	}{
+		{
+			name: "map data",
+			data: map[string]interface{}{
+				"name":  "test",
+				"value": 42,
+			},
+			wantError:    false,
+			wantContains: []string{"name", "test", "value", "42"},
+		},
+		{
+			name: "slice of maps",
+			data: []interface{}{
+				map[string]interface{}{
+					"id":   1,
+					"name": "test1",
+				},
+				map[string]interface{}{
+					"id":   2,
+					"name": "test2",
+				},
+			},
+			wantError:    false,
+			wantContains: []string{"ID", "NAME", "test1", "test2", "1", "2"},
+		},
+		{
+			name:         "empty slice",
+			data:         []interface{}{},
+			wantError:    false,
+			wantContains: []string{"No results found"},
+		},
+		{
+			name: "API response wrapper with data array",
+			data: map[string]interface{}{
+				"data": []interface{}{
+					map[string]interface{}{
+						"id":     1,
+						"title":  "Incident 1",
+						"status": "active",
+					},
+					map[string]interface{}{
+						"id":     2,
+						"title":  "Incident 2",
+						"status": "resolved",
+					},
+				},
+				"meta": map[string]interface{}{
+					"total": 2,
+				},
+			},
+			wantError:    false,
+			wantContains: []string{"ID", "TITLE", "STATUS", "Incident 1", "Incident 2", "active", "resolved"},
+		},
+		{
+			name: "API response wrapper with single data object",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":     1,
+					"title":  "Single Incident",
+					"status": "active",
+				},
+				"meta": map[string]interface{}{
+					"version": "1.0",
+				},
+			},
+			wantError:    false,
+			wantContains: []string{"id", "title", "status", "Single Incident", "active"},
+		},
+		{
+			name: "JSON:API format with attributes",
+			data: []interface{}{
+				map[string]interface{}{
+					"id":   "12345",
+					"type": "incident",
+					"attributes": map[string]interface{}{
+						"title":      "Database timeout",
+						"severity":   "SEV-2",
+						"status":     "active",
+						"created_at": "2024-01-15T10:30:00Z",
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"12345", "incident", "Database timeout", "SEV-2", "active",
+			},
+		},
+		{
+			name: "JSON:API format with relationships",
+			data: []interface{}{
+				map[string]interface{}{
+					"id":   "12345",
+					"type": "incident",
+					"attributes": map[string]interface{}{
+						"title": "API Error",
+					},
+					"relationships": map[string]interface{}{
+						"commander": map[string]interface{}{
+							"data": map[string]interface{}{
+								"id":   "user-123",
+								"type": "user",
+							},
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"12345", "incident", "API Error", "user-123",
+			},
+		},
+		{
+			name:         "nil data",
+			data:         nil,
+			wantError:    false,
+			wantContains: []string{},
+		},
+		{
+			name: "timeseries data with single series",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "0",
+					"type": "timeseries_response",
+					"attributes": map[string]interface{}{
+						"times": []interface{}{
+							float64(1704067200000),
+							float64(1704067220000),
+							float64(1704067240000),
+						},
+						"values": []interface{}{
+							[]interface{}{22.5, 23.1, 22.8},
+						},
+						"series": []interface{}{
+							map[string]interface{}{
+								"query_index": 0,
+								"group_tags":  []interface{}{},
+							},
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"TIMESTAMP", "SERIES 0",
+				"1704067200000", "22.5",
+				"1704067220000", "23.1",
+				"1704067240000", "22.8",
+			},
+		},
+		{
+			name: "timeseries data with multiple series",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "0",
+					"type": "timeseries_response",
+					"attributes": map[string]interface{}{
+						"times": []interface{}{
+							float64(1704067200000),
+							float64(1704067220000),
+						},
+						"values": []interface{}{
+							[]interface{}{10.5, 11.2},
+							[]interface{}{20.3, 21.1},
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"TIMESTAMP", "SERIES 0", "SERIES 1",
+				"1704067200000", "10.5", "20.3",
+				"1704067220000", "11.2", "21.1",
+			},
+		},
+		{
+			name: "timeseries data with times only (no values)",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"attributes": map[string]interface{}{
+						"times": []interface{}{
+							float64(1704067200000),
+							float64(1704067220000),
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"TIMESTAMP",
+				"1704067200000",
+				"1704067220000",
+			},
+		},
 	}
 
-	result, err := ToTable(data)
-	if err != nil {
-		t.Errorf("ToTable() unexpected error: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ToTable(tt.data)
 
-	if result == "" {
-		t.Error("ToTable() returned empty string")
-	}
+			if tt.wantError {
+				if err == nil {
+					t.Error("ToTable() expected error but got none")
+				}
+				return
+			}
 
-	// Should contain JSON since it delegates
-	if !strings.Contains(result, `"name"`) {
-		t.Error("ToTable() should contain data")
+			if err != nil {
+				t.Errorf("ToTable() unexpected error: %v", err)
+				return
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(result, want) {
+					t.Errorf("ToTable() result missing %q. Got: %s", want, result)
+				}
+			}
+		})
 	}
 }
 
 func TestToYAML(t *testing.T) {
-	// ToYAML currently delegates to ToJSON
-	data := map[string]interface{}{
-		"name": "test",
-		"value": 42,
+	tests := []struct {
+		name         string
+		data         interface{}
+		wantError    bool
+		wantContains []string
+	}{
+		{
+			name: "map data",
+			data: map[string]interface{}{
+				"name":  "test",
+				"value": 42,
+			},
+			wantError:    false,
+			wantContains: []string{"name:", "test", "value:", "42"},
+		},
+		{
+			name: "slice data",
+			data: []string{"a", "b", "c"},
+			wantError:    false,
+			wantContains: []string{"a", "b", "c"},
+		},
+		{
+			name:      "nil data",
+			data:      nil,
+			wantError: false,
+		},
 	}
 
-	result, err := ToYAML(data)
-	if err != nil {
-		t.Errorf("ToYAML() unexpected error: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ToYAML(tt.data)
 
-	if result == "" {
-		t.Error("ToYAML() returned empty string")
-	}
+			if tt.wantError {
+				if err == nil {
+					t.Error("ToYAML() expected error but got none")
+				}
+				return
+			}
 
-	// Should contain JSON since it delegates
-	if !strings.Contains(result, `"name"`) {
-		t.Error("ToYAML() should contain data")
+			if err != nil {
+				t.Errorf("ToYAML() unexpected error: %v", err)
+				return
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(result, want) {
+					t.Errorf("ToYAML() result missing %q. Got: %s", want, result)
+				}
+			}
+		})
 	}
 }
 

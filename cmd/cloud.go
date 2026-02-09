@@ -96,7 +96,7 @@ func runCloudAWSList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list AWS integrations: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func runCloudGCPList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list GCP integrations: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func runCloudAzureList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list Azure integrations: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

@@ -73,7 +73,7 @@ func runOnCallTeamsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list teams: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func runOnCallTeamsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get team: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

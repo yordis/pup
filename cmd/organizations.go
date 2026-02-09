@@ -66,7 +66,7 @@ func runOrganizationsGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get organization: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func runOrganizationsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list organizations: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

@@ -242,7 +242,7 @@ func runVulnerabilitiesSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to search vulnerabilities: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func runVulnerabilitiesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list vulnerabilities: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,7 @@ func runStaticAnalysisASTList(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func runStaticAnalysisASTGet(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -359,7 +359,7 @@ func runStaticAnalysisCustomRulesetsList(cmd *cobra.Command, args []string) erro
 		return fmt.Errorf("failed to list custom rulesets: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -383,7 +383,7 @@ func runStaticAnalysisCustomRulesetsGet(cmd *cobra.Command, args []string) error
 		return fmt.Errorf("failed to get custom ruleset: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -404,7 +404,7 @@ func runStaticAnalysisSCAList(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -424,7 +424,7 @@ func runStaticAnalysisSCAGet(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -446,7 +446,7 @@ func runStaticAnalysisCoverageList(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -466,7 +466,7 @@ func runStaticAnalysisCoverageGet(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

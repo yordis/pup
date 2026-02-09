@@ -166,7 +166,7 @@ func runCICDPipelinesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list pipelines: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func runCICDPipelinesGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get pipeline: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -248,7 +248,7 @@ func runCICDEventsSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to search events: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -302,7 +302,7 @@ func runCICDEventsAggregate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to aggregate events: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

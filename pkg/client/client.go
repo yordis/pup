@@ -46,7 +46,7 @@ func New(cfg *config.Config) (*Client, error) {
 	if ctx == nil {
 		if cfg.APIKey == "" || cfg.AppKey == "" {
 			return nil, fmt.Errorf(
-				"authentication required: either run 'fetch auth login' for OAuth2 or set DD_API_KEY and DD_APP_KEY environment variables",
+				"authentication required: either run 'pup auth login' for OAuth2 or set DD_API_KEY and DD_APP_KEY environment variables",
 			)
 		}
 
@@ -67,9 +67,20 @@ func New(cfg *config.Config) (*Client, error) {
 	// Configure the API client
 	configuration := datadog.NewConfiguration()
 	configuration.Host = fmt.Sprintf("api.%s", cfg.Site)
-	configuration.SetUnstableOperationEnabled("v2.QueryTimeseriesData", true)
-	configuration.SetUnstableOperationEnabled("v2.ListIncidents", true)
-	configuration.SetUnstableOperationEnabled("v2.GetIncident", true)
+
+	// Enable all unstable operations to suppress warnings
+	// These are beta/preview features that we want to use
+	unstableOps := []string{
+		"v2.QueryTimeseriesData",
+		"v2.ListIncidents",
+		"v2.GetIncident",
+		"v2.CreateIncident",
+		"v2.UpdateIncident",
+		"v2.DeleteIncident",
+	}
+	for _, op := range unstableOps {
+		configuration.SetUnstableOperationEnabled(op, true)
+	}
 
 	api := datadog.NewAPIClient(configuration)
 

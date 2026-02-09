@@ -62,7 +62,7 @@ func runObsPipelinesList(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func runObsPipelinesGet(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	output, err := formatter.ToJSON(result)
+	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

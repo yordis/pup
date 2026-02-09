@@ -100,7 +100,7 @@ func runSecurityRulesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list security rules: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func runSecurityRulesGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get security rule: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func runSecuritySignalsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list security signals: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func runSecurityFindingsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list security findings: %w", err)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}

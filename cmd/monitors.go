@@ -6,8 +6,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV1"
 	"github.com/DataDog/pup/pkg/formatter"
 	"github.com/spf13/cobra"
@@ -66,18 +64,23 @@ AUTHENTICATION:
 
 var monitorsListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all monitors",
-	Long: `List all monitors with optional filtering.
+	Short: "List monitors (limited results)",
+	Long: `List monitors with optional filtering (returns up to limit).
 
-This command retrieves all monitors from your Datadog account. You can filter
-the results by monitor name or tags to narrow down the list.
+This command retrieves monitors from your Datadog account. By default, it returns
+up to 200 monitors. To see more monitors, use filters to narrow down results
+or increase --limit (max 1000).
+
+IMPORTANT: This command returns a LIMITED number of results (default 200, max 1000).
+It does not return all monitors. Use filters to find specific monitors.
 
 FILTERS:
-  --name      Filter by monitor name (substring match)
-  --tags      Filter by tags (comma-separated, e.g., "env:prod,team:backend")
+  --name   Filter by monitor name (substring match)
+  --tags   Filter by tags (comma-separated, e.g., "env:prod,team:backend")
+  --limit  Maximum number of monitors to return (default: 200, max: 1000)
 
 EXAMPLES:
-  # List all monitors
+  # List up to 200 monitors (default)
   pup monitors list
 
   # Find monitors with "CPU" in the name
@@ -92,6 +95,17 @@ EXAMPLES:
   # Combine name and tag filters
   pup monitors list --name="Database" --tags="env:production"
 
+  # Get up to 1000 monitors (maximum allowed)
+  pup monitors list --limit=1000
+
+  # Get only 50 monitors
+  pup monitors list --limit=50
+
+WORKING WITH LARGE SETS:
+  This command returns a limited number of results. To work with large numbers of
+  monitors, use filters (--name, --tags) to narrow down the results to find
+  specific monitors rather than trying to retrieve all monitors.
+
 OUTPUT FIELDS:
   • id: Monitor ID
   • name: Monitor name
@@ -103,7 +117,7 @@ OUTPUT FIELDS:
   • overall_state: Current state (Alert, Warn, No Data, OK)
   • created: Creation timestamp
   • modified: Last modification timestamp`,
-	RunE:  runMonitorsList,
+	RunE: runMonitorsList,
 }
 
 var monitorsGetCmd = &cobra.Command{
@@ -148,8 +162,8 @@ OUTPUT INCLUDES:
   • created: Creation timestamp
   • creator: User who created the monitor
   • modified: Last modification timestamp`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runMonitorsGet,
+	Args: cobra.ExactArgs(1),
+	RunE: runMonitorsGet,
 }
 
 var monitorsDeleteCmd = &cobra.Command{
@@ -175,7 +189,7 @@ EXAMPLES:
   pup monitors delete 12345678 --yes
 
   # Delete monitor using global auto-approve
-  DD_AUTO_APPROVE=true fetch monitors delete 12345678
+  DD_AUTO_APPROVE=true pup monitors delete 12345678
 
 CONFIRMATION PROMPT:
   When run without --yes flag, you will see:
@@ -189,23 +203,25 @@ AUTOMATION:
   For scripts and CI/CD pipelines, use one of:
   • --yes flag: pup monitors delete 12345678 --yes
   • -y flag: pup monitors delete 12345678 -y
-  • Environment: DD_AUTO_APPROVE=true fetch monitors delete 12345678
+  • Environment: DD_AUTO_APPROVE=true pup monitors delete 12345678
 
 WARNING:
   Deletion is permanent and cannot be undone. The monitor and all its alert
   history will be removed from Datadog.`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runMonitorsDelete,
+	Args: cobra.ExactArgs(1),
+	RunE: runMonitorsDelete,
 }
 
 var (
-	monitorName string
-	monitorTags string
+	monitorName  string
+	monitorTags  string
+	monitorLimit int32
 )
 
 func init() {
 	monitorsListCmd.Flags().StringVar(&monitorName, "name", "", "Filter monitors by name")
 	monitorsListCmd.Flags().StringVar(&monitorTags, "tags", "", "Filter monitors by tags (comma-separated)")
+	monitorsListCmd.Flags().Int32Var(&monitorLimit, "limit", 200, "Maximum number of monitors to return (default: 200, max: 1000)")
 
 	monitorsCmd.AddCommand(monitorsListCmd)
 	monitorsCmd.AddCommand(monitorsGetCmd)
@@ -228,20 +244,55 @@ func runMonitorsList(cmd *cobra.Command, args []string) error {
 		opts.WithTags(monitorTags)
 	}
 
-	resp, r, err := api.ListMonitors(client.Context(), opts)
-	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to list monitors: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to list monitors: %w", err)
+	// Set limit for results (default 200, max 1000)
+	// Users can increase limit or use filters to find specific monitors
+	if monitorLimit > 1000 {
+		monitorLimit = 1000
+	}
+	if monitorLimit < 1 {
+		monitorLimit = 200
 	}
 
-	output, err := formatter.ToJSON(resp)
+	// Use limit as page size and request first page only
+	opts.WithPageSize(monitorLimit)
+	opts.WithPage(0)
+
+	resp, r, err := api.ListMonitors(client.Context(), opts)
+	if err != nil {
+		return formatAPIError("list monitors", err, r)
+	}
+
+	// Show count of monitors found (helpful for debugging filters)
+	if len(resp) == 0 {
+		printOutput("No monitors found matching the specified criteria.\n")
+		if monitorName != "" || monitorTags != "" {
+			printOutput("Try adjusting your filters (--name or --tags) or removing them to see all monitors.\n")
+		}
+		return nil
+	}
+
+	// Enforce limit - only return up to requested number of items
+	// API might return more items, so we truncate to the requested limit
+	originalCount := len(resp)
+	if len(resp) > int(monitorLimit) {
+		resp = resp[:monitorLimit]
+	}
+
+	// Convert to interface{} to ensure compatibility with formatter
+	var data interface{} = resp
+
+	output, err := formatter.FormatOutput(data, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
 
 	printOutput("%s\n", output)
+
+	// Show count info if we're truncating
+	if originalCount > int(monitorLimit) {
+		printOutput("\nShowing %d of %d monitors (use --limit to adjust)\n", monitorLimit, originalCount)
+	}
+
 	return nil
 }
 
@@ -256,13 +307,10 @@ func runMonitorsGet(cmd *cobra.Command, args []string) error {
 
 	resp, r, err := api.GetMonitor(client.Context(), parseInt64(monitorID))
 	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to get monitor: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to get monitor: %w", err)
+		return formatAPIError("get monitor", err, r)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
@@ -300,13 +348,10 @@ func runMonitorsDelete(cmd *cobra.Command, args []string) error {
 
 	resp, r, err := api.DeleteMonitor(client.Context(), parseInt64(monitorID))
 	if err != nil {
-		if r != nil {
-			return fmt.Errorf("failed to delete monitor: %w (status: %d)", err, r.StatusCode)
-		}
-		return fmt.Errorf("failed to delete monitor: %w", err)
+		return formatAPIError("delete monitor", err, r)
 	}
 
-	output, err := formatter.ToJSON(resp)
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
 	if err != nil {
 		return err
 	}
