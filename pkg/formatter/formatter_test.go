@@ -207,6 +207,82 @@ func TestToTable(t *testing.T) {
 			wantError:    false,
 			wantContains: []string{},
 		},
+		{
+			name: "timeseries data with single series",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "0",
+					"type": "timeseries_response",
+					"attributes": map[string]interface{}{
+						"times": []interface{}{
+							float64(1704067200000),
+							float64(1704067220000),
+							float64(1704067240000),
+						},
+						"values": []interface{}{
+							[]interface{}{22.5, 23.1, 22.8},
+						},
+						"series": []interface{}{
+							map[string]interface{}{
+								"query_index": 0,
+								"group_tags":  []interface{}{},
+							},
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"TIMESTAMP", "SERIES 0",
+				"1704067200000", "22.5",
+				"1704067220000", "23.1",
+				"1704067240000", "22.8",
+			},
+		},
+		{
+			name: "timeseries data with multiple series",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "0",
+					"type": "timeseries_response",
+					"attributes": map[string]interface{}{
+						"times": []interface{}{
+							float64(1704067200000),
+							float64(1704067220000),
+						},
+						"values": []interface{}{
+							[]interface{}{10.5, 11.2},
+							[]interface{}{20.3, 21.1},
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"TIMESTAMP", "SERIES 0", "SERIES 1",
+				"1704067200000", "10.5", "20.3",
+				"1704067220000", "11.2", "21.1",
+			},
+		},
+		{
+			name: "timeseries data with times only (no values)",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"attributes": map[string]interface{}{
+						"times": []interface{}{
+							float64(1704067200000),
+							float64(1704067220000),
+						},
+					},
+				},
+			},
+			wantError: false,
+			wantContains: []string{
+				"TIMESTAMP",
+				"1704067200000",
+				"1704067220000",
+			},
+		},
 	}
 
 	for _, tt := range tests {
