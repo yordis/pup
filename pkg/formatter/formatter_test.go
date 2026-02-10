@@ -543,3 +543,376 @@ func TestOutputFormat_Constants(t *testing.T) {
 		t.Errorf("FormatYAML = %q, want \"yaml\"", FormatYAML)
 	}
 }
+
+func TestFormatTableValue(t *testing.T) {
+	tests := []struct {
+		name string
+		val  interface{}
+		want string
+	}{
+		{
+			name: "nil value",
+			val:  nil,
+			want: "",
+		},
+		{
+			name: "string short",
+			val:  "hello",
+			want: "hello",
+		},
+		{
+			name: "string long truncated",
+			val:  "this is a very long string that should be truncated because it exceeds fifty characters",
+			want: "this is a very long string that should be trunc...",
+		},
+		{
+			name: "string exactly 50 chars",
+			val:  "12345678901234567890123456789012345678901234567890",
+			want: "12345678901234567890123456789012345678901234567890",
+		},
+		{
+			name: "empty array",
+			val:  []interface{}{},
+			want: "[]",
+		},
+		{
+			name: "array with 1 item",
+			val:  []interface{}{"item1"},
+			want: "[item1]",
+		},
+		{
+			name: "array with 3 items",
+			val:  []interface{}{"a", "b", "c"},
+			want: "[a, b, c]",
+		},
+		{
+			name: "array with more than 3 items",
+			val:  []interface{}{"a", "b", "c", "d", "e"},
+			want: "[5 items]",
+		},
+		{
+			name: "empty map",
+			val:  map[string]interface{}{},
+			want: "{0 fields}",
+		},
+		{
+			name: "map with fields",
+			val:  map[string]interface{}{"key1": "val1", "key2": "val2"},
+			want: "{2 fields}",
+		},
+		{
+			name: "float64 integer value",
+			val:  float64(42),
+			want: "42",
+		},
+		{
+			name: "float64 decimal value",
+			val:  float64(42.567),
+			want: "42.57",
+		},
+		{
+			name: "float64 negative integer",
+			val:  float64(-10),
+			want: "-10",
+		},
+		{
+			name: "float64 negative decimal",
+			val:  float64(-10.234),
+			want: "-10.23",
+		},
+		{
+			name: "bool true",
+			val:  true,
+			want: "true",
+		},
+		{
+			name: "bool false",
+			val:  false,
+			want: "false",
+		},
+		{
+			name: "int value",
+			val:  123,
+			want: "123",
+		},
+		{
+			name: "int64 value",
+			val:  int64(999),
+			want: "999",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := formatTableValue(tt.val)
+			if result != tt.want {
+				t.Errorf("formatTableValue(%v) = %q, want %q", tt.val, result, tt.want)
+			}
+		})
+	}
+}
+
+func TestToJSON_Error(t *testing.T) {
+	// Test with unmarshalable data (channels can't be marshaled to JSON)
+	ch := make(chan int)
+	_, err := ToJSON(ch)
+	if err == nil {
+		t.Error("ToJSON() with channel should return error")
+	}
+	if !strings.Contains(err.Error(), "failed to marshal JSON") {
+		t.Errorf("ToJSON() error should mention 'failed to marshal JSON', got: %v", err)
+	}
+}
+
+// Note: ToYAML error path is difficult to test because yaml.v3 panics on unmarshalable
+// types rather than returning errors. The error path in ToYAML would only be triggered
+// by internal yaml library errors which are hard to simulate in a unit test.
+
+func TestToTable_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name         string
+		data         interface{}
+		wantError    bool
+		wantContains []string
+	}{
+		{
+			name: "slice of non-maps",
+			data: []interface{}{"string1", "string2", "string3"},
+			wantError: false,
+			wantContains: []string{"string1", "string2", "string3"},
+		},
+		{
+			name: "API response wrapper with empty data array",
+			data: map[string]interface{}{
+				"data": []interface{}{},
+				"meta": map[string]interface{}{
+					"total": 0,
+				},
+			},
+			wantError:    false,
+			wantContains: []string{"No results found"},
+		},
+		{
+			name: "JSON:API single object with attributes but no timeseries",
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "123",
+					"type": "monitor",
+					"attributes": map[string]interface{}{
+						"name":   "CPU Monitor",
+						"status": "OK",
+					},
+				},
+			},
+			wantError:    false,
+			wantContains: []string{"id", "type", "name", "status", "123", "monitor", "CPU Monitor", "OK"},
+		},
+		{
+			name: "JSON:API with array relationships",
+			data: []interface{}{
+				map[string]interface{}{
+					"id":   "incident-1",
+					"type": "incident",
+					"attributes": map[string]interface{}{
+						"title": "Outage",
+					},
+					"relationships": map[string]interface{}{
+						"responders": map[string]interface{}{
+							"data": []interface{}{
+								map[string]interface{}{"id": "user-1", "type": "user"},
+								map[string]interface{}{"id": "user-2", "type": "user"},
+								map[string]interface{}{"id": "user-3", "type": "user"},
+							},
+						},
+					},
+				},
+			},
+			wantError:    false,
+			wantContains: []string{"incident-1", "Outage", "user-1,user-2,user-3"},
+		},
+		{
+			name: "unsupported type (fails at marshal)",
+			data: func() {},
+			wantError: true, // Functions can't be marshaled to JSON
+			wantContains: []string{},
+		},
+		{
+			name: "API wrapper with single non-map data",
+			data: map[string]interface{}{
+				"data": "single value",
+			},
+			wantError:    false,
+			wantContains: []string{"data", "single value"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ToTable(tt.data)
+
+			if tt.wantError {
+				if err == nil {
+					t.Error("ToTable() expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("ToTable() unexpected error: %v", err)
+				return
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(result, want) {
+					t.Errorf("ToTable() result missing %q. Got: %s", want, result)
+				}
+			}
+		})
+	}
+}
+
+func TestFlattenJSONAPIObject(t *testing.T) {
+	tests := []struct {
+		name string
+		obj  map[string]interface{}
+		want map[string]interface{}
+	}{
+		{
+			name: "simple object with attributes",
+			obj: map[string]interface{}{
+				"id":   "123",
+				"type": "incident",
+				"attributes": map[string]interface{}{
+					"title":  "Test Incident",
+					"status": "active",
+				},
+			},
+			want: map[string]interface{}{
+				"id":     "123",
+				"type":   "incident",
+				"title":  "Test Incident",
+				"status": "active",
+			},
+		},
+		{
+			name: "object with single relationship",
+			obj: map[string]interface{}{
+				"id":   "456",
+				"type": "alert",
+				"relationships": map[string]interface{}{
+					"owner": map[string]interface{}{
+						"data": map[string]interface{}{
+							"id":   "user-123",
+							"type": "user",
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"id":         "456",
+				"type":       "alert",
+				"owner_id":   "user-123",
+				"owner_type": "user",
+			},
+		},
+		{
+			name: "object with array relationship",
+			obj: map[string]interface{}{
+				"id":   "789",
+				"type": "incident",
+				"relationships": map[string]interface{}{
+					"responders": map[string]interface{}{
+						"data": []interface{}{
+							map[string]interface{}{"id": "user-1"},
+							map[string]interface{}{"id": "user-2"},
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"id":             "789",
+				"type":           "incident",
+				"responders_ids": "user-1,user-2",
+			},
+		},
+		{
+			name: "object with empty relationship array",
+			obj: map[string]interface{}{
+				"id":   "999",
+				"type": "monitor",
+				"relationships": map[string]interface{}{
+					"tags": map[string]interface{}{
+						"data": []interface{}{},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"id":   "999",
+				"type": "monitor",
+			},
+		},
+		{
+			name: "object with attributes and relationships",
+			obj: map[string]interface{}{
+				"id":   "combo",
+				"type": "service",
+				"attributes": map[string]interface{}{
+					"name":        "api-service",
+					"environment": "production",
+				},
+				"relationships": map[string]interface{}{
+					"team": map[string]interface{}{
+						"data": map[string]interface{}{
+							"id":   "team-42",
+							"type": "team",
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"id":          "combo",
+				"type":        "service",
+				"name":        "api-service",
+				"environment": "production",
+				"team_id":     "team-42",
+				"team_type":   "team",
+			},
+		},
+		{
+			name: "relationship without data field",
+			obj: map[string]interface{}{
+				"id":   "rel-test",
+				"type": "test",
+				"relationships": map[string]interface{}{
+					"link": map[string]interface{}{
+						"href": "http://example.com",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"id":   "rel-test",
+				"type": "test",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := flattenJSONAPIObject(tt.obj)
+
+			// Check all expected keys
+			for key, expectedVal := range tt.want {
+				if result[key] != expectedVal {
+					t.Errorf("flattenJSONAPIObject() key %q = %v, want %v", key, result[key], expectedVal)
+				}
+			}
+
+			// Check for unexpected keys
+			for key := range result {
+				if _, exists := tt.want[key]; !exists {
+					t.Errorf("flattenJSONAPIObject() unexpected key %q with value %v", key, result[key])
+				}
+			}
+		})
+	}
+}
