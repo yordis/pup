@@ -79,7 +79,6 @@ func New(cfg *config.Config) (*Client, error) {
 	// Enable all unstable operations to suppress warnings
 	// These are beta/preview features that we want to use
 	unstableOps := []string{
-		"v2.QueryTimeseriesData",
 		"v2.ListIncidents",
 		"v2.GetIncident",
 		"v2.CreateIncident",
