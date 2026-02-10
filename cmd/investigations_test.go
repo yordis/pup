@@ -69,7 +69,7 @@ func TestInvestigationsTriggerCmd(t *testing.T) {
 
 	// Check flags
 	flags := investigationsTriggerCmd.Flags()
-	requiredFlags := []string{"type", "monitor-id", "event-id", "event-ts", "tags", "description", "start-time", "end-time"}
+	requiredFlags := []string{"type", "monitor-id", "event-id", "event-ts"}
 	for _, name := range requiredFlags {
 		if flags.Lookup(name) == nil {
 			t.Errorf("Missing --%s flag", name)
@@ -200,100 +200,6 @@ func TestBuildTriggerRequestBody_MonitorAlert(t *testing.T) {
 	}
 }
 
-func TestBuildTriggerRequestBody_General(t *testing.T) {
-	origType := invTriggerType
-	origTags := invTags
-	origDesc := invDescription
-	origStart := invStartTime
-	origEnd := invEndTime
-	defer func() {
-		invTriggerType = origType
-		invTags = origTags
-		invDescription = origDesc
-		invStartTime = origStart
-		invEndTime = origEnd
-	}()
-
-	invTriggerType = "general"
-	invTags = "service:web-store,env:prod"
-	invDescription = "High error rate"
-	invStartTime = 1706918956000
-	invEndTime = 1706919956000
-
-	body, err := buildTriggerRequestBody()
-	if err != nil {
-		t.Fatalf("buildTriggerRequestBody() error = %v", err)
-	}
-
-	data := body["data"].(map[string]any)
-	attrs := data["attributes"].(map[string]any)
-	trigger := attrs["trigger"].(map[string]any)
-
-	if trigger["type"] != "general_investigation" {
-		t.Errorf("trigger.type = %v, want general_investigation", trigger["type"])
-	}
-
-	gi := trigger["general_investigation"].(map[string]any)
-
-	tags, ok := gi["tags"].([]string)
-	if !ok {
-		t.Fatal("tags is not []string")
-	}
-	if len(tags) != 2 || tags[0] != "service:web-store" || tags[1] != "env:prod" {
-		t.Errorf("tags = %v, want [service:web-store env:prod]", tags)
-	}
-
-	if gi["description"] != "High error rate" {
-		t.Errorf("description = %v, want 'High error rate'", gi["description"])
-	}
-
-	if gi["start_time"] != int64(1706918956000) {
-		t.Errorf("start_time = %v, want 1706918956000", gi["start_time"])
-	}
-
-	if gi["end_time"] != int64(1706919956000) {
-		t.Errorf("end_time = %v, want 1706919956000", gi["end_time"])
-	}
-}
-
-func TestBuildTriggerRequestBody_GeneralNoOptionalTimes(t *testing.T) {
-	origType := invTriggerType
-	origTags := invTags
-	origDesc := invDescription
-	origStart := invStartTime
-	origEnd := invEndTime
-	defer func() {
-		invTriggerType = origType
-		invTags = origTags
-		invDescription = origDesc
-		invStartTime = origStart
-		invEndTime = origEnd
-	}()
-
-	invTriggerType = "general"
-	invTags = "service:web-store"
-	invDescription = "Something is wrong"
-	invStartTime = 0
-	invEndTime = 0
-
-	body, err := buildTriggerRequestBody()
-	if err != nil {
-		t.Fatalf("buildTriggerRequestBody() error = %v", err)
-	}
-
-	data := body["data"].(map[string]any)
-	attrs := data["attributes"].(map[string]any)
-	trigger := attrs["trigger"].(map[string]any)
-	gi := trigger["general_investigation"].(map[string]any)
-
-	if _, exists := gi["start_time"]; exists {
-		t.Error("start_time should not be present when zero")
-	}
-	if _, exists := gi["end_time"]; exists {
-		t.Error("end_time should not be present when zero")
-	}
-}
-
 func TestBuildTriggerRequestBody_Validation(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -301,8 +207,6 @@ func TestBuildTriggerRequestBody_Validation(t *testing.T) {
 		monitorID   int64
 		eventID     string
 		eventTS     int64
-		tags        string
-		description string
 		wantErr     string
 	}{
 		{
@@ -330,23 +234,9 @@ func TestBuildTriggerRequestBody_Validation(t *testing.T) {
 			wantErr:     "--event-ts is required",
 		},
 		{
-			name:        "general missing tags",
-			triggerType: "general",
-			tags:        "",
-			description: "Some issue",
-			wantErr:     "--tags is required",
-		},
-		{
-			name:        "general missing description",
-			triggerType: "general",
-			tags:        "service:web",
-			description: "",
-			wantErr:     "--description is required",
-		},
-		{
 			name:        "invalid type",
 			triggerType: "invalid",
-			wantErr:     "invalid investigation type",
+			wantErr:     "must be monitor_alert",
 		},
 	}
 
@@ -356,23 +246,17 @@ func TestBuildTriggerRequestBody_Validation(t *testing.T) {
 			origMonitorID := invMonitorID
 			origEventID := invEventID
 			origEventTS := invEventTS
-			origTags := invTags
-			origDesc := invDescription
 			defer func() {
 				invTriggerType = origType
 				invMonitorID = origMonitorID
 				invEventID = origEventID
 				invEventTS = origEventTS
-				invTags = origTags
-				invDescription = origDesc
 			}()
 
 			invTriggerType = tt.triggerType
 			invMonitorID = tt.monitorID
 			invEventID = tt.eventID
 			invEventTS = tt.eventTS
-			invTags = tt.tags
-			invDescription = tt.description
 
 			_, err := buildTriggerRequestBody()
 			if err == nil {
