@@ -157,15 +157,7 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 ## Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/DataDog/pup.git
-cd pup
-
-# Build
-go build -o pup .
-
-# Install (optional)
-go install
+go install github.com/DataDog/pup@latest
 ```
 
 ## Authentication
