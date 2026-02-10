@@ -122,7 +122,7 @@ func runInvestigationsTrigger(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to trigger investigation: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result, err := readRawResponse(resp)
 	if err != nil {
@@ -148,7 +148,7 @@ func runInvestigationsGet(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get investigation: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result, err := readRawResponse(resp)
 	if err != nil {
@@ -178,7 +178,7 @@ func runInvestigationsList(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to list investigations: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result, err := readRawResponse(resp)
 	if err != nil {
