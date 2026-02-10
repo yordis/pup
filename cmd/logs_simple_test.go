@@ -25,6 +25,61 @@ func TestLogsCmd(t *testing.T) {
 	}
 }
 
+func TestParseTimeString(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		check   func(int64) bool
+	}{
+		{
+			name:  "relative time - 1 hour",
+			input: "1h",
+			check: func(ts int64) bool {
+				// Should be roughly 1 hour ago in milliseconds
+				// Timestamps should be 13 digits for milliseconds since epoch
+				return ts > 1000000000000 && ts < 9999999999999
+			},
+		},
+		{
+			name:  "relative time - 7 days",
+			input: "7d",
+			check: func(ts int64) bool {
+				// Should be roughly 7 days ago in milliseconds
+				return ts > 1000000000000 && ts < 9999999999999
+			},
+		},
+		{
+			name:  "now",
+			input: "now",
+			check: func(ts int64) bool {
+				// Should be current time in milliseconds (13 digits)
+				return ts > 1000000000000 && ts < 9999999999999
+			},
+		},
+		{
+			name:    "invalid format",
+			input:   "invalid",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseTimeString(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseTimeString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.check != nil && !tt.check(got) {
+				t.Errorf("parseTimeString() = %d, validation failed", got)
+			}
+		})
+	}
+}
+
 // Helper function to setup logs test client
 func setupLogsTestClient(t *testing.T) func() {
 	t.Helper()
