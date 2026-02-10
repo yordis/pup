@@ -207,8 +207,25 @@ var testCmd = &cobra.Command{
 
 		fmt.Println("Configuration is valid:")
 		fmt.Printf("  Site: %s\n", cfg.Site)
-		fmt.Printf("  API Key: %s...%s\n", cfg.APIKey[:8], cfg.APIKey[len(cfg.APIKey)-4:])
-		fmt.Printf("  App Key: %s...%s\n", cfg.AppKey[:8], cfg.AppKey[len(cfg.AppKey)-4:])
+
+		// Display API key info if present
+		if len(cfg.APIKey) >= 12 {
+			fmt.Printf("  API Key: %s...%s\n", cfg.APIKey[:8], cfg.APIKey[len(cfg.APIKey)-4:])
+		} else if len(cfg.APIKey) > 0 {
+			fmt.Printf("  API Key: %s (too short - may be invalid)\n", cfg.APIKey)
+		} else {
+			fmt.Println("  API Key: (not set - using OAuth2 or will prompt)")
+		}
+
+		// Display App key info if present
+		if len(cfg.AppKey) >= 12 {
+			fmt.Printf("  App Key: %s...%s\n", cfg.AppKey[:8], cfg.AppKey[len(cfg.AppKey)-4:])
+		} else if len(cfg.AppKey) > 0 {
+			fmt.Printf("  App Key: %s (too short - may be invalid)\n", cfg.AppKey)
+		} else {
+			fmt.Println("  App Key: (not set - using OAuth2 or will prompt)")
+		}
+
 		fmt.Println("\nConnection test successful!")
 
 		return nil
