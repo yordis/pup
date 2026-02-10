@@ -4,18 +4,34 @@ on:
   pull_request:
     branches:
       - '**'
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write  # Needed to commit coverage badge on main branch
   pull-requests: write
+  security-events: write  # Needed for Datadog SAST results
+
+env:
+  DD_ENV: ci
+  DD_SERVICE: pup
 
 jobs:
   test:
     name: Test and Coverage
     runs-on: ubuntu-latest
+    env:
+      DD_API_KEY: ${{ secrets.DD_API_KEY }}
+      DD_SITE: ${{ secrets.DD_SITE || 'datadoghq.com' }}
+      DD_CIVISIBILITY_AGENTLESS_ENABLED: true
+      DD_CIVISIBILITY_GIT_UPLOAD_ENABLED: true
+      DD_CIVISIBILITY_ENABLED: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Fetch full git history for Datadog CI Visibility
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -23,16 +39,34 @@ jobs:
           go-version: '1.25'
           cache: true
 
+      - name: Install Datadog CI tools
+        run: |
+          # Install orchestrion for Go test instrumentation
+          go install github.com/DataDog/orchestrion@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+          # Install datadog-ci CLI for coverage upload
+          npm install -g @datadog/datadog-ci
+
       - name: Install bc for floating-point math
         run: sudo apt-get update && sudo apt-get install -y bc
 
       - name: Run tests with coverage
         run: |
           # Run tests on all packages with race detection
-          go test -v -race ./...
-          # Calculate coverage only for pkg/ (cmd/ is CLI code with lower test coverage)
-          # Use -count=1 to disable test caching and get accurate coverage
-          go test -count=1 -coverprofile=coverage.out -covermode=atomic ./pkg/...
+          # Use orchestrion to instrument tests for Datadog CI Visibility
+          if [ -n "$DD_API_KEY" ]; then
+            echo "Running tests with Datadog CI Visibility enabled"
+            orchestrion go test -v -race ./...
+            # Calculate coverage with orchestrion instrumentation
+            orchestrion go test -count=1 -coverprofile=coverage.out -covermode=atomic ./pkg/...
+          else
+            echo "Running tests without Datadog CI Visibility (DD_API_KEY not set)"
+            go test -v -race ./...
+            go test -count=1 -coverprofile=coverage.out -covermode=atomic ./pkg/...
+          fi
+
+          # Generate HTML coverage report
           go tool cover -html=coverage.out -o coverage.html
 
       - name: Calculate coverage
@@ -55,6 +89,15 @@ jobs:
           echo "## Summary" >> coverage_report.txt
           echo "" >> coverage_report.txt
           go tool cover -func=coverage.out | tail -1 >> coverage_report.txt
+
+      - name: Upload coverage to Datadog
+        if: env.DD_API_KEY != ''
+        env:
+          DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ secrets.DD_SITE || 'datadoghq.com' }}
+        run: |
+          # Upload coverage reports to Datadog
+          datadog-ci coverage upload --format=go-cover coverage.out
 
       - name: Check coverage threshold
         run: |
@@ -261,3 +304,33 @@ jobs:
 
       - name: Verify binary
         run: ./pup --version
+
+  sast:
+    name: Datadog Static Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    env:
+      DD_API_KEY: ${{ secrets.DD_API_KEY }}
+      DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+      DD_SITE: ${{ secrets.DD_SITE || 'datadoghq.com' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Full history for better SAST analysis
+
+      - name: Run Datadog Static Analysis
+        if: env.DD_API_KEY != ''
+        run: |
+          # Install datadog-ci if not already installed
+          npm install -g @datadog/datadog-ci
+
+          # Run static analysis
+          # This will analyze the code for security vulnerabilities, code quality issues, etc.
+          datadog-ci sast scan --service=${{ env.DD_SERVICE }} --env=${{ env.DD_ENV }}
+
+      - name: SAST disabled notice
+        if: env.DD_API_KEY == ''
+        run: |
+          echo "⚠️  Datadog Static Analysis skipped: DD_API_KEY not configured"
+          echo "To enable SAST, add DD_API_KEY and DD_APP_KEY as repository secrets"
