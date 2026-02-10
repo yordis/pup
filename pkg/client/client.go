@@ -8,6 +8,9 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"time"
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
 	"github.com/DataDog/pup/pkg/auth/storage"
@@ -114,4 +117,38 @@ func (c *Client) API() *datadog.APIClient {
 // Config returns the client configuration
 func (c *Client) Config() *config.Config {
 	return c.config
+}
+
+// RawRequest makes an HTTP request with proper authentication headers.
+// This is used for APIs not covered by the typed datadog-api-client-go library.
+func (c *Client) RawRequest(method, path string, body io.Reader) (*http.Response, error) {
+	url := fmt.Sprintf("https://api.%s%s", c.config.Site, path)
+
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	// Set auth headers from context
+	if token, ok := c.ctx.Value(datadog.ContextAccessToken).(string); ok && token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	} else if apiKeys, ok := c.ctx.Value(datadog.ContextAPIKeys).(map[string]datadog.APIKey); ok {
+		if key, exists := apiKeys["apiKeyAuth"]; exists {
+			req.Header.Set("DD-API-KEY", key.Key)
+		}
+		if key, exists := apiKeys["appKeyAuth"]; exists {
+			req.Header.Set("DD-APPLICATION-KEY", key.Key)
+		}
+	}
+
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("executing request: %w", err)
+	}
+
+	return resp, nil
 }
