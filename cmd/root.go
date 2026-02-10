@@ -72,7 +72,6 @@ func init() {
 	rootCmd.AddCommand(incidentsCmd)
 	rootCmd.AddCommand(rumCmd)
 	rootCmd.AddCommand(cicdCmd)
-	rootCmd.AddCommand(vulnerabilitiesCmd)
 	rootCmd.AddCommand(staticAnalysisCmd)
 	rootCmd.AddCommand(downtimeCmd)
 	rootCmd.AddCommand(tagsCmd)
@@ -101,6 +100,7 @@ func init() {
 	rootCmd.AddCommand(investigationsCmd)
 	rootCmd.AddCommand(productAnalyticsCmd)
 	rootCmd.AddCommand(casesCmd)
+	rootCmd.AddCommand(apmCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
