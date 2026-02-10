@@ -9,6 +9,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/DataDog/pup/pkg/config"
 )
 
 func TestRootCmd_SilenceUsage(t *testing.T) {
@@ -227,5 +229,92 @@ func TestFormatAPIError_AllStatusCodes(t *testing.T) {
 				t.Errorf("formatAPIError() should contain operation name, got: %q", errMsg)
 			}
 		})
+	}
+}
+
+func TestTestCmd_EmptyKeys(t *testing.T) {
+	// Save original config
+	origCfg := cfg
+
+	// Set up test config with empty keys
+	cfg = &config.Config{
+		Site:   "datadoghq.com",
+		APIKey: "",
+		AppKey: "",
+	}
+	defer func() { cfg = origCfg }()
+
+	// Execute test command
+	err := testCmd.RunE(testCmd, []string{})
+
+	// Should not panic and should succeed
+	if err != nil {
+		t.Errorf("testCmd.RunE() with empty keys failed: %v", err)
+	}
+}
+
+func TestTestCmd_ShortKeys(t *testing.T) {
+	// Save original config
+	origCfg := cfg
+
+	// Set up test config with short keys
+	cfg = &config.Config{
+		Site:   "datadoghq.com",
+		APIKey: "short",
+		AppKey: "key",
+	}
+	defer func() { cfg = origCfg }()
+
+	// Execute test command
+	err := testCmd.RunE(testCmd, []string{})
+
+	// Should not panic and should succeed
+	if err != nil {
+		t.Errorf("testCmd.RunE() with short keys failed: %v", err)
+	}
+}
+
+func TestTestCmd_ValidKeys(t *testing.T) {
+	// Save original config
+	origCfg := cfg
+
+	// Set up test config with valid length keys
+	cfg = &config.Config{
+		Site:   "datadoghq.com",
+		APIKey: "1234567890abcdef1234567890abcdef",
+		AppKey: "abcdefghijklmnopqrstuvwxyz123456",
+	}
+	defer func() { cfg = origCfg }()
+
+	// Execute test command
+	err := testCmd.RunE(testCmd, []string{})
+
+	// Should not panic and should succeed
+	if err != nil {
+		t.Errorf("testCmd.RunE() with valid keys failed: %v", err)
+	}
+}
+
+func TestTestCmd_InvalidSite(t *testing.T) {
+	// Save original config
+	origCfg := cfg
+
+	// Set up test config with empty site
+	cfg = &config.Config{
+		Site:   "",
+		APIKey: "1234567890abcdef",
+		AppKey: "abcdefghijklmnop",
+	}
+	defer func() { cfg = origCfg }()
+
+	// Execute test command
+	err := testCmd.RunE(testCmd, []string{})
+
+	// Should fail validation
+	if err == nil {
+		t.Error("testCmd.RunE() with empty site should fail")
+	}
+	if !strings.Contains(err.Error(), "DD_SITE") {
+		t.Errorf("testCmd.RunE() error should mention DD_SITE, got: %v", err)
 	}
 }
