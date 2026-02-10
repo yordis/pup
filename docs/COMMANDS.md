@@ -23,7 +23,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | metrics | query, list, get, search | cmd/metrics.go | ✅ |
 | logs | search, list, aggregate | cmd/logs.go | ✅ |
 | traces | search, list, aggregate | cmd/traces.go | ✅ |
-| monitors | list, get, delete | cmd/monitors.go | ✅ |
+| monitors | list, get, delete, search | cmd/monitors.go | ✅ |
 | dashboards | list, get, delete, url | cmd/dashboards.go | ✅ |
 | slos | list, get, create, update, delete, corrections | cmd/slos.go | ✅ |
 | incidents | list, get, attachments | cmd/incidents.go | ✅ |
