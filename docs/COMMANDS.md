@@ -1,6 +1,6 @@
 # Command Reference
 
-Complete reference for all 36 command groups in Pup.
+Complete reference for all 37 command groups in Pup.
 
 ## Command Pattern
 
@@ -56,8 +56,9 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | cloud | aws, gcp, azure (list) | cmd/cloud.go | ✅ |
 | integrations | slack, pagerduty, webhooks | cmd/integrations.go | ✅ |
 | misc | ip-ranges, status | cmd/miscellaneous.go | ✅ |
+| cases | create, get, search, assign, archive, projects | cmd/cases.go | ✅ |
 
-**Summary:** 33 working, 0 API-blocked, 3 placeholders
+**Summary:** 34 working, 0 API-blocked, 3 placeholders
 
 **Note:** RUM command (cmd/rum.go) is fully operational. Apps and sessions work completely. Metrics and retention-filters support list/get operations (create/update/delete operations pending due to complex API type structures).
 
@@ -140,8 +141,9 @@ pup infrastructure hosts list
 - **service-catalog** - Service registry (list, get)
 
 ### Operations & Incident Response
-- **incidents** - Incident management (list, get, create, update)
+- **incidents** - Incident management (list, get, attachments)
 - **on-call** - Team management (create, update, delete teams; manage memberships with roles)
+- **cases** - Case management (create, search, assign, archive, projects)
 
 ### Organization & Access
 - **users** - User management (list, get, roles)

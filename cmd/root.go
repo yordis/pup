@@ -100,6 +100,7 @@ func init() {
 	rootCmd.AddCommand(miscCmd)
 	rootCmd.AddCommand(investigationsCmd)
 	rootCmd.AddCommand(productAnalyticsCmd)
+	rootCmd.AddCommand(casesCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
