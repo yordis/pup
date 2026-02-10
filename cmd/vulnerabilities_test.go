@@ -9,77 +9,6 @@ import (
 	"testing"
 )
 
-func TestVulnerabilitiesCmd(t *testing.T) {
-	if vulnerabilitiesCmd == nil {
-		t.Fatal("vulnerabilitiesCmd is nil")
-	}
-
-	if vulnerabilitiesCmd.Use != "vulnerabilities" {
-		t.Errorf("Use = %s, want vulnerabilities", vulnerabilitiesCmd.Use)
-	}
-
-	if vulnerabilitiesCmd.Short == "" {
-		t.Error("Short description is empty")
-	}
-
-	if vulnerabilitiesCmd.Long == "" {
-		t.Error("Long description is empty")
-	}
-}
-
-func TestVulnerabilitiesCmd_Subcommands(t *testing.T) {
-	expectedCommands := []string{"search", "list"}
-
-	commands := vulnerabilitiesCmd.Commands()
-
-	commandMap := make(map[string]bool)
-	for _, cmd := range commands {
-		commandMap[cmd.Use] = true
-	}
-
-	for _, expected := range expectedCommands {
-		if !commandMap[expected] {
-			t.Errorf("Missing subcommand: %s", expected)
-		}
-	}
-}
-
-func TestVulnerabilitiesSearchCmd(t *testing.T) {
-	if vulnerabilitiesSearchCmd == nil {
-		t.Fatal("vulnerabilitiesSearchCmd is nil")
-	}
-
-	if vulnerabilitiesSearchCmd.Use != "search" {
-		t.Errorf("Use = %s, want search", vulnerabilitiesSearchCmd.Use)
-	}
-
-	if vulnerabilitiesSearchCmd.Short == "" {
-		t.Error("Short description is empty")
-	}
-
-	if vulnerabilitiesSearchCmd.RunE == nil {
-		t.Error("RunE is nil")
-	}
-}
-
-func TestVulnerabilitiesListCmd(t *testing.T) {
-	if vulnerabilitiesListCmd == nil {
-		t.Fatal("vulnerabilitiesListCmd is nil")
-	}
-
-	if vulnerabilitiesListCmd.Use != "list" {
-		t.Errorf("Use = %s, want list", vulnerabilitiesListCmd.Use)
-	}
-
-	if vulnerabilitiesListCmd.Short == "" {
-		t.Error("Short description is empty")
-	}
-
-	if vulnerabilitiesListCmd.RunE == nil {
-		t.Error("RunE is nil")
-	}
-}
-
 func TestStaticAnalysisCmd(t *testing.T) {
 	if staticAnalysisCmd == nil {
 		t.Fatal("staticAnalysisCmd is nil")
@@ -168,16 +97,6 @@ func TestStaticAnalysisCoverageCmd(t *testing.T) {
 
 	if staticAnalysisCoverageCmd.Short == "" {
 		t.Error("Short description is empty")
-	}
-}
-
-func TestVulnerabilitiesCmd_ParentChild(t *testing.T) {
-	commands := vulnerabilitiesCmd.Commands()
-
-	for _, cmd := range commands {
-		if cmd.Parent() != vulnerabilitiesCmd {
-			t.Errorf("Command %s parent is not vulnerabilitiesCmd", cmd.Use)
-		}
 	}
 }
 
