@@ -72,7 +72,6 @@ func init() {
 	rootCmd.AddCommand(incidentsCmd)
 	rootCmd.AddCommand(rumCmd)
 	rootCmd.AddCommand(cicdCmd)
-	rootCmd.AddCommand(vulnerabilitiesCmd)
 	rootCmd.AddCommand(staticAnalysisCmd)
 	rootCmd.AddCommand(downtimeCmd)
 	rootCmd.AddCommand(tagsCmd)
