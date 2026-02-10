@@ -96,6 +96,7 @@ func init() {
 	rootCmd.AddCommand(cloudCmd)
 	rootCmd.AddCommand(integrationsCmd)
 	rootCmd.AddCommand(miscCmd)
+	rootCmd.AddCommand(investigationsCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
