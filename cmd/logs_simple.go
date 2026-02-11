@@ -54,8 +54,12 @@ LOG QUERY SYNTAX:
 
 TIME RANGES:
   Supported time formats:
-  • Relative: 1h, 30m, 7d, 1w (hour, minute, day, week)
+  • Relative short: 1h, 30m, 7d, 5s, 1w
+  • Relative long: 5min, 5minutes, 2hr, 2hours, 3days, 1week
+  • With spaces: "5 minutes", "2 hours"
+  • With minus: -5m, -2h (treated same as 5m, 2h)
   • Absolute: Unix timestamp in milliseconds
+  • RFC3339: 2024-01-01T00:00:00Z
   • now: Current time
 
 EXAMPLES:
@@ -557,8 +561,8 @@ var (
 func init() {
 	// Search command flags (v1)
 	logsSearchCmd.Flags().StringVar(&logsQuery, "query", "", "Search query (required)")
-	logsSearchCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 30m, 7d, RFC3339, or Unix timestamp")
-	logsSearchCmd.Flags().StringVar(&logsTo, "to", "now", "End time: 1h, 30m, now, RFC3339, or Unix timestamp")
+	logsSearchCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
+	logsSearchCmd.Flags().StringVar(&logsTo, "to", "now", "End time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsSearchCmd.Flags().IntVar(&logsLimit, "limit", 50, "Maximum number of logs (1-1000)")
 	logsSearchCmd.Flags().StringVar(&logsSort, "sort", "desc", "Sort order: asc or desc")
 	logsSearchCmd.Flags().StringVar(&logsIndex, "index", "", "Comma-separated log indexes")
@@ -569,7 +573,7 @@ func init() {
 
 	// List command flags (v2)
 	logsListCmd.Flags().StringVar(&logsQuery, "query", "*", "Search query")
-	logsListCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 30m, 7d, RFC3339, or Unix timestamp")
+	logsListCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsListCmd.Flags().StringVar(&logsTo, "to", "now", "End time")
 	logsListCmd.Flags().IntVar(&logsLimit, "limit", 10, "Number of logs")
 	logsListCmd.Flags().StringVar(&logsSort, "sort", "-timestamp", "Sort order")
@@ -577,7 +581,7 @@ func init() {
 
 	// Query command flags (v2)
 	logsQueryCmd.Flags().StringVar(&logsQuery, "query", "", "Log query (required)")
-	logsQueryCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 30m, 7d, RFC3339, or Unix timestamp")
+	logsQueryCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsQueryCmd.Flags().StringVar(&logsTo, "to", "now", "End time")
 	logsQueryCmd.Flags().IntVar(&logsLimit, "limit", 50, "Maximum results")
 	logsQueryCmd.Flags().StringVar(&logsSort, "sort", "-timestamp", "Sort order")
@@ -589,7 +593,7 @@ func init() {
 
 	// Aggregate command flags (v2)
 	logsAggregateCmd.Flags().StringVar(&logsQuery, "query", "", "Log query (required)")
-	logsAggregateCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 30m, 7d, RFC3339, or Unix timestamp")
+	logsAggregateCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsAggregateCmd.Flags().StringVar(&logsTo, "to", "now", "End time")
 	logsAggregateCmd.Flags().StringVar(&logsCompute, "compute", "count", "Metric to compute")
 	logsAggregateCmd.Flags().StringVar(&logsGroupBy, "group-by", "", "Field to group by")
