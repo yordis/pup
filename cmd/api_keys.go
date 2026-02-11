@@ -97,7 +97,8 @@ func init() {
 }
 
 func runAPIKeysList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// API Keys management doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("GET", "/api/v2/api_keys")
 	if err != nil {
 		return err
 	}
@@ -120,7 +121,8 @@ func runAPIKeysList(cmd *cobra.Command, args []string) error {
 }
 
 func runAPIKeysGet(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// API Keys management doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("GET", "/api/v2/api_keys/")
 	if err != nil {
 		return err
 	}
@@ -144,7 +146,8 @@ func runAPIKeysGet(cmd *cobra.Command, args []string) error {
 }
 
 func runAPIKeysCreate(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// API Keys management doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("POST", "/api/v2/api_keys")
 	if err != nil {
 		return err
 	}
@@ -176,7 +179,8 @@ func runAPIKeysCreate(cmd *cobra.Command, args []string) error {
 }
 
 func runAPIKeysDelete(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// API Keys management doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("DELETE", "/api/v2/api_keys/")
 	if err != nil {
 		return err
 	}
