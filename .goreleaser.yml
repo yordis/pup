@@ -166,7 +166,7 @@ brews:
     homepage: https://github.com/DataDog/pup
     description: "Datadog API CLI - OAuth2 + API key authentication for Datadog APIs"
     license: Apache-2.0
-    folder: Formula
+    directory: Formula
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
