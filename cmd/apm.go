@@ -561,13 +561,15 @@ func runAPMServicesList(cmd *cobra.Command, args []string) error {
 	path := fmt.Sprintf("/api/v2/apm/services?%s", params.Encode())
 	resp, err := client.RawRequest("GET", path, nil)
 	if err != nil {
-		return fmt.Errorf("failed to list APM services: %w", err)
+		return fmt.Errorf("failed to list APM services: %w\n\nRequest: GET %s\nParameters: start=%d, end=%d, filter[env]=%s",
+			err, path, startTime, endTime, envFilter)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	result, err := readRawResponse(resp)
 	if err != nil {
-		return fmt.Errorf("failed to list APM services: %w", err)
+		return fmt.Errorf("failed to list APM services: %w\n\nRequest: GET %s\nParameters: start=%d, end=%d, filter[env]=%s",
+			err, path, startTime, endTime, envFilter)
 	}
 
 	output, err := formatter.FormatOutput(result, formatter.OutputFormat(outputFormat))
