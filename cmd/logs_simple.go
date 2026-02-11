@@ -8,6 +8,8 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
@@ -593,10 +595,10 @@ func init() {
 
 // Helper functions
 
-// parseTimeString converts relative or absolute time to Unix timestamp in milliseconds
+// parseTimeString converts relative or absolute time to Unix timestamp in milliseconds (UTC)
 func parseTimeString(timeStr string) (int64, error) {
 	if timeStr == "now" {
-		return time.Now().UnixMilli(), nil
+		return time.Now().UTC().UnixMilli(), nil
 	}
 
 	// Try parsing as relative time (1h, 30m, 7d)
@@ -621,7 +623,7 @@ func parseTimeString(timeStr string) (int64, error) {
 			default:
 				return 0, fmt.Errorf("invalid time unit: %s (use s, m, h, d, or w)", unit)
 			}
-			return time.Now().Add(-duration).UnixMilli(), nil
+			return time.Now().UTC().Add(-duration).UnixMilli(), nil
 		}
 	}
 
@@ -632,6 +634,76 @@ func parseTimeString(timeStr string) (int64, error) {
 	}
 
 	return 0, fmt.Errorf("invalid time format: %s (use relative like '1h' or Unix timestamp)", timeStr)
+}
+
+// parseComputeString parses compute strings like "count", "avg(@duration)", "percentile(@duration, 99)"
+// and returns the aggregation function and metric field
+func parseComputeString(compute string) (aggregation string, metric string, err error) {
+	compute = strings.TrimSpace(compute)
+
+	// List of valid aggregation functions (from API error message)
+	validFunctions := []string{
+		"count", "max", "min", "avg", "sum", "median",
+		"cardinality", "delta", "most_frequent", "earliest",
+		"any", "latest", "dd_sketch", "top_n",
+	}
+
+	// Check for simple count
+	if strings.ToLower(compute) == "count" {
+		return "count", "", nil
+	}
+
+	// Parse format: function(metric) or function(metric, param)
+	// Examples: avg(@duration), percentile(@duration, 99), cardinality(@user.id)
+	re := regexp.MustCompile(`^(\w+)\(([^,)]+)(?:,\s*(\d+))?\)$`)
+	matches := re.FindStringSubmatch(compute)
+
+	if matches == nil {
+		// No parentheses - treat as a simple aggregation function
+		funcLower := strings.ToLower(compute)
+		for _, valid := range validFunctions {
+			if funcLower == valid {
+				return funcLower, "", nil
+			}
+		}
+		return "", "", fmt.Errorf("invalid compute format: %q\n\nExpected format:\n  - count\n  - function(metric) e.g. avg(@duration), sum(@bytes), cardinality(@user.id)\n  - percentile(metric, N) e.g. percentile(@duration, 99)\n\nSupported functions: %s",
+			compute, strings.Join(validFunctions, ", "))
+	}
+
+	aggregation = strings.ToLower(matches[1])
+	metric = strings.TrimSpace(matches[2])
+	percentileValue := ""
+	if len(matches) > 3 && matches[3] != "" {
+		percentileValue = matches[3]
+	}
+
+	// Handle percentile special case: convert "percentile" to "pcNN"
+	if aggregation == "percentile" {
+		if percentileValue == "" {
+			return "", "", fmt.Errorf("percentile requires a percentile value: e.g. percentile(@duration, 99)")
+		}
+		aggregation = "pc" + percentileValue
+	}
+
+	// Validate aggregation function
+	isValid := false
+	for _, valid := range validFunctions {
+		if aggregation == valid {
+			isValid = true
+			break
+		}
+	}
+	// Also allow pcNN format (e.g., pc99, pc95, pc50)
+	if strings.HasPrefix(aggregation, "pc") {
+		isValid = true
+	}
+
+	if !isValid {
+		return "", "", fmt.Errorf("unknown aggregation function: %q\n\nSupported functions: %s, percentiles (pc50, pc75, pc90, pc95, pc99)",
+			aggregation, strings.Join(validFunctions, ", "))
+	}
+
+	return aggregation, metric, nil
 }
 
 // Implementation functions
@@ -691,9 +763,9 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		if r != nil && r.Body != nil {
 			bodyBytes, readErr := io.ReadAll(r.Body)
 			if readErr == nil && len(bodyBytes) > 0 {
-				fromTimeObj := time.UnixMilli(fromTime)
-				toTimeObj := time.UnixMilli(toTime)
-				return fmt.Errorf("failed to search logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- From: %s (parsed from: %s)\n- To: %s (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify your time range is valid\n- Check that your query syntax is correct\n- Ensure you have proper permissions",
+				fromTimeObj := time.UnixMilli(fromTime).UTC()
+				toTimeObj := time.UnixMilli(toTime).UTC()
+				return fmt.Errorf("failed to search logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- From: %s UTC (parsed from: %s)\n- To: %s UTC (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify your time range is valid\n- Check that your query syntax is correct\n- Ensure you have proper permissions",
 					err, r.StatusCode, string(bodyBytes),
 					logsQuery,
 					fromTimeObj.Format(time.RFC3339), logsFrom,
@@ -910,16 +982,21 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --to time: %w", err)
 	}
 
+	// Parse the compute string to extract aggregation and metric
+	aggregation, metric, err := parseComputeString(logsCompute)
+	if err != nil {
+		return fmt.Errorf("invalid --compute value: %w", err)
+	}
+
 	api := datadogV2.NewLogsApi(client.V2())
 
 	// Build compute aggregation
 	compute := datadogV2.LogsCompute{
-		Aggregation: datadogV2.LogsAggregationFunction(logsCompute),
+		Aggregation: datadogV2.LogsAggregationFunction(aggregation),
 	}
 
-	// Parse compute field if present (e.g., "avg(@duration)")
-	if logsCompute != "count" {
-		metric := "*"
+	// Add metric field if present
+	if metric != "" {
 		compute.Metric = &metric
 	}
 
@@ -952,7 +1029,16 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 		if r != nil && r.Body != nil {
 			bodyBytes, readErr := io.ReadAll(r.Body)
 			if readErr == nil && len(bodyBytes) > 0 {
-				return fmt.Errorf("failed to aggregate logs: %w\nStatus: %d\nAPI Response: %s", err, r.StatusCode, string(bodyBytes))
+				fromTimeObj := time.UnixMilli(fromTime).UTC()
+				toTimeObj := time.UnixMilli(toTime).UTC()
+				return fmt.Errorf("failed to aggregate logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- Compute: %s (parsed as: aggregation=%q, metric=%q)\n- Group By: %s\n- From: %s UTC (parsed from: %s)\n- To: %s UTC (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify the aggregation function is supported\n- Ensure the metric field exists in your logs (e.g., @duration, @bytes)\n- Check your query syntax\n- Verify your time range is valid",
+					err, r.StatusCode, string(bodyBytes),
+					logsQuery,
+					logsCompute, aggregation, metric,
+					logsGroupBy,
+					fromTimeObj.Format(time.RFC3339), logsFrom,
+					toTimeObj.Format(time.RFC3339), logsTo,
+					logsLimit)
 			}
 			return fmt.Errorf("failed to aggregate logs: %w (status: %d)", err, r.StatusCode)
 		}

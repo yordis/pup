@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/DataDog/pup/pkg/client"
@@ -75,6 +76,172 @@ func TestParseTimeString(t *testing.T) {
 
 			if !tt.wantErr && tt.check != nil && !tt.check(got) {
 				t.Errorf("parseTimeString() = %d, validation failed", got)
+			}
+		})
+	}
+}
+
+func TestParseComputeString(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           string
+		wantAggregation string
+		wantMetric      string
+		wantErr         bool
+		errContains     string
+	}{
+		{
+			name:            "count - no metric",
+			input:           "count",
+			wantAggregation: "count",
+			wantMetric:      "",
+			wantErr:         false,
+		},
+		{
+			name:            "count - uppercase",
+			input:           "COUNT",
+			wantAggregation: "count",
+			wantMetric:      "",
+			wantErr:         false,
+		},
+		{
+			name:            "avg with metric",
+			input:           "avg(@duration)",
+			wantAggregation: "avg",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:            "sum with metric",
+			input:           "sum(@bytes)",
+			wantAggregation: "sum",
+			wantMetric:      "@bytes",
+			wantErr:         false,
+		},
+		{
+			name:            "min with metric",
+			input:           "min(@response_time)",
+			wantAggregation: "min",
+			wantMetric:      "@response_time",
+			wantErr:         false,
+		},
+		{
+			name:            "max with metric",
+			input:           "max(@duration)",
+			wantAggregation: "max",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:            "cardinality with metric",
+			input:           "cardinality(@user.id)",
+			wantAggregation: "cardinality",
+			wantMetric:      "@user.id",
+			wantErr:         false,
+		},
+		{
+			name:            "percentile with metric and parameter - converts to pc99",
+			input:           "percentile(@duration, 99)",
+			wantAggregation: "pc99",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:            "percentile pc95",
+			input:           "percentile(@latency, 95)",
+			wantAggregation: "pc95",
+			wantMetric:      "@latency",
+			wantErr:         false,
+		},
+		{
+			name:            "percentile pc50 (median)",
+			input:           "percentile(@response_time, 50)",
+			wantAggregation: "pc50",
+			wantMetric:      "@response_time",
+			wantErr:         false,
+		},
+		{
+			name:        "percentile without value",
+			input:       "percentile(@duration)",
+			wantErr:     true,
+			errContains: "percentile requires a percentile value",
+		},
+		{
+			name:            "median with metric",
+			input:           "median(@latency)",
+			wantAggregation: "median",
+			wantMetric:      "@latency",
+			wantErr:         false,
+		},
+		{
+			name:            "metric with dots and underscores",
+			input:           "avg(@http.response_time)",
+			wantAggregation: "avg",
+			wantMetric:      "@http.response_time",
+			wantErr:         false,
+		},
+		{
+			name:            "whitespace handling",
+			input:           "  avg(@duration)  ",
+			wantAggregation: "avg",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:        "invalid - unknown function",
+			input:       "invalid(@duration)",
+			wantErr:     true,
+			errContains: "unknown aggregation function",
+		},
+		{
+			name:        "invalid - malformed",
+			input:       "avg(@duration",
+			wantErr:     true,
+			errContains: "invalid compute format",
+		},
+		{
+			name:        "invalid - no function name",
+			input:       "(@duration)",
+			wantErr:     true,
+			errContains: "invalid compute format",
+		},
+		{
+			name:        "invalid - empty string",
+			input:       "",
+			wantErr:     true,
+			errContains: "invalid compute format",
+		},
+		{
+			name:            "case insensitive function",
+			input:           "AVG(@duration)",
+			wantAggregation: "avg",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotAgg, gotMetric, err := parseComputeString(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseComputeString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr && tt.errContains != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("parseComputeString() error = %v, should contain %q", err, tt.errContains)
+				}
+				return
+			}
+
+			if gotAgg != tt.wantAggregation {
+				t.Errorf("parseComputeString() aggregation = %q, want %q", gotAgg, tt.wantAggregation)
+			}
+
+			if gotMetric != tt.wantMetric {
+				t.Errorf("parseComputeString() metric = %q, want %q", gotMetric, tt.wantMetric)
 			}
 		})
 	}
