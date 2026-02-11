@@ -387,7 +387,8 @@ func init() {
 
 // RUM Apps Implementation
 func runRumAppsList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// RUM API doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("GET", "/api/v2/rum/applications")
 	if err != nil {
 		return err
 	}
@@ -410,7 +411,8 @@ func runRumAppsList(cmd *cobra.Command, args []string) error {
 }
 
 func runRumAppsGet(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// RUM API doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("GET", "/api/v2/rum/applications/")
 	if err != nil {
 		return err
 	}
@@ -433,7 +435,8 @@ func runRumAppsGet(cmd *cobra.Command, args []string) error {
 }
 
 func runRumAppsCreate(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// RUM API doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("POST", "/api/v2/rum/applications")
 	if err != nil {
 		return err
 	}
