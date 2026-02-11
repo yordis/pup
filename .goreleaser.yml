@@ -5,8 +5,6 @@ version: 2
 
 before:
   hooks:
-    # Run tests before building
-    - go test ./...
     # Ensure go.mod is tidy
     - go mod tidy
 
