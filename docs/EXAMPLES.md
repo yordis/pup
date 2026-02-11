@@ -116,6 +116,21 @@ pup logs aggregate \
   --group-by="status"
 ```
 
+### Search Logs in Specific Storage Tier
+```bash
+# Search Flex logs (cost-optimized storage tier)
+pup logs search --query="service:api" --from="7d" --storage="flex"
+
+# Search online archives (long-term storage)
+pup logs search --query="status:error" --from="30d" --storage="online-archives"
+
+# Search standard indexes (default, fastest tier)
+pup logs search --query="service:web-app" --from="1h" --storage="indexes"
+
+# Search all storage tiers (default when --storage is not specified)
+pup logs search --query="status:warn" --from="1h"
+```
+
 ## Dashboards
 
 ### List Dashboards

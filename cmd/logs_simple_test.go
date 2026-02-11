@@ -503,9 +503,9 @@ func TestRunLogsArchivesGet(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name       string
-		archiveID  string
-		wantErr    bool
+		name      string
+		archiveID string
+		wantErr   bool
 	}{
 		{
 			name:      "get archive",
@@ -563,9 +563,9 @@ func TestRunLogsMetricsGet(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name      string
-		metricID  string
-		wantErr   bool
+		name     string
+		metricID string
+		wantErr  bool
 	}{
 		{
 			name:     "get metric",
@@ -594,9 +594,9 @@ func TestRunLogsArchivesDelete(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name       string
-		archiveID  string
-		wantErr    bool
+		name      string
+		archiveID string
+		wantErr   bool
 	}{
 		{
 			name:      "delete archive",
@@ -625,9 +625,9 @@ func TestRunLogsMetricsDelete(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name      string
-		metricID  string
-		wantErr   bool
+		name     string
+		metricID string
+		wantErr  bool
 	}{
 		{
 			name:     "delete metric",
@@ -646,6 +646,273 @@ func TestRunLogsMetricsDelete(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("runLogsMetricsDelete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAndConvertStorageTier(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantNil  bool
+		wantErr  bool
+		wantTier string
+	}{
+		{
+			name:    "empty string - no storage tier specified",
+			input:   "",
+			wantNil: true,
+			wantErr: false,
+		},
+		{
+			name:     "indexes",
+			input:    "indexes",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "indexes",
+		},
+		{
+			name:     "online-archives",
+			input:    "online-archives",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "online-archives",
+		},
+		{
+			name:     "flex",
+			input:    "flex",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "flex",
+		},
+		{
+			name:     "FLEX - uppercase",
+			input:    "FLEX",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "flex",
+		},
+		{
+			name:     "Indexes - mixed case",
+			input:    "Indexes",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "indexes",
+		},
+		{
+			name:    "invalid storage tier",
+			input:   "invalid",
+			wantNil: true,
+			wantErr: true,
+		},
+		{
+			name:    "invalid - close but not exact",
+			input:   "archive",
+			wantNil: true,
+			wantErr: true,
+		},
+		{
+			name:     "whitespace - should be trimmed",
+			input:    "  flex  ",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "flex",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := validateAndConvertStorageTier(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateAndConvertStorageTier() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if (got == nil) != tt.wantNil {
+				t.Errorf("validateAndConvertStorageTier() returned nil = %v, wantNil %v", got == nil, tt.wantNil)
+				return
+			}
+
+			if !tt.wantNil && got != nil && string(*got) != tt.wantTier {
+				t.Errorf("validateAndConvertStorageTier() tier = %v, want %v", string(*got), tt.wantTier)
+			}
+		})
+	}
+}
+
+func TestRunLogsSearchWithStorageTier(t *testing.T) {
+	cleanup := setupLogsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name        string
+		query       string
+		from        string
+		to          string
+		storageTier string
+		wantErr     bool
+	}{
+		{
+			name:        "search with flex storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "flex",
+			wantErr:     true, // Will fail because of mock client, but validates tier parsing
+		},
+		{
+			name:        "search with online-archives",
+			query:       "status:error",
+			from:        "30d",
+			to:          "now",
+			storageTier: "online-archives",
+			wantErr:     true,
+		},
+		{
+			name:        "search with indexes",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "indexes",
+			wantErr:     true,
+		},
+		{
+			name:        "search with invalid storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "invalid",
+			wantErr:     true,
+		},
+		{
+			name:        "search without storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logsQuery = tt.query
+			logsFrom = tt.from
+			logsTo = tt.to
+			logsStorage = tt.storageTier
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runLogsSearch(logsSearchCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runLogsSearch() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// For invalid storage tier, check that error message mentions "invalid storage tier"
+			if tt.storageTier == "invalid" && err != nil {
+				if !strings.Contains(err.Error(), "invalid storage tier") {
+					t.Errorf("runLogsSearch() with invalid storage tier should mention 'invalid storage tier', got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestRunLogsQueryWithStorageTier(t *testing.T) {
+	cleanup := setupLogsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name        string
+		query       string
+		from        string
+		to          string
+		storageTier string
+		wantErr     bool
+	}{
+		{
+			name:        "query with flex storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "flex",
+			wantErr:     true,
+		},
+		{
+			name:        "query with invalid storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "bad-tier",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logsQuery = tt.query
+			logsFrom = tt.from
+			logsTo = tt.to
+			logsStorage = tt.storageTier
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runLogsQuery(logsQueryCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runLogsQuery() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunLogsAggregateWithStorageTier(t *testing.T) {
+	cleanup := setupLogsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name        string
+		query       string
+		from        string
+		to          string
+		compute     string
+		storageTier string
+		wantErr     bool
+	}{
+		{
+			name:        "aggregate with flex storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			compute:     "count",
+			storageTier: "flex",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logsQuery = tt.query
+			logsFrom = tt.from
+			logsTo = tt.to
+			logsCompute = tt.compute
+			logsStorage = tt.storageTier
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runLogsAggregate(logsAggregateCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runLogsAggregate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

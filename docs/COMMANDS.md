@@ -81,6 +81,7 @@ pup slos get abc-123-def
 ### Search/Query
 ```bash
 pup logs search --query="status:error" --from="1h"
+pup logs search --query="service:api" --from="7d" --storage="flex"
 pup metrics search --query="avg:system.cpu.user{*}" --from="1h"
 pup metrics query --query="avg:system.cpu.user{*}" --from="1h"
 pup events search --query="@user.id:12345"
