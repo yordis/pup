@@ -59,7 +59,7 @@ func setupMetricsTestClient(t *testing.T) func() {
 	}
 }
 
-func TestRunMetricsQuery(t *testing.T) {
+func TestRunMetricsSearch(t *testing.T) {
 	cleanup := setupMetricsTestClient(t)
 	defer cleanup()
 
@@ -97,12 +97,65 @@ func TestRunMetricsQuery(t *testing.T) {
 			outputWriter = &buf
 			defer func() { outputWriter = os.Stdout }()
 
+			err := runMetricsSearch(metricsSearchCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runMetricsSearch() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunMetricsQuery(t *testing.T) {
+	cleanup := setupMetricsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name    string
+		query   string
+		from    string
+		to      string
+		wantErr bool
+	}{
+		{
+			name:    "valid query",
+			query:   "avg:system.cpu.user{*}",
+			from:    "1h",
+			to:      "now",
+			wantErr: true, // Mock client error
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			queryString = tt.query
+			fromTime = tt.from
+			toTime = tt.to
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
 			err := runMetricsQuery(metricsQueryCmd, []string{})
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("runMetricsQuery() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestMetricsSearchCmd(t *testing.T) {
+	if metricsSearchCmd == nil {
+		t.Fatal("metricsSearchCmd is nil")
+	}
+
+	if metricsSearchCmd.Use != "search" {
+		t.Errorf("Use = %s, want search", metricsSearchCmd.Use)
+	}
+
+	if metricsSearchCmd.Short != "Search metrics (v1 API)" {
+		t.Errorf("Short = %s, want 'Search metrics (v1 API)'", metricsSearchCmd.Short)
 	}
 }
 
@@ -239,13 +292,13 @@ func TestRunMetricsSubmit(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name      string
+		name       string
 		metricName string
-		value     float64
-		timestamp string
-		tags      string
+		value      float64
+		timestamp  string
+		tags       string
 		metricType string
-		wantErr   bool
+		wantErr    bool
 	}{
 		{
 			name:       "submit gauge",
