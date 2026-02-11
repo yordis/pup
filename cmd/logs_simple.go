@@ -595,10 +595,10 @@ func init() {
 
 // Helper functions
 
-// parseTimeString converts relative or absolute time to Unix timestamp in milliseconds
+// parseTimeString converts relative or absolute time to Unix timestamp in milliseconds (UTC)
 func parseTimeString(timeStr string) (int64, error) {
 	if timeStr == "now" {
-		return time.Now().UnixMilli(), nil
+		return time.Now().UTC().UnixMilli(), nil
 	}
 
 	// Try parsing as relative time (1h, 30m, 7d)
@@ -623,7 +623,7 @@ func parseTimeString(timeStr string) (int64, error) {
 			default:
 				return 0, fmt.Errorf("invalid time unit: %s (use s, m, h, d, or w)", unit)
 			}
-			return time.Now().Add(-duration).UnixMilli(), nil
+			return time.Now().UTC().Add(-duration).UnixMilli(), nil
 		}
 	}
 
@@ -763,9 +763,9 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		if r != nil && r.Body != nil {
 			bodyBytes, readErr := io.ReadAll(r.Body)
 			if readErr == nil && len(bodyBytes) > 0 {
-				fromTimeObj := time.UnixMilli(fromTime)
-				toTimeObj := time.UnixMilli(toTime)
-				return fmt.Errorf("failed to search logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- From: %s (parsed from: %s)\n- To: %s (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify your time range is valid\n- Check that your query syntax is correct\n- Ensure you have proper permissions",
+				fromTimeObj := time.UnixMilli(fromTime).UTC()
+				toTimeObj := time.UnixMilli(toTime).UTC()
+				return fmt.Errorf("failed to search logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- From: %s UTC (parsed from: %s)\n- To: %s UTC (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify your time range is valid\n- Check that your query syntax is correct\n- Ensure you have proper permissions",
 					err, r.StatusCode, string(bodyBytes),
 					logsQuery,
 					fromTimeObj.Format(time.RFC3339), logsFrom,
@@ -1029,9 +1029,9 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 		if r != nil && r.Body != nil {
 			bodyBytes, readErr := io.ReadAll(r.Body)
 			if readErr == nil && len(bodyBytes) > 0 {
-				fromTimeObj := time.UnixMilli(fromTime)
-				toTimeObj := time.UnixMilli(toTime)
-				return fmt.Errorf("failed to aggregate logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- Compute: %s (parsed as: aggregation=%q, metric=%q)\n- Group By: %s\n- From: %s (parsed from: %s)\n- To: %s (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify the aggregation function is supported\n- Ensure the metric field exists in your logs (e.g., @duration, @bytes)\n- Check your query syntax\n- Verify your time range is valid",
+				fromTimeObj := time.UnixMilli(fromTime).UTC()
+				toTimeObj := time.UnixMilli(toTime).UTC()
+				return fmt.Errorf("failed to aggregate logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- Compute: %s (parsed as: aggregation=%q, metric=%q)\n- Group By: %s\n- From: %s UTC (parsed from: %s)\n- To: %s UTC (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify the aggregation function is supported\n- Ensure the metric field exists in your logs (e.g., @duration, @bytes)\n- Check your query syntax\n- Verify your time range is valid",
 					err, r.StatusCode, string(bodyBytes),
 					logsQuery,
 					logsCompute, aggregation, metric,
