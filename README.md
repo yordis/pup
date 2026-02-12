@@ -23,11 +23,6 @@ A Go-based command-line wrapper for easy interaction with Datadog APIs.
 
 Pup implements **38 of 85+ available Datadog APIs** (44.7% coverage).
 
-**Summary:**
-- ✅ **35 Working** - Fully implemented and functional
-- ⏳ **3 Planned** - Skeleton implementation, endpoints pending
-- ❌ **48+ Not Implemented** - Available in Datadog but not yet in pup
-
 See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
 💡 **Tip:** Use Ctrl/Cmd+F to search for specific APIs. [Request features via GitHub Issues](https://github.com/DataDog/pup/issues).
@@ -41,10 +36,10 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 |------------|--------|--------------|-------|
 | Metrics | ✅ | `metrics search`, `metrics query`, `metrics list`, `metrics get` | V1 and V2 APIs supported |
 | Logs | ✅ | `logs search`, `logs list`, `logs aggregate` | V1 and V2 APIs supported |
-| Traces | ❌ | - | Not yet implemented (use APM commands for trace data) |
 | Events | ✅ | `events list`, `events search`, `events get` | Infrastructure event management |
 | RUM | ✅ | `rum apps`, `rum sessions`, `rum metrics list/get`, `rum retention-filters list/get` | Apps, sessions, metrics, retention filters (create/update pending) |
 | APM Services | ✅ | `apm services`, `apm entities`, `apm dependencies`, `apm flow-map` | Services stats, operations, resources; entity queries; dependencies; flow visualization |
+| Traces | ❌ | - | Not yet implemented |
 | Profiling | ❌ | - | Not yet implemented |
 | Session Replay | ❌ | - | Not yet implemented |
 | Spans Metrics | ❌ | - | Not yet implemented |
@@ -158,7 +153,7 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
 ## Installation
 
-### Homebrew (macOS/Linux)
+### Homebrew (macOS/Linux) - Coming soon!
 
 ```bash
 brew tap datadog/pack
