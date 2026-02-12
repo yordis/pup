@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -210,7 +211,7 @@ func TestFormatAPIError_AllStatusCodes(t *testing.T) {
 	}
 
 	for _, tt := range statusTests {
-		t.Run(string(rune(tt.code)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d", tt.code), func(t *testing.T) {
 			err := formatAPIError("test operation", errors.New("test error"), &mockHTTPResponse{statusCode: tt.code})
 
 			if err == nil {
@@ -349,6 +350,14 @@ func TestExtractAPIErrorBody(t *testing.T) {
 				ErrorMessage: "400 Bad Request",
 			},
 			want: "",
+		},
+		{
+			name: "wrapped GenericOpenAPIError",
+			err: fmt.Errorf("api call failed: %w", datadog.GenericOpenAPIError{
+				ErrorBody:    []byte(`{"errors":["bad query"]}`),
+				ErrorMessage: "400 Bad Request",
+			}),
+			want: `{"errors":["bad query"]}`,
 		},
 		{
 			name: "non-GenericOpenAPIError",

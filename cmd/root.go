@@ -278,7 +278,9 @@ func extractAPIErrorBody(err error) string {
 	return ""
 }
 
-// formatAPIError creates user-friendly error messages for API errors
+// formatAPIError creates user-friendly error messages for API errors.
+// It extracts the API response body from GenericOpenAPIError when available
+// and appends contextual guidance based on the HTTP status code.
 func formatAPIError(operation string, err error, response any) error {
 	type httpResponse interface {
 		StatusCode() int

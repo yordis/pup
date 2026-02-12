@@ -788,6 +788,9 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 	// Fetch first page
 	resp, r, err := api.ListLogs(client.Context(), opts)
 	if err != nil {
+		// These inline error handlers use extractAPIErrorBody directly instead of
+		// formatAPIError because they include domain-specific request details and
+		// troubleshooting context that the centralized helper does not support.
 		if r != nil {
 			apiBody := extractAPIErrorBody(err)
 			if apiBody != "" {
