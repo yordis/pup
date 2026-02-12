@@ -96,9 +96,114 @@ func TestParseTimeParam(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:      "negative value",
+			name:      "negative value (minus prefix)",
 			input:     "-5h",
-			wantError: true,
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-5 * time.Hour)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "long form: minutes",
+			input:     "5minutes",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-5 * time.Minute)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "long form: min",
+			input:     "10min",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-10 * time.Minute)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "long form: hours",
+			input:     "2hours",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-2 * time.Hour)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "long form: hr",
+			input:     "3hr",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-3 * time.Hour)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "long form: hrs",
+			input:     "4hrs",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-4 * time.Hour)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "long form: days",
+			input:     "14days",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-14 * 24 * time.Hour)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "long form: weeks",
+			input:     "2weeks",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-2 * 7 * 24 * time.Hour)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "with space: minutes",
+			input:     "5 minutes",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-5 * time.Minute)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "with space: hours",
+			input:     "2 hours",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-2 * time.Hour)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
+		},
+		{
+			name:      "with minus prefix and long form",
+			input:     "-10minutes",
+			wantError: false,
+			checkFunc: func(t time.Time) bool {
+				expected := now.Add(-10 * time.Minute)
+				diff := expected.Sub(t).Abs()
+				return diff < time.Second
+			},
 		},
 		{
 			name:      "empty string",
