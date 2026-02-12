@@ -7,11 +7,13 @@ package cmd
 
 import (
 	"fmt"
-	"io"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
 	"github.com/DataDog/pup/pkg/formatter"
+	"github.com/DataDog/pup/pkg/util"
 	"github.com/spf13/cobra"
 )
 
@@ -28,10 +30,17 @@ CAPABILITIES:
   • Search logs with flexible queries (v1 API)
   • Query and aggregate logs (v2 API)
   • List logs with filtering (v2 API)
+  • Search across different storage tiers (indexes, online-archives, flex)
   • Manage log archives (CRUD operations)
   • Manage custom destinations for logs
   • Create and manage log-based metrics
   • Configure restriction queries for access control
+
+STORAGE TIERS:
+  Datadog logs can be stored in different tiers with different performance and cost characteristics:
+  • indexes - Standard indexed logs (default, real-time searchable)
+  • online-archives - Rehydrated logs from archives (slower queries, lower cost)
+  • flex - Flex logs (cost-optimized storage tier, balanced performance)
 
 LOG QUERY SYNTAX:
   Logs use a query language similar to web search:
@@ -44,16 +53,26 @@ LOG QUERY SYNTAX:
 
 TIME RANGES:
   Supported time formats:
-  • Relative: 1h, 30m, 7d, 1w (hour, minute, day, week)
+  • Relative short: 1h, 30m, 7d, 5s, 1w
+  • Relative long: 5min, 5minutes, 2hr, 2hours, 3days, 1week
+  • With spaces: "5 minutes", "2 hours"
+  • With minus: -5m, -2h (treated same as 5m, 2h)
   • Absolute: Unix timestamp in milliseconds
+  • RFC3339: 2024-01-01T00:00:00Z
   • now: Current time
 
 EXAMPLES:
   # Search for error logs in the last hour
   pup logs search --query="status:error" --from="1h"
 
+  # Search Flex logs specifically
+  pup logs search --query="status:error" --from="1h" --storage="flex"
+
   # Query logs from a specific service
   pup logs query --query="service:web-app" --from="4h" --to="now"
+
+  # Query online archives
+  pup logs query --query="service:web-app" --from="30d" --storage="online-archives"
 
   # Aggregate logs by status
   pup logs aggregate --query="*" --compute="count" --group-by="status"
@@ -112,10 +131,17 @@ OPTIONS:
   --limit   Maximum number of logs to return (default: 50, max: 1000)
   --sort    Sort order: asc or desc (default: desc)
   --index   Comma-separated list of log indexes to search
+  --storage Storage tier to search: indexes, online-archives, or flex (default: all tiers)
 
 EXAMPLES:
   # Search for errors in the last hour
   pup logs search --query="status:error" --from="1h"
+
+  # Search Flex logs for errors
+  pup logs search --query="status:error" --from="1h" --storage="flex"
+
+  # Search online archives
+  pup logs search --query="service:api" --from="30d" --storage="online-archives"
 
   # Search specific service with time range
   pup logs search --query="service:api" --from="2h" --to="1h"
@@ -154,10 +180,17 @@ FILTERS:
   --to      End time (default: now)
   --limit   Number of logs to return (default: 10)
   --sort    Sort order: timestamp, -timestamp (default: -timestamp)
+  --storage Storage tier: indexes, online-archives, or flex (default: all tiers)
 
 EXAMPLES:
   # List recent logs
   pup logs list --from="1h"
+
+  # List Flex logs with query filter
+  pup logs list --query="service:api" --from="2h" --limit=50 --storage="flex"
+
+  # List logs from online archives
+  pup logs list --query="*" --from="30d" --storage="online-archives"
 
   # List logs with query filter
   pup logs list --query="service:api" --from="2h" --limit=50
@@ -178,16 +211,23 @@ This is the recommended modern API for querying logs with better performance
 and more features than the v1 search API.
 
 OPTIONS:
-  --query   Log query (required)
-  --from    Start time (required)
-  --to      End time (default: now)
-  --limit   Maximum results (default: 50)
-  --sort    Sort order: timestamp, -timestamp
+  --query    Log query (required)
+  --from     Start time (required)
+  --to       End time (default: now)
+  --limit    Maximum results (default: 50)
+  --sort     Sort order: timestamp, -timestamp
   --timezone Timezone for timestamps (e.g., "America/New_York")
+  --storage  Storage tier: indexes, online-archives, or flex (default: all tiers)
 
 EXAMPLES:
   # Query recent errors
   pup logs query --query="status:error" --from="1h"
+
+  # Query Flex logs
+  pup logs query --query="status:error" --from="1h" --storage="flex"
+
+  # Query online archives
+  pup logs query --query="service:web" --from="30d" --storage="online-archives"
 
   # Query with specific timezone
   pup logs query --query="service:web" --from="4h" --timezone="America/New_York"
@@ -212,6 +252,7 @@ AGGREGATION OPTIONS:
   --compute   Metric to compute (count, cardinality, percentile, etc.)
   --group-by  Field to group by (e.g., "status", "service", "@http.status_code")
   --limit     Maximum number of groups (default: 10)
+  --storage   Storage tier: indexes, online-archives, or flex (default: all tiers)
 
 COMPUTE METRICS:
   • count: Count of logs
@@ -225,6 +266,12 @@ COMPUTE METRICS:
 EXAMPLES:
   # Count logs by status
   pup logs aggregate --query="*" --from="1h" --compute="count" --group-by="status"
+
+  # Count Flex logs by status
+  pup logs aggregate --query="*" --from="1h" --compute="count" --group-by="status" --storage="flex"
+
+  # Count unique users in online archives
+  pup logs aggregate --query="service:web" --from="30d" --compute="cardinality(@user.id)" --storage="online-archives"
 
   # Count unique users
   pup logs aggregate --query="service:web" --from="4h" --compute="cardinality(@user.id)"
@@ -503,6 +550,7 @@ var (
 	logsSort     string
 	logsIndex    string
 	logsTimezone string
+	logsStorage  string
 
 	// Aggregate flags
 	logsCompute string
@@ -512,53 +560,45 @@ var (
 func init() {
 	// Search command flags (v1)
 	logsSearchCmd.Flags().StringVar(&logsQuery, "query", "", "Search query (required)")
-	logsSearchCmd.Flags().StringVar(&logsFrom, "from", "", "Start time: 1h, 30m, 7d, or timestamp (required)")
-	logsSearchCmd.Flags().StringVar(&logsTo, "to", "now", "End time: 1h, 30m, now, or timestamp")
+	logsSearchCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
+	logsSearchCmd.Flags().StringVar(&logsTo, "to", "now", "End time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsSearchCmd.Flags().IntVar(&logsLimit, "limit", 50, "Maximum number of logs (1-1000)")
 	logsSearchCmd.Flags().StringVar(&logsSort, "sort", "desc", "Sort order: asc or desc")
 	logsSearchCmd.Flags().StringVar(&logsIndex, "index", "", "Comma-separated log indexes")
+	logsSearchCmd.Flags().StringVar(&logsStorage, "storage", "", "Storage tier: indexes, online-archives, or flex")
 	if err := logsSearchCmd.MarkFlagRequired("query"); err != nil {
-		panic(fmt.Errorf("failed to mark flag as required: %w", err))
-	}
-	if err := logsSearchCmd.MarkFlagRequired("from"); err != nil {
 		panic(fmt.Errorf("failed to mark flag as required: %w", err))
 	}
 
 	// List command flags (v2)
 	logsListCmd.Flags().StringVar(&logsQuery, "query", "*", "Search query")
-	logsListCmd.Flags().StringVar(&logsFrom, "from", "", "Start time (required)")
+	logsListCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsListCmd.Flags().StringVar(&logsTo, "to", "now", "End time")
 	logsListCmd.Flags().IntVar(&logsLimit, "limit", 10, "Number of logs")
 	logsListCmd.Flags().StringVar(&logsSort, "sort", "-timestamp", "Sort order")
-	if err := logsListCmd.MarkFlagRequired("from"); err != nil {
-		panic(fmt.Errorf("failed to mark flag as required: %w", err))
-	}
+	logsListCmd.Flags().StringVar(&logsStorage, "storage", "", "Storage tier: indexes, online-archives, or flex")
 
 	// Query command flags (v2)
 	logsQueryCmd.Flags().StringVar(&logsQuery, "query", "", "Log query (required)")
-	logsQueryCmd.Flags().StringVar(&logsFrom, "from", "", "Start time (required)")
+	logsQueryCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsQueryCmd.Flags().StringVar(&logsTo, "to", "now", "End time")
 	logsQueryCmd.Flags().IntVar(&logsLimit, "limit", 50, "Maximum results")
 	logsQueryCmd.Flags().StringVar(&logsSort, "sort", "-timestamp", "Sort order")
 	logsQueryCmd.Flags().StringVar(&logsTimezone, "timezone", "", "Timezone for timestamps")
+	logsQueryCmd.Flags().StringVar(&logsStorage, "storage", "", "Storage tier: indexes, online-archives, or flex")
 	if err := logsQueryCmd.MarkFlagRequired("query"); err != nil {
-		panic(fmt.Errorf("failed to mark flag as required: %w", err))
-	}
-	if err := logsQueryCmd.MarkFlagRequired("from"); err != nil {
 		panic(fmt.Errorf("failed to mark flag as required: %w", err))
 	}
 
 	// Aggregate command flags (v2)
 	logsAggregateCmd.Flags().StringVar(&logsQuery, "query", "", "Log query (required)")
-	logsAggregateCmd.Flags().StringVar(&logsFrom, "from", "", "Start time (required)")
+	logsAggregateCmd.Flags().StringVar(&logsFrom, "from", "1h", "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'")
 	logsAggregateCmd.Flags().StringVar(&logsTo, "to", "now", "End time")
 	logsAggregateCmd.Flags().StringVar(&logsCompute, "compute", "count", "Metric to compute")
 	logsAggregateCmd.Flags().StringVar(&logsGroupBy, "group-by", "", "Field to group by")
 	logsAggregateCmd.Flags().IntVar(&logsLimit, "limit", 10, "Maximum groups")
+	logsAggregateCmd.Flags().StringVar(&logsStorage, "storage", "", "Storage tier: indexes, online-archives, or flex")
 	if err := logsAggregateCmd.MarkFlagRequired("query"); err != nil {
-		panic(fmt.Errorf("failed to mark flag as required: %w", err))
-	}
-	if err := logsAggregateCmd.MarkFlagRequired("from"); err != nil {
 		panic(fmt.Errorf("failed to mark flag as required: %w", err))
 	}
 
@@ -593,66 +633,121 @@ func init() {
 
 // Helper functions
 
-// parseTimeString converts relative or absolute time to Unix timestamp in milliseconds
-func parseTimeString(timeStr string) (int64, error) {
-	if timeStr == "now" {
-		return time.Now().UnixMilli(), nil
+// validateAndConvertStorageTier validates the storage tier string and converts it to LogsStorageTier
+// Returns nil if storage is empty (which means search all tiers)
+func validateAndConvertStorageTier(storage string) (*datadogV2.LogsStorageTier, error) {
+	if storage == "" {
+		return nil, nil
 	}
 
-	// Try parsing as relative time (1h, 30m, 7d)
-	if len(timeStr) >= 2 {
-		unit := timeStr[len(timeStr)-1:]
-		valueStr := timeStr[:len(timeStr)-1]
+	// Validate storage tier value
+	validTiers := []string{"indexes", "online-archives", "flex"}
+	storageNormalized := strings.ToLower(strings.TrimSpace(storage))
 
-		var value int64
-		if _, err := fmt.Sscanf(valueStr, "%d", &value); err == nil {
-			var duration time.Duration
-			switch unit {
-			case "s":
-				duration = time.Duration(value) * time.Second
-			case "m":
-				duration = time.Duration(value) * time.Minute
-			case "h":
-				duration = time.Duration(value) * time.Hour
-			case "d":
-				duration = time.Duration(value) * 24 * time.Hour
-			case "w":
-				duration = time.Duration(value) * 7 * 24 * time.Hour
-			default:
-				return 0, fmt.Errorf("invalid time unit: %s (use s, m, h, d, or w)", unit)
-			}
-			return time.Now().Add(-duration).UnixMilli(), nil
+	for _, valid := range validTiers {
+		if storageNormalized == valid {
+			tier := datadogV2.LogsStorageTier(storageNormalized)
+			return &tier, nil
 		}
 	}
 
-	// Try parsing as Unix timestamp (milliseconds)
-	var timestamp int64
-	if _, err := fmt.Sscanf(timeStr, "%d", &timestamp); err == nil {
-		return timestamp, nil
+	return nil, fmt.Errorf("invalid storage tier: %q\n\nValid options:\n  - indexes (standard indexed logs)\n  - online-archives (rehydrated logs from archives)\n  - flex (cost-optimized Flex logs)", storage)
+}
+
+// parseComputeString parses compute strings like "count", "avg(@duration)", "percentile(@duration, 99)"
+// and returns the aggregation function and metric field
+func parseComputeString(compute string) (aggregation string, metric string, err error) {
+	compute = strings.TrimSpace(compute)
+
+	// List of valid aggregation functions (from API error message)
+	validFunctions := []string{
+		"count", "max", "min", "avg", "sum", "median",
+		"cardinality", "delta", "most_frequent", "earliest",
+		"any", "latest", "dd_sketch", "top_n",
 	}
 
-	return 0, fmt.Errorf("invalid time format: %s (use relative like '1h' or Unix timestamp)", timeStr)
+	// Check for simple count
+	if strings.ToLower(compute) == "count" {
+		return "count", "", nil
+	}
+
+	// Parse format: function(metric) or function(metric, param)
+	// Examples: avg(@duration), percentile(@duration, 99), cardinality(@user.id)
+	re := regexp.MustCompile(`^(\w+)\(([^,)]+)(?:,\s*(\d+))?\)$`)
+	matches := re.FindStringSubmatch(compute)
+
+	if matches == nil {
+		// No parentheses - treat as a simple aggregation function
+		funcLower := strings.ToLower(compute)
+		for _, valid := range validFunctions {
+			if funcLower == valid {
+				return funcLower, "", nil
+			}
+		}
+		return "", "", fmt.Errorf("invalid compute format: %q\n\nExpected format:\n  - count\n  - function(metric) e.g. avg(@duration), sum(@bytes), cardinality(@user.id)\n  - percentile(metric, N) e.g. percentile(@duration, 99)\n\nSupported functions: %s",
+			compute, strings.Join(validFunctions, ", "))
+	}
+
+	aggregation = strings.ToLower(matches[1])
+	metric = strings.TrimSpace(matches[2])
+	percentileValue := ""
+	if len(matches) > 3 && matches[3] != "" {
+		percentileValue = matches[3]
+	}
+
+	// Handle percentile special case: convert "percentile" to "pcNN"
+	if aggregation == "percentile" {
+		if percentileValue == "" {
+			return "", "", fmt.Errorf("percentile requires a percentile value: e.g. percentile(@duration, 99)")
+		}
+		aggregation = "pc" + percentileValue
+	}
+
+	// Validate aggregation function
+	isValid := false
+	for _, valid := range validFunctions {
+		if aggregation == valid {
+			isValid = true
+			break
+		}
+	}
+	// Also allow pcNN format (e.g., pc99, pc95, pc50)
+	if strings.HasPrefix(aggregation, "pc") {
+		isValid = true
+	}
+
+	if !isValid {
+		return "", "", fmt.Errorf("unknown aggregation function: %q\n\nSupported functions: %s, percentiles (pc50, pc75, pc90, pc95, pc99)",
+			aggregation, strings.Join(validFunctions, ", "))
+	}
+
+	return aggregation, metric, nil
 }
 
 // Implementation functions
 
 func runLogsSearch(cmd *cobra.Command, args []string) error {
+	// Validate storage tier before creating client
+	storageTier, err := validateAndConvertStorageTier(logsStorage)
+	if err != nil {
+		return err
+	}
+
+	fromTime, err := util.ParseTimeToUnixMilli(logsFrom)
+	if err != nil {
+		return fmt.Errorf("invalid --from time: %w", err)
+	}
+
+	toTime, err := util.ParseTimeToUnixMilli(logsTo)
+	if err != nil {
+		return fmt.Errorf("invalid --to time: %w", err)
+	}
+
 	client, err := getClient()
 	if err != nil {
 		return err
 	}
 
-	fromTime, err := parseTimeString(logsFrom)
-	if err != nil {
-		return fmt.Errorf("invalid --from time: %w", err)
-	}
-
-	toTime, err := parseTimeString(logsTo)
-	if err != nil {
-		return fmt.Errorf("invalid --to time: %w", err)
-	}
-
-	// Use v2 API instead of deprecated v1 API
 	api := datadogV2.NewLogsApi(client.V2())
 
 	query := logsQuery
@@ -678,6 +773,11 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		Sort: &v2Sort,
 	}
 
+	// Set storage tier if provided
+	if storageTier != nil {
+		body.Filter.StorageTier = storageTier
+	}
+
 	// Note: v2 API doesn't support the index parameter the same way v1 did
 	// If index filtering is needed, it should be included in the query string
 
@@ -688,13 +788,16 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 	// Fetch first page
 	resp, r, err := api.ListLogs(client.Context(), opts)
 	if err != nil {
-		if r != nil && r.Body != nil {
-			bodyBytes, readErr := io.ReadAll(r.Body)
-			if readErr == nil && len(bodyBytes) > 0 {
-				fromTimeObj := time.UnixMilli(fromTime)
-				toTimeObj := time.UnixMilli(toTime)
-				return fmt.Errorf("failed to search logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- From: %s (parsed from: %s)\n- To: %s (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify your time range is valid\n- Check that your query syntax is correct\n- Ensure you have proper permissions",
-					err, r.StatusCode, string(bodyBytes),
+		// These inline error handlers use extractAPIErrorBody directly instead of
+		// formatAPIError because they include domain-specific request details and
+		// troubleshooting context that the centralized helper does not support.
+		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				fromTimeObj := time.UnixMilli(fromTime).UTC()
+				toTimeObj := time.UnixMilli(toTime).UTC()
+				return fmt.Errorf("failed to search logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- From: %s UTC (parsed from: %s)\n- To: %s UTC (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify your time range is valid\n- Check that your query syntax is correct\n- Ensure you have proper permissions",
+					err, r.StatusCode, apiBody,
 					logsQuery,
 					fromTimeObj.Format(time.RFC3339), logsFrom,
 					toTimeObj.Format(time.RFC3339), logsTo,
@@ -705,12 +808,12 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to search logs: %w", err)
 	}
 
-	// Collect all logs from all pages
+	// Collect logs up to the requested limit
 	allLogs := resp.GetData()
 	pageCount := 1
 
-	// Follow pagination if there's more data
-	for {
+	// Follow pagination until we hit the limit or run out of pages
+	for logsLimit > 0 && len(allLogs) < logsLimit {
 		meta, ok := resp.GetMetaOk()
 		if !ok || meta == nil {
 			break
@@ -724,18 +827,28 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 			break
 		}
 
-		// Fetch next page
+		remaining := logsLimit - len(allLogs)
+		if remaining <= 0 {
+			break
+		}
+		remainingLimit := int32(remaining)
+		if remainingLimit < limit {
+			body.Page.Limit = &remainingLimit
+		}
 		body.Page.Cursor = cursor
 		opts.Body = &body
 		resp, r, err = api.ListLogs(client.Context(), opts)
 		if err != nil {
-			// Return what we have so far with a warning
 			printOutput("Warning: Failed to fetch page %d: %v\n", pageCount+1, err)
 			break
 		}
 
 		allLogs = append(allLogs, resp.GetData()...)
 		pageCount++
+	}
+
+	if logsLimit > 0 && len(allLogs) > logsLimit {
+		allLogs = allLogs[:logsLimit]
 	}
 
 	// Show helpful message if no logs found
@@ -749,10 +862,8 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build response with all collected logs
 	finalResp := resp
 	if pageCount > 1 {
-		// Update data with all collected logs
 		finalResp.SetData(allLogs)
 		printOutput("Fetched %d logs across %d pages\n\n", len(allLogs), pageCount)
 	}
@@ -767,19 +878,25 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 }
 
 func runLogsList(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// Validate storage tier before creating client
+	storageTier, err := validateAndConvertStorageTier(logsStorage)
 	if err != nil {
 		return err
 	}
 
-	fromTime, err := parseTimeString(logsFrom)
+	fromTime, err := util.ParseTimeToUnixMilli(logsFrom)
 	if err != nil {
 		return fmt.Errorf("invalid --from time: %w", err)
 	}
 
-	toTime, err := parseTimeString(logsTo)
+	toTime, err := util.ParseTimeToUnixMilli(logsTo)
 	if err != nil {
 		return fmt.Errorf("invalid --to time: %w", err)
+	}
+
+	client, err := getClient()
+	if err != nil {
+		return err
 	}
 
 	api := datadogV2.NewLogsApi(client.V2())
@@ -804,12 +921,17 @@ func runLogsList(cmd *cobra.Command, args []string) error {
 		},
 	}
 
+	// Set storage tier if provided
+	if storageTier != nil {
+		opts.Body.Filter.StorageTier = storageTier
+	}
+
 	resp, r, err := api.ListLogs(client.Context(), opts)
 	if err != nil {
-		if r != nil && r.Body != nil {
-			bodyBytes, readErr := io.ReadAll(r.Body)
-			if readErr == nil && len(bodyBytes) > 0 {
-				return fmt.Errorf("failed to list logs: %w\nStatus: %d\nAPI Response: %s", err, r.StatusCode, string(bodyBytes))
+		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				return fmt.Errorf("failed to list logs: %w\nStatus: %d\nAPI Response: %s", err, r.StatusCode, apiBody)
 			}
 			return fmt.Errorf("failed to list logs: %w (status: %d)", err, r.StatusCode)
 		}
@@ -826,19 +948,25 @@ func runLogsList(cmd *cobra.Command, args []string) error {
 }
 
 func runLogsQuery(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// Validate storage tier before creating client
+	storageTier, err := validateAndConvertStorageTier(logsStorage)
 	if err != nil {
 		return err
 	}
 
-	fromTime, err := parseTimeString(logsFrom)
+	fromTime, err := util.ParseTimeToUnixMilli(logsFrom)
 	if err != nil {
 		return fmt.Errorf("invalid --from time: %w", err)
 	}
 
-	toTime, err := parseTimeString(logsTo)
+	toTime, err := util.ParseTimeToUnixMilli(logsTo)
 	if err != nil {
 		return fmt.Errorf("invalid --to time: %w", err)
+	}
+
+	client, err := getClient()
+	if err != nil {
+		return err
 	}
 
 	api := datadogV2.NewLogsApi(client.V2())
@@ -861,16 +989,21 @@ func runLogsQuery(cmd *cobra.Command, args []string) error {
 		Sort: &sort,
 	}
 
+	// Set storage tier if provided
+	if storageTier != nil {
+		body.Filter.StorageTier = storageTier
+	}
+
 	opts := datadogV2.ListLogsOptionalParameters{
 		Body: &body,
 	}
 
 	resp, r, err := api.ListLogs(client.Context(), opts)
 	if err != nil {
-		if r != nil && r.Body != nil {
-			bodyBytes, readErr := io.ReadAll(r.Body)
-			if readErr == nil && len(bodyBytes) > 0 {
-				return fmt.Errorf("failed to query logs: %w\nStatus: %d\nAPI Response: %s", err, r.StatusCode, string(bodyBytes))
+		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				return fmt.Errorf("failed to query logs: %w\nStatus: %d\nAPI Response: %s", err, r.StatusCode, apiBody)
 			}
 			return fmt.Errorf("failed to query logs: %w (status: %d)", err, r.StatusCode)
 		}
@@ -887,31 +1020,42 @@ func runLogsQuery(cmd *cobra.Command, args []string) error {
 }
 
 func runLogsAggregate(cmd *cobra.Command, args []string) error {
-	client, err := getClient()
+	// Validate storage tier before creating client
+	storageTier, err := validateAndConvertStorageTier(logsStorage)
 	if err != nil {
 		return err
 	}
 
-	fromTime, err := parseTimeString(logsFrom)
+	fromTime, err := util.ParseTimeToUnixMilli(logsFrom)
 	if err != nil {
 		return fmt.Errorf("invalid --from time: %w", err)
 	}
 
-	toTime, err := parseTimeString(logsTo)
+	toTime, err := util.ParseTimeToUnixMilli(logsTo)
 	if err != nil {
 		return fmt.Errorf("invalid --to time: %w", err)
+	}
+
+	// Parse the compute string to extract aggregation and metric
+	aggregation, metric, err := parseComputeString(logsCompute)
+	if err != nil {
+		return fmt.Errorf("invalid --compute value: %w", err)
+	}
+
+	client, err := getClient()
+	if err != nil {
+		return err
 	}
 
 	api := datadogV2.NewLogsApi(client.V2())
 
 	// Build compute aggregation
 	compute := datadogV2.LogsCompute{
-		Aggregation: datadogV2.LogsAggregationFunction(logsCompute),
+		Aggregation: datadogV2.LogsAggregationFunction(aggregation),
 	}
 
-	// Parse compute field if present (e.g., "avg(@duration)")
-	if logsCompute != "count" {
-		metric := "*"
+	// Add metric field if present
+	if metric != "" {
 		compute.Metric = &metric
 	}
 
@@ -928,6 +1072,11 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 		},
 	}
 
+	// Set storage tier if provided
+	if storageTier != nil {
+		body.Filter.StorageTier = storageTier
+	}
+
 	// Add group by if specified
 	if logsGroupBy != "" {
 		limit := int64(logsLimit)
@@ -941,10 +1090,19 @@ func runLogsAggregate(cmd *cobra.Command, args []string) error {
 
 	resp, r, err := api.AggregateLogs(client.Context(), body)
 	if err != nil {
-		if r != nil && r.Body != nil {
-			bodyBytes, readErr := io.ReadAll(r.Body)
-			if readErr == nil && len(bodyBytes) > 0 {
-				return fmt.Errorf("failed to aggregate logs: %w\nStatus: %d\nAPI Response: %s", err, r.StatusCode, string(bodyBytes))
+		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				fromTimeObj := time.UnixMilli(fromTime).UTC()
+				toTimeObj := time.UnixMilli(toTime).UTC()
+				return fmt.Errorf("failed to aggregate logs: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- Compute: %s (parsed as: aggregation=%q, metric=%q)\n- Group By: %s\n- From: %s UTC (parsed from: %s)\n- To: %s UTC (parsed from: %s)\n- Limit: %d\n\nTroubleshooting:\n- Verify the aggregation function is supported\n- Ensure the metric field exists in your logs (e.g., @duration, @bytes)\n- Check your query syntax\n- Verify your time range is valid",
+					err, r.StatusCode, apiBody,
+					logsQuery,
+					logsCompute, aggregation, metric,
+					logsGroupBy,
+					fromTimeObj.Format(time.RFC3339), logsFrom,
+					toTimeObj.Format(time.RFC3339), logsTo,
+					logsLimit)
 			}
 			return fmt.Errorf("failed to aggregate logs: %w (status: %d)", err, r.StatusCode)
 		}

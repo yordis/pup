@@ -1,4 +1,6 @@
-# Pup - Datadog API CLI Wrapper
+# [PREVIEW] Pup - Datadog API CLI Wrapper
+
+**NOTICE: This is in Preview mode, we are fine tuning the interactions and bugs that arise. Please file issues or submit PRs. Thank you for your early interest!**
 
 [![CI](https://github.com/DataDog/pup/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DataDog/pup/actions/workflows/ci.yml)
 [![Go Version](https://img.shields.io/badge/go-1.25+-00ADD8?logo=go)](https://go.dev/)
@@ -21,11 +23,6 @@ A Go-based command-line wrapper for easy interaction with Datadog APIs.
 
 Pup implements **38 of 85+ available Datadog APIs** (44.7% coverage).
 
-**Summary:**
-- ✅ **35 Working** - Fully implemented and functional
-- ⏳ **3 Planned** - Skeleton implementation, endpoints pending
-- ❌ **48+ Not Implemented** - Available in Datadog but not yet in pup
-
 See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
 💡 **Tip:** Use Ctrl/Cmd+F to search for specific APIs. [Request features via GitHub Issues](https://github.com/DataDog/pup/issues).
@@ -37,12 +34,12 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
-| Metrics | ✅ | `metrics query`, `metrics list`, `metrics get`, `metrics search` | Full query and metadata support |
+| Metrics | ✅ | `metrics search`, `metrics query`, `metrics list`, `metrics get` | V1 and V2 APIs supported |
 | Logs | ✅ | `logs search`, `logs list`, `logs aggregate` | V1 and V2 APIs supported |
-| Traces | ✅ | `traces search`, `traces list`, `traces aggregate` | APM traces support |
 | Events | ✅ | `events list`, `events search`, `events get` | Infrastructure event management |
 | RUM | ✅ | `rum apps`, `rum sessions`, `rum metrics list/get`, `rum retention-filters list/get` | Apps, sessions, metrics, retention filters (create/update pending) |
 | APM Services | ✅ | `apm services`, `apm entities`, `apm dependencies`, `apm flow-map` | Services stats, operations, resources; entity queries; dependencies; flow visualization |
+| Traces | ❌ | - | Not yet implemented |
 | Profiling | ❌ | - | Not yet implemented |
 | Session Replay | ❌ | - | Not yet implemented |
 | Spans Metrics | ❌ | - | Not yet implemented |
@@ -106,7 +103,7 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 | Incidents | ✅ | `incidents list`, `incidents get`, `incidents attachments` | Incident management with attachment support |
 | On-Call (Teams) | ✅ | `on-call teams` (CRUD, memberships with roles) | Full team management system with admin/member roles |
 | Case Management | ✅ | `cases` (create, search, assign, archive, projects) | Complete case management with priorities P1-P5 |
-| Error Tracking | ✅ | `error-tracking issues list`, `error-tracking issues get` | Error issue management |
+| Error Tracking | ✅ | `error-tracking issues search`, `error-tracking issues get` | Error issue search and details |
 | Service Catalog | ✅ | `service-catalog list`, `service-catalog get` | Service registry management |
 | Scorecards | ✅ | `scorecards list`, `scorecards get` | Service quality scores |
 | Incident Services/Teams | ❌ | - | Not yet implemented |
@@ -156,9 +153,22 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
 ## Installation
 
+### Homebrew (macOS/Linux) - Coming soon!
+
+```bash
+brew tap datadog/pack
+brew install datadog/pack/pup
+```
+
+### Go Install
+
 ```bash
 go install github.com/DataDog/pup@latest
 ```
+
+### Manual Download
+
+Download pre-built binaries from the [latest release](https://github.com/DataDog/pup/releases/latest).
 
 ## Authentication
 
@@ -245,6 +255,19 @@ pup monitors get 12345678
 
 # Delete monitor
 pup monitors delete 12345678 --yes
+```
+
+### Metrics
+
+```bash
+# Search metrics using classic query syntax (v1 API)
+pup metrics search --query="avg:system.cpu.user{*}" --from="1h"
+
+# Query time-series data (v2 API)
+pup metrics query --query="avg:system.cpu.user{*}" --from="1h"
+
+# List available metrics
+pup metrics list --filter="system.*"
 ```
 
 ### Dashboards

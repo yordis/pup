@@ -22,7 +22,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | auth | login, logout, status, refresh | cmd/auth.go | ✅ |
 | metrics | query, list, get, search | cmd/metrics.go | ✅ |
 | logs | search, list, aggregate | cmd/logs.go | ✅ |
-| traces | search, list, aggregate | cmd/traces.go | ✅ |
+| traces | - | cmd/traces_simple.go | ❌ |
 | monitors | list, get, delete, search | cmd/monitors.go | ✅ |
 | dashboards | list, get, delete, url | cmd/dashboards.go | ✅ |
 | slos | list, get, create, update, delete, corrections | cmd/slos.go | ✅ |
@@ -44,7 +44,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | security | rules, signals, findings (search) | cmd/security.go | ✅ |
 | organizations | get, list | cmd/organizations.go | ✅ |
 | service-catalog | list, get | cmd/service_catalog.go | ✅ |
-| error-tracking | issues (list, get) | cmd/error_tracking.go | ✅ |
+| error-tracking | issues (search, get) | cmd/error_tracking.go | ✅ |
 | scorecards | list, get | cmd/scorecards.go | ✅ |
 | usage | summary, hourly | cmd/usage.go | ✅ |
 | apm | services (list, stats, operations, resources), entities (list), dependencies (list), flow-map | cmd/apm.go | ✅ |
@@ -81,7 +81,9 @@ pup slos get abc-123-def
 ### Search/Query
 ```bash
 pup logs search --query="status:error" --from="1h"
-pup metrics query --query="avg:system.cpu.user{*}"
+pup logs search --query="service:api" --from="7d" --storage="flex"
+pup metrics search --query="avg:system.cpu.user{*}" --from="1h"
+pup metrics query --query="avg:system.cpu.user{*}" --from="1h"
 pup events search --query="@user.id:12345"
 ```
 
@@ -106,7 +108,7 @@ pup infrastructure hosts list
 ### Data & Observability
 - **metrics** - Time-series metrics (query, list, get, search)
 - **logs** - Log search and analysis (search, list, aggregate)
-- **traces** - APM traces (search, list, aggregate)
+- **traces** - APM traces (not yet implemented - use `apm` commands instead)
 - **rum** - Real User Monitoring (apps, metrics, retention-filters, sessions)
 - **events** - Infrastructure events (list, search, get)
 
@@ -135,7 +137,7 @@ pup infrastructure hosts list
 
 ### Development & Quality
 - **cicd** - CI/CD visibility (pipelines, events)
-- **error-tracking** - Error management (issues list, issues get)
+- **error-tracking** - Error management (issues search, issues get)
 - **scorecards** - Service quality (list, get)
 - **service-catalog** - Service registry (list, get)
 

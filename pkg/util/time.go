@@ -9,17 +9,26 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // ParseTimeParam parses time parameters supporting multiple formats:
 // - "now" for current time
 // - Unix timestamps (e.g., "1704067200")
-// - Relative time (e.g., "1h", "30m", "7d")
+// - Relative time with flexible formats:
+//   - Short: "1h", "30m", "7d", "5s", "1w"
+//   - Long: "5min", "5mins", "5minute", "5minutes"
+//   - Long: "2hr", "2hrs", "2hour", "2hours"
+//   - Long: "3day", "3days"
+//   - Long: "1week", "1weeks"
+//   - With spaces: "5 minutes", "2 hours"
+//   - With minus prefix: "-5m", "-2h" (treated same as "5m", "2h")
+//
 // - ISO date strings (e.g., "2024-01-01T00:00:00Z")
 func ParseTimeParam(timeStr string) (time.Time, error) {
-	// Handle "now"
-	if timeStr == "now" {
+	// Handle "now" (case-insensitive)
+	if strings.ToLower(timeStr) == "now" {
 		return time.Now(), nil
 	}
 
@@ -31,8 +40,10 @@ func ParseTimeParam(timeStr string) (time.Time, error) {
 		}
 	}
 
-	// Try parsing relative time (e.g., "1h", "30m", "2d")
-	re := regexp.MustCompile(`^(\d+)([smhd])$`)
+	// Try parsing relative time with flexible formats
+	// Supports: 5m, 5min, 5mins, 5minute, 5minutes, 5 minutes, -5m, etc.
+	// Case-insensitive to handle MIN, Hour, HOURS, etc.
+	re := regexp.MustCompile(`(?i)^-?(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|week|weeks)$`)
 	matches := re.FindStringSubmatch(timeStr)
 	if len(matches) == 3 {
 		value, err := strconv.Atoi(matches[1])
@@ -40,18 +51,21 @@ func ParseTimeParam(timeStr string) (time.Time, error) {
 			return time.Time{}, fmt.Errorf("invalid time value: %w", err)
 		}
 
-		unit := matches[2]
+		unit := strings.ToLower(matches[2])
 		var duration time.Duration
 
+		// Map all variations to their base duration
 		switch unit {
-		case "s":
+		case "s", "sec", "secs", "second", "seconds":
 			duration = time.Duration(value) * time.Second
-		case "m":
+		case "m", "min", "mins", "minute", "minutes":
 			duration = time.Duration(value) * time.Minute
-		case "h":
+		case "h", "hr", "hrs", "hour", "hours":
 			duration = time.Duration(value) * time.Hour
-		case "d":
+		case "d", "day", "days":
 			duration = time.Duration(value) * 24 * time.Hour
+		case "w", "week", "weeks":
+			duration = time.Duration(value) * 7 * 24 * time.Hour
 		}
 
 		return time.Now().Add(-duration), nil

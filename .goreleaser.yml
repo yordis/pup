@@ -5,8 +5,6 @@ version: 2
 
 before:
   hooks:
-    # Run tests before building
-    - go test ./...
     # Ensure go.mod is tidy
     - go mod tidy
 
@@ -155,6 +153,29 @@ changelog:
       order: 3
     - title: "Other Changes"
       order: 999
+
+# Homebrew Tap
+homebrew_casks:
+  - name: pup
+    repository:
+      owner: DataDog
+      name: homebrew-pack
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/DataDog/pup
+    description: "Datadog API CLI - OAuth2 + API key authentication for Datadog APIs"
+    license: Apache-2.0
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "chore(cask): update {{ .ProjectName }} to {{ .Tag }}"
+    binaries:
+      - pup
+    completions:
+      bash: "completions/pup.bash"
+      zsh: "completions/pup.zsh"
+      fish: "completions/pup.fish"
+    url:
+      verified: github.com/DataDog/pup/releases/download
 
 # Announce releases
 announce:

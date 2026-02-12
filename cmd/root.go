@@ -7,10 +7,13 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
+	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
 	"github.com/DataDog/pup/internal/version"
 	"github.com/DataDog/pup/pkg/client"
 	"github.com/DataDog/pup/pkg/config"
@@ -32,7 +35,7 @@ var (
 	autoApprove  bool
 
 	// Dependency injection points for testing
-	clientFactory = defaultClientFactory
+	clientFactory           = defaultClientFactory
 	outputWriter  io.Writer = os.Stdout
 	inputReader   io.Reader = os.Stdin
 )
@@ -49,7 +52,114 @@ with Datadog APIs. It supports both API key and OAuth2 authentication.`,
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() error {
+	return ExecuteWithArgs(os.Args[1:])
+}
+
+// ExecuteWithArgs executes the root command with the given arguments
+func ExecuteWithArgs(args []string) error {
+	// IMPORTANT: Aliases are checked LAST to prevent overriding built-in commands.
+	// This ensures that no alias can shadow an existing pup command, even if validation
+	// is bypassed or a new command is added that conflicts with an existing alias.
+	//
+	// Priority order:
+	// 1. Built-in commands (version, auth, metrics, etc.)
+	// 2. Aliases (only if no built-in command matches)
+
+	// Check if the first argument might be an alias
+	// Only resolve as alias if it's NOT a built-in command
+	if len(args) > 0 && !isFlag(args[0]) && !isBuiltinCommand(args[0]) {
+		if aliasCommand, err := config.GetAlias(args[0]); err == nil {
+			// Expand the alias by replacing args[0] with the alias command
+			expandedArgs := expandAlias(aliasCommand, args[1:])
+			rootCmd.SetArgs(expandedArgs)
+			return rootCmd.Execute()
+		}
+	}
+
+	// Not an alias or is a built-in command, execute normally
+	rootCmd.SetArgs(args)
 	return rootCmd.Execute()
+}
+
+// expandAlias expands an alias command and appends additional arguments
+func expandAlias(aliasCommand string, additionalArgs []string) []string {
+	// Split the alias command into parts
+	// Simple split by spaces (could be enhanced to handle quoted strings)
+	parts := splitCommand(aliasCommand)
+
+	// Append any additional arguments passed after the alias
+	result := make([]string, 0, len(parts)+len(additionalArgs))
+	result = append(result, parts...)
+	result = append(result, additionalArgs...)
+
+	return result
+}
+
+// splitCommand splits a command string by spaces, respecting quotes
+func splitCommand(command string) []string {
+	var parts []string
+	var current strings.Builder
+	inQuote := false
+	quoteChar := rune(0)
+
+	for _, r := range command {
+		switch {
+		case r == '"' || r == '\'':
+			if !inQuote {
+				inQuote = true
+				quoteChar = r
+			} else if r == quoteChar {
+				inQuote = false
+				quoteChar = 0
+			} else {
+				current.WriteRune(r)
+			}
+		case r == ' ' && !inQuote:
+			if current.Len() > 0 {
+				parts = append(parts, current.String())
+				current.Reset()
+			}
+		default:
+			current.WriteRune(r)
+		}
+	}
+
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+
+	return parts
+}
+
+// isFlag checks if a string is a flag (starts with -)
+func isFlag(s string) bool {
+	return len(s) > 0 && s[0] == '-'
+}
+
+// isBuiltinCommand checks if a command name matches a registered cobra command
+// This ensures aliases cannot override built-in commands at runtime.
+//
+// CRITICAL SECURITY CHECK: This function is used in ExecuteWithArgs to ensure
+// that built-in commands ALWAYS take precedence over aliases, even if:
+// - Alias validation is bypassed (e.g., manual config.yml editing)
+// - New commands are added after aliases are created
+// - The reserved command list in alias.go becomes out of sync
+//
+// DO NOT REMOVE THIS CHECK - it prevents aliases from shadowing built-in commands.
+func isBuiltinCommand(name string) bool {
+	// Check if the command exists in rootCmd's registered commands
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == name {
+			return true
+		}
+		// Also check aliases defined by cobra commands themselves
+		for _, alias := range cmd.Aliases {
+			if alias == name {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func init() {
@@ -63,6 +173,7 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(testCmd)
 	rootCmd.AddCommand(authCmd)
+	rootCmd.AddCommand(aliasCmd)
 	rootCmd.AddCommand(metricsCmd)
 	rootCmd.AddCommand(monitorsCmd)
 	rootCmd.AddCommand(dashboardsCmd)
@@ -150,7 +261,26 @@ func readConfirmation() (string, error) {
 	return "", scanner.Err()
 }
 
-// formatAPIError creates user-friendly error messages for API errors
+// extractAPIErrorBody extracts the API response body from a
+// datadog.GenericOpenAPIError. The datadog-api-client-go library consumes
+// http.Response.Body during deserialization and stores the bytes in the error.
+// Callers that try to re-read http.Response.Body will always get empty data.
+func extractAPIErrorBody(err error) string {
+	if err == nil {
+		return ""
+	}
+	var apiErr datadog.GenericOpenAPIError
+	if errors.As(err, &apiErr) {
+		if body := apiErr.Body(); len(body) > 0 {
+			return string(body)
+		}
+	}
+	return ""
+}
+
+// formatAPIError creates user-friendly error messages for API errors.
+// It extracts the API response body from GenericOpenAPIError when available
+// and appends contextual guidance based on the HTTP status code.
 func formatAPIError(operation string, err error, response any) error {
 	type httpResponse interface {
 		StatusCode() int
@@ -159,6 +289,11 @@ func formatAPIError(operation string, err error, response any) error {
 	if r, ok := response.(httpResponse); ok && r != nil {
 		statusCode := r.StatusCode()
 		baseMsg := fmt.Sprintf("failed to %s: %v (status: %d)", operation, err, statusCode)
+
+		// Include API response body if available
+		if body := extractAPIErrorBody(err); body != "" {
+			baseMsg = fmt.Sprintf("failed to %s: %v (status: %d)\nAPI Response: %s", operation, err, statusCode, body)
+		}
 
 		switch {
 		case statusCode >= 500:

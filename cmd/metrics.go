@@ -11,9 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV1"
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
 	"github.com/DataDog/pup/pkg/formatter"
+	"github.com/DataDog/pup/pkg/util"
 	"github.com/spf13/cobra"
 )
 
@@ -80,7 +82,7 @@ AUTHENTICATION:
 // Query command
 var metricsQueryCmd = &cobra.Command{
 	Use:   "query",
-	Short: "Query time-series metrics data",
+	Short: "Query time-series metrics data (v2 API)",
 	Long: `Query time-series metrics data with flexible aggregation and filtering.
 
 This command queries metrics data from Datadog using the metrics query language.
@@ -131,6 +133,31 @@ OUTPUT:
 	RunE: runMetricsQuery,
 }
 
+// Search command (v1 API)
+var metricsSearchCmd = &cobra.Command{
+	Use:   "search",
+	Short: "Search metrics (v1 API)",
+	Long: `Search metrics using the v1 QueryMetrics API with classic query syntax.
+
+This command uses the v1 metrics query endpoint which accepts the traditional
+Datadog query string format directly. Use this when you want straightforward
+metric queries without v2 timeseries formula semantics.
+
+QUERY SYNTAX:
+  <aggregation>:<metric_name>{<filter>} [by {<group>}]
+
+EXAMPLES:
+  # Query CPU usage for the last hour
+  pup metrics search --query="avg:system.cpu.user{*}" --from="1h"
+
+  # Query request count by service
+  pup metrics search --query="sum:app.requests{env:prod} by {service}" --from="4h"
+
+  # Query with absolute time range
+  pup metrics search --query="avg:system.load.1{*}" --from="1704067200" --to="1704153600"`,
+	RunE: runMetricsSearch,
+}
+
 // List command
 var metricsListCmd = &cobra.Command{
 	Use:   "list",
@@ -138,38 +165,47 @@ var metricsListCmd = &cobra.Command{
 	Long: `List all available metrics in your Datadog account.
 
 This command retrieves the list of all metrics that have been submitted to
-Datadog. You can optionally filter the list using a metric name pattern.
+Datadog. You can optionally filter the list using a metric name pattern or
+filter by Datadog tags.
 
-FILTERING:
-  Use the --filter flag to search for metrics matching a pattern:
+FILTERING BY NAME:
+  Use the --filter flag to search for metrics matching a name pattern:
   • system.* - All system metrics
   • *.cpu.* - All CPU-related metrics
   • custom.* - All custom metrics
   • myapp.* - All metrics starting with myapp
+  • *request* - All metrics containing "request"
+
+  Pattern matching supports wildcards (* and ?) and is case-sensitive.
+  Filtering is performed client-side after fetching all metrics.
+
+FILTERING BY TAGS:
+  Use the --tag-filter flag to filter by Datadog tags (comma-separated):
+  • env:prod - Metrics tagged with env:prod
+  • env:prod,service:api - Metrics tagged with both env:prod AND service:api
+
+  Tag filtering is performed server-side by the Datadog API and returns
+  metrics that match ALL specified tags.
 
 EXAMPLES:
   # List all metrics
   pup metrics list
 
-  # List system metrics
+  # Filter by metric name pattern
   pup metrics list --filter="system.*"
-
-  # List CPU metrics
   pup metrics list --filter="*.cpu.*"
-
-  # List custom metrics
-  pup metrics list --filter="custom.*"
-
-  # Search for specific metrics
   pup metrics list --filter="*request*"
+
+  # Filter by tags
+  pup metrics list --tag-filter="env:prod"
+  pup metrics list --tag-filter="env:prod,service:api"
+
+  # Combine both filters (name pattern + tags)
+  pup metrics list --filter="system.*" --tag-filter="env:prod"
 
 OUTPUT:
   Returns an array of metric names. The response may be paginated for
-  large metric sets.
-
-PAGINATION:
-  Currently returns all matching metrics. For very large metric sets,
-  consider using more specific filters.`,
+  large metric sets.`,
 	RunE: runMetricsList,
 }
 
@@ -408,6 +444,7 @@ var (
 
 	// List flags
 	filterPattern string
+	tagFilter     string
 
 	// Metadata update flags
 	metadataDescription string
@@ -435,8 +472,17 @@ func init() {
 		panic(fmt.Errorf("failed to mark flag as required: %w", err))
 	}
 
+	// Search command flags
+	metricsSearchCmd.Flags().StringVar(&queryString, "query", "", "Metric query string (required)")
+	metricsSearchCmd.Flags().StringVar(&fromTime, "from", "1h", "Start time (e.g., 1h, 30m, 7d, now, unix timestamp)")
+	metricsSearchCmd.Flags().StringVar(&toTime, "to", "now", "End time (e.g., now, unix timestamp)")
+	if err := metricsSearchCmd.MarkFlagRequired("query"); err != nil {
+		panic(fmt.Errorf("failed to mark flag as required: %w", err))
+	}
+
 	// List command flags
-	metricsListCmd.Flags().StringVar(&filterPattern, "filter", "", "Filter metrics by pattern (e.g., system.*)")
+	metricsListCmd.Flags().StringVar(&filterPattern, "filter", "", "Filter metrics by name pattern (e.g., system.*, *.cpu.*)")
+	metricsListCmd.Flags().StringVar(&tagFilter, "tag-filter", "", "Filter metrics by tags (e.g., env:prod,service:api)")
 
 	// Metadata update flags
 	metricsMetadataUpdateCmd.Flags().StringVar(&metadataDescription, "description", "", "Metric description")
@@ -473,6 +519,7 @@ func init() {
 
 	// Add subcommands to metrics
 	metricsCmd.AddCommand(metricsQueryCmd)
+	metricsCmd.AddCommand(metricsSearchCmd)
 	metricsCmd.AddCommand(metricsListCmd)
 	metricsCmd.AddCommand(metricsMetadataCmd)
 	metricsCmd.AddCommand(metricsSubmitCmd)
@@ -487,29 +534,34 @@ func runMetricsQuery(cmd *cobra.Command, args []string) error {
 	}
 
 	// Parse time ranges
-	from, err := parseTimeParam(fromTime)
+	from, err := util.ParseTimeParam(fromTime)
 	if err != nil {
 		return fmt.Errorf("invalid --from time: %w", err)
 	}
 
-	to, err := parseTimeParam(toTime)
+	to, err := util.ParseTimeParam(toTime)
 	if err != nil {
 		return fmt.Errorf("invalid --to time: %w", err)
 	}
 
-	// Use v2 API for timeseries query (more flexible)
+	// Use v2 API for timeseries query
 	api := datadogV2.NewMetricsApi(client.V2())
-
-	// Build query request
-	metricsQuery := datadogV2.NewMetricsTimeseriesQuery(datadogV2.METRICSDATASOURCE_METRICS, queryString)
-	timeseriesQuery := datadogV2.MetricsTimeseriesQueryAsTimeseriesQuery(metricsQuery)
 
 	body := datadogV2.TimeseriesFormulaQueryRequest{
 		Data: datadogV2.TimeseriesFormulaRequest{
 			Attributes: datadogV2.TimeseriesFormulaRequestAttributes{
-				From:    from.Unix(),
-				To:      to.Unix(),
-				Queries: []datadogV2.TimeseriesQuery{timeseriesQuery},
+				Formulas: []datadogV2.QueryFormula{
+					{Formula: "a"},
+				},
+				Queries: []datadogV2.TimeseriesQuery{{
+					MetricsTimeseriesQuery: &datadogV2.MetricsTimeseriesQuery{
+						DataSource: datadogV2.METRICSDATASOURCE_METRICS,
+						Query:      queryString,
+						Name:       datadog.PtrString("a"),
+					},
+				}},
+				From: from.UTC().UnixMilli(),
+				To:   to.UTC().UnixMilli(),
 			},
 			Type: datadogV2.TIMESERIESFORMULAREQUESTTYPE_TIMESERIES_REQUEST,
 		},
@@ -518,6 +570,14 @@ func runMetricsQuery(cmd *cobra.Command, args []string) error {
 	resp, r, err := api.QueryTimeseriesData(client.Context(), body)
 	if err != nil {
 		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				return fmt.Errorf("failed to query metrics: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Query: %s\n- From: %s (Unix: %d)\n- To: %s (Unix: %d)\n\nTroubleshooting:\n- Verify your query syntax is correct (e.g., avg:metric.name{filter})\n- Check that the time range is valid\n- Ensure the metric exists and has data in the specified time range\n- Confirm you have proper permissions to access the metric",
+					err, r.StatusCode, apiBody,
+					queryString,
+					from.Format(time.RFC3339), from.Unix(),
+					to.Format(time.RFC3339), to.Unix())
+			}
 			return fmt.Errorf("failed to query metrics: %w (status: %d)", err, r.StatusCode)
 		}
 		return fmt.Errorf("failed to query metrics: %w", err)
@@ -532,6 +592,111 @@ func runMetricsQuery(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// runMetricsSearch executes the metrics search command using the v1 API
+func runMetricsSearch(cmd *cobra.Command, args []string) error {
+	client, err := getClient()
+	if err != nil {
+		return err
+	}
+
+	// Parse time ranges
+	from, err := util.ParseTimeParam(fromTime)
+	if err != nil {
+		return fmt.Errorf("invalid --from time: %w", err)
+	}
+
+	to, err := util.ParseTimeParam(toTime)
+	if err != nil {
+		return fmt.Errorf("invalid --to time: %w", err)
+	}
+
+	api := datadogV1.NewMetricsApi(client.V1())
+
+	resp, r, err := api.QueryMetrics(client.Context(), from.Unix(), to.Unix(), queryString)
+	if err != nil {
+		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				return fmt.Errorf("failed to search metrics: %w\nStatus: %d\nAPI Response: %s",
+					err, r.StatusCode, apiBody)
+			}
+			return fmt.Errorf("failed to search metrics: %w (status: %d)", err, r.StatusCode)
+		}
+		return fmt.Errorf("failed to search metrics: %w", err)
+	}
+
+	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
+	if err != nil {
+		return err
+	}
+
+	printOutput("%s\n", output)
+	return nil
+}
+
+// matchMetricName checks if a metric name matches a wildcard pattern.
+// Supports * (match any characters) and ? (match single character).
+func matchMetricName(pattern, name string) bool {
+	// If no pattern, match all
+	if pattern == "" {
+		return true
+	}
+
+	// Simple case: exact match
+	if pattern == name {
+		return true
+	}
+
+	// Convert glob pattern to regex-like matching
+	pIdx, nIdx := 0, 0
+	pLen, nLen := len(pattern), len(name)
+
+	// Track position for backtracking after *
+	var starIdx, matchIdx int = -1, 0
+
+	for nIdx < nLen {
+		if pIdx < pLen {
+			switch pattern[pIdx] {
+			case '?':
+				// ? matches any single character
+				pIdx++
+				nIdx++
+				continue
+			case '*':
+				// * matches zero or more characters
+				starIdx = pIdx
+				matchIdx = nIdx
+				pIdx++
+				continue
+			default:
+				// Regular character must match exactly
+				if pattern[pIdx] == name[nIdx] {
+					pIdx++
+					nIdx++
+					continue
+				}
+			}
+		}
+
+		// If we have a star, try backtracking
+		if starIdx != -1 {
+			pIdx = starIdx + 1
+			matchIdx++
+			nIdx = matchIdx
+			continue
+		}
+
+		return false
+	}
+
+	// Consume remaining * in pattern
+	for pIdx < pLen && pattern[pIdx] == '*' {
+		pIdx++
+	}
+
+	return pIdx == pLen
+}
+
 // runMetricsList executes the metrics list command
 func runMetricsList(cmd *cobra.Command, args []string) error {
 	client, err := getClient()
@@ -544,17 +709,51 @@ func runMetricsList(cmd *cobra.Command, args []string) error {
 	// From time defaults to 1 hour ago
 	from := time.Now().Add(-1 * time.Hour).Unix()
 
+	// Build API options - only use tag filter for --tag-filter flag
 	opts := datadogV1.NewListActiveMetricsOptionalParameters()
-	if filterPattern != "" {
-		opts = opts.WithTagFilter(filterPattern)
+	if tagFilter != "" {
+		opts = opts.WithTagFilter(tagFilter)
 	}
 
 	resp, r, err := api.ListActiveMetrics(client.Context(), from, *opts)
 	if err != nil {
 		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				filters := []string{}
+				if filterPattern != "" {
+					filters = append(filters, fmt.Sprintf("Name pattern: %s", filterPattern))
+				}
+				if tagFilter != "" {
+					filters = append(filters, fmt.Sprintf("Tag filter: %s", tagFilter))
+				}
+				filterInfo := strings.Join(filters, "\n- ")
+				if filterInfo == "" {
+					filterInfo = "None"
+				}
+
+				return fmt.Errorf("failed to list metrics: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Filters:\n  %s\n- From: %s (Unix: %d)\n\nTroubleshooting:\n- For --filter, use metric name patterns (e.g., system.*, *.cpu.*)\n- For --tag-filter, use Datadog tags (e.g., env:prod,service:api)\n- Verify you have permissions to list metrics",
+					err, r.StatusCode, apiBody,
+					filterInfo,
+					time.Unix(from, 0).Format(time.RFC3339), from)
+			}
 			return fmt.Errorf("failed to list metrics: %w (status: %d)", err, r.StatusCode)
 		}
 		return fmt.Errorf("failed to list metrics: %w", err)
+	}
+
+	// Apply client-side name filtering if pattern is specified
+	if filterPattern != "" {
+		metrics, ok := resp.GetMetricsOk()
+		if ok && metrics != nil {
+			filtered := make([]string, 0)
+			for _, metric := range *metrics {
+				if matchMetricName(filterPattern, metric) {
+					filtered = append(filtered, metric)
+				}
+			}
+			resp.Metrics = filtered
+		}
 	}
 
 	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
@@ -579,6 +778,11 @@ func runMetricsMetadataGet(cmd *cobra.Command, args []string) error {
 	resp, r, err := api.GetMetricMetadata(client.Context(), metricName)
 	if err != nil {
 		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				return fmt.Errorf("failed to get metric metadata: %w\nStatus: %d\nAPI Response: %s\n\nMetric: %s\n\nTroubleshooting:\n- Verify the metric name is correct\n- Ensure the metric exists in your account\n- Check that you have permissions to view metadata",
+					err, r.StatusCode, apiBody, metricName)
+			}
 			return fmt.Errorf("failed to get metric metadata: %w (status: %d)", err, r.StatusCode)
 		}
 		return fmt.Errorf("failed to get metric metadata: %w", err)
@@ -630,6 +834,11 @@ func runMetricsMetadataUpdate(cmd *cobra.Command, args []string) error {
 	resp, r, err := api.UpdateMetricMetadata(client.Context(), metricName, body)
 	if err != nil {
 		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				return fmt.Errorf("failed to update metric metadata: %w\nStatus: %d\nAPI Response: %s\n\nMetric: %s\n\nTroubleshooting:\n- Verify the metric name is correct\n- Check that the metadata values are valid (unit, type, etc.)\n- Ensure you have permissions to update metadata",
+					err, r.StatusCode, apiBody, metricName)
+			}
 			return fmt.Errorf("failed to update metric metadata: %w (status: %d)", err, r.StatusCode)
 		}
 		return fmt.Errorf("failed to update metric metadata: %w", err)
@@ -701,9 +910,9 @@ func runMetricsSubmit(cmd *cobra.Command, args []string) error {
 	}
 
 	series := datadogV2.MetricSeries{
-		Metric: submitName,
-		Type:   &metricType,
-		Points: []datadogV2.MetricPoint{point},
+		Metric:    submitName,
+		Type:      &metricType,
+		Points:    []datadogV2.MetricPoint{point},
 		Resources: []datadogV2.MetricResource{resource},
 	}
 
@@ -725,6 +934,12 @@ func runMetricsSubmit(cmd *cobra.Command, args []string) error {
 	resp, r, err := api.SubmitMetrics(client.Context(), body, *datadogV2.NewSubmitMetricsOptionalParameters())
 	if err != nil {
 		if r != nil {
+			apiBody := extractAPIErrorBody(err)
+			if apiBody != "" {
+				return fmt.Errorf("failed to submit metrics: %w\nStatus: %d\nAPI Response: %s\n\nRequest Details:\n- Metric: %s\n- Value: %f\n- Type: %s\n- Timestamp: %d\n- Tags: %v\n\nTroubleshooting:\n- Verify the metric name follows naming conventions (lowercase, dots/underscores)\n- Check that the metric type is valid (gauge, count, rate)\n- Ensure your API key has permission to submit metrics\n- Verify tags are in key:value format",
+					err, r.StatusCode, apiBody,
+					submitName, submitValue, submitType, timestamp, tags)
+			}
 			return fmt.Errorf("failed to submit metrics: %w (status: %d)", err, r.StatusCode)
 		}
 		return fmt.Errorf("failed to submit metrics: %w", err)
@@ -743,50 +958,4 @@ func runMetricsSubmit(cmd *cobra.Command, args []string) error {
 func runMetricsTagsList(cmd *cobra.Command, args []string) error {
 	// NOTE: ListTagsByMetricName is not available in datadog-api-client-go v2.30.0
 	return fmt.Errorf("listing tags by metric name is not supported in the current API client version")
-}
-
-// parseTimeParam parses a time parameter (relative or absolute)
-func parseTimeParam(timeStr string) (time.Time, error) {
-	// Handle "now" keyword
-	if strings.ToLower(timeStr) == "now" {
-		return time.Now(), nil
-	}
-
-	// Try parsing as unix timestamp
-	if timestamp, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
-		return time.Unix(timestamp, 0), nil
-	}
-
-	// Parse relative time (e.g., 1h, 30m, 7d, 1w)
-	if len(timeStr) < 2 {
-		return time.Time{}, fmt.Errorf("invalid time format: %s", timeStr)
-	}
-
-	valueStr := timeStr[:len(timeStr)-1]
-	unit := timeStr[len(timeStr)-1:]
-
-	value, err := strconv.ParseInt(valueStr, 10, 64)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid time value: %s", timeStr)
-	}
-
-	now := time.Now()
-	var duration time.Duration
-
-	switch strings.ToLower(unit) {
-	case "s":
-		duration = time.Duration(value) * time.Second
-	case "m":
-		duration = time.Duration(value) * time.Minute
-	case "h":
-		duration = time.Duration(value) * time.Hour
-	case "d":
-		duration = time.Duration(value) * 24 * time.Hour
-	case "w":
-		duration = time.Duration(value) * 7 * 24 * time.Hour
-	default:
-		return time.Time{}, fmt.Errorf("invalid time unit: %s (use s, m, h, d, or w)", unit)
-	}
-
-	return now.Add(-duration), nil
 }

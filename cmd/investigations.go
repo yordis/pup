@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/DataDog/pup/pkg/formatter"
 	"github.com/spf13/cobra"
@@ -23,19 +22,16 @@ var investigationsCmd = &cobra.Command{
 	Long: `Manage Bits AI investigations.
 
 Bits AI investigations allow you to trigger automated root cause analysis
-for monitor alerts or general infrastructure issues.
+for monitor alerts.
 
 CAPABILITIES:
-  • Trigger a new investigation (monitor alert or general)
+  • Trigger a new investigation (monitor alert)
   • Get investigation details by ID
   • List investigations with optional filters
 
 EXAMPLES:
   # Trigger investigation from a monitor alert
   pup investigations trigger --type=monitor_alert --monitor-id=123456 --event-id="evt-abc" --event-ts=1706918956000
-
-  # Trigger a general investigation
-  pup investigations trigger --type=general --tags="service:web-store" --description="High error rate"
 
   # Get investigation details
   pup investigations get <investigation-id>
@@ -67,29 +63,21 @@ var investigationsListCmd = &cobra.Command{
 }
 
 var (
-	invTriggerType  string
-	invMonitorID    int64
-	invEventID      string
-	invEventTS      int64
-	invTags         string
-	invDescription  string
-	invStartTime    int64
-	invEndTime      int64
-	invPageOffset   int64
-	invPageLimit    int64
-	invFilterMonID  int64
+	invTriggerType string
+	invMonitorID   int64
+	invEventID     string
+	invEventTS     int64
+	invPageOffset  int64
+	invPageLimit   int64
+	invFilterMonID int64
 )
 
 func init() {
 	// trigger flags
-	investigationsTriggerCmd.Flags().StringVar(&invTriggerType, "type", "", "Investigation type: monitor_alert or general (required)")
+	investigationsTriggerCmd.Flags().StringVar(&invTriggerType, "type", "", "Investigation type: monitor_alert (required)")
 	investigationsTriggerCmd.Flags().Int64Var(&invMonitorID, "monitor-id", 0, "Monitor ID (required for monitor_alert)")
 	investigationsTriggerCmd.Flags().StringVar(&invEventID, "event-id", "", "Event ID (required for monitor_alert)")
 	investigationsTriggerCmd.Flags().Int64Var(&invEventTS, "event-ts", 0, "Event timestamp in milliseconds (required for monitor_alert)")
-	investigationsTriggerCmd.Flags().StringVar(&invTags, "tags", "", "Comma-separated tags (required for general)")
-	investigationsTriggerCmd.Flags().StringVar(&invDescription, "description", "", "Problem description (required for general)")
-	investigationsTriggerCmd.Flags().Int64Var(&invStartTime, "start-time", 0, "Start time in milliseconds (optional for general)")
-	investigationsTriggerCmd.Flags().Int64Var(&invEndTime, "end-time", 0, "End time in milliseconds (optional for general)")
 	if err := investigationsTriggerCmd.MarkFlagRequired("type"); err != nil {
 		panic(fmt.Errorf("failed to mark flag as required: %w", err))
 	}
@@ -196,50 +184,25 @@ func runInvestigationsList(cmd *cobra.Command, args []string) error {
 func buildTriggerRequestBody() (map[string]any, error) {
 	var trigger map[string]any
 
-	switch invTriggerType {
-	case "monitor_alert":
-		if invMonitorID == 0 {
-			return nil, fmt.Errorf("--monitor-id is required for monitor_alert investigations")
-		}
-		if invEventID == "" {
-			return nil, fmt.Errorf("--event-id is required for monitor_alert investigations")
-		}
-		if invEventTS == 0 {
-			return nil, fmt.Errorf("--event-ts is required for monitor_alert investigations")
-		}
-		trigger = map[string]any{
-			"type": "monitor_alert_trigger",
-			"monitor_alert_trigger": map[string]any{
-				"monitor_id": invMonitorID,
-				"event_id":   invEventID,
-				"event_ts":   invEventTS,
-			},
-		}
-
-	case "general":
-		if invTags == "" {
-			return nil, fmt.Errorf("--tags is required for general investigations")
-		}
-		if invDescription == "" {
-			return nil, fmt.Errorf("--description is required for general investigations")
-		}
-		general := map[string]any{
-			"tags":        strings.Split(invTags, ","),
-			"description": invDescription,
-		}
-		if invStartTime != 0 {
-			general["start_time"] = invStartTime
-		}
-		if invEndTime != 0 {
-			general["end_time"] = invEndTime
-		}
-		trigger = map[string]any{
-			"type":                  "general_investigation",
-			"general_investigation": general,
-		}
-
-	default:
-		return nil, fmt.Errorf("invalid investigation type %q: must be monitor_alert or general", invTriggerType)
+	if invTriggerType != "monitor_alert" {
+		return nil, fmt.Errorf("invalid investigation type %q: must be monitor_alert", invTriggerType)
+	}
+	if invMonitorID == 0 {
+		return nil, fmt.Errorf("--monitor-id is required for monitor_alert investigations")
+	}
+	if invEventID == "" {
+		return nil, fmt.Errorf("--event-id is required for monitor_alert investigations")
+	}
+	if invEventTS == 0 {
+		return nil, fmt.Errorf("--event-ts is required for monitor_alert investigations")
+	}
+	trigger = map[string]any{
+		"type": "monitor_alert_trigger",
+		"monitor_alert_trigger": map[string]any{
+			"monitor_id": invMonitorID,
+			"event_id":   invEventID,
+			"event_ts":   invEventTS,
+		},
 	}
 
 	return map[string]any{

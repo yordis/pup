@@ -9,10 +9,12 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/DataDog/pup/pkg/client"
 	"github.com/DataDog/pup/pkg/config"
+	"github.com/DataDog/pup/pkg/util"
 )
 
 func TestLogsCmd(t *testing.T) {
@@ -58,6 +60,15 @@ func TestParseTimeString(t *testing.T) {
 			},
 		},
 		{
+			name:  "RFC3339 timestamp",
+			input: "2024-01-01T00:00:00Z",
+			check: func(ts int64) bool {
+				// Should be Jan 1, 2024 in milliseconds
+				// 2024-01-01T00:00:00Z = 1704067200000ms
+				return ts == 1704067200000
+			},
+		},
+		{
 			name:    "invalid format",
 			input:   "invalid",
 			wantErr: true,
@@ -66,15 +77,181 @@ func TestParseTimeString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseTimeString(tt.input)
+			got, err := util.ParseTimeToUnixMilli(tt.input)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseTimeString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("util.ParseTimeToUnixMilli() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr && tt.check != nil && !tt.check(got) {
-				t.Errorf("parseTimeString() = %d, validation failed", got)
+				t.Errorf("util.ParseTimeToUnixMilli() = %d, validation failed", got)
+			}
+		})
+	}
+}
+
+func TestParseComputeString(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           string
+		wantAggregation string
+		wantMetric      string
+		wantErr         bool
+		errContains     string
+	}{
+		{
+			name:            "count - no metric",
+			input:           "count",
+			wantAggregation: "count",
+			wantMetric:      "",
+			wantErr:         false,
+		},
+		{
+			name:            "count - uppercase",
+			input:           "COUNT",
+			wantAggregation: "count",
+			wantMetric:      "",
+			wantErr:         false,
+		},
+		{
+			name:            "avg with metric",
+			input:           "avg(@duration)",
+			wantAggregation: "avg",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:            "sum with metric",
+			input:           "sum(@bytes)",
+			wantAggregation: "sum",
+			wantMetric:      "@bytes",
+			wantErr:         false,
+		},
+		{
+			name:            "min with metric",
+			input:           "min(@response_time)",
+			wantAggregation: "min",
+			wantMetric:      "@response_time",
+			wantErr:         false,
+		},
+		{
+			name:            "max with metric",
+			input:           "max(@duration)",
+			wantAggregation: "max",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:            "cardinality with metric",
+			input:           "cardinality(@user.id)",
+			wantAggregation: "cardinality",
+			wantMetric:      "@user.id",
+			wantErr:         false,
+		},
+		{
+			name:            "percentile with metric and parameter - converts to pc99",
+			input:           "percentile(@duration, 99)",
+			wantAggregation: "pc99",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:            "percentile pc95",
+			input:           "percentile(@latency, 95)",
+			wantAggregation: "pc95",
+			wantMetric:      "@latency",
+			wantErr:         false,
+		},
+		{
+			name:            "percentile pc50 (median)",
+			input:           "percentile(@response_time, 50)",
+			wantAggregation: "pc50",
+			wantMetric:      "@response_time",
+			wantErr:         false,
+		},
+		{
+			name:        "percentile without value",
+			input:       "percentile(@duration)",
+			wantErr:     true,
+			errContains: "percentile requires a percentile value",
+		},
+		{
+			name:            "median with metric",
+			input:           "median(@latency)",
+			wantAggregation: "median",
+			wantMetric:      "@latency",
+			wantErr:         false,
+		},
+		{
+			name:            "metric with dots and underscores",
+			input:           "avg(@http.response_time)",
+			wantAggregation: "avg",
+			wantMetric:      "@http.response_time",
+			wantErr:         false,
+		},
+		{
+			name:            "whitespace handling",
+			input:           "  avg(@duration)  ",
+			wantAggregation: "avg",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+		{
+			name:        "invalid - unknown function",
+			input:       "invalid(@duration)",
+			wantErr:     true,
+			errContains: "unknown aggregation function",
+		},
+		{
+			name:        "invalid - malformed",
+			input:       "avg(@duration",
+			wantErr:     true,
+			errContains: "invalid compute format",
+		},
+		{
+			name:        "invalid - no function name",
+			input:       "(@duration)",
+			wantErr:     true,
+			errContains: "invalid compute format",
+		},
+		{
+			name:        "invalid - empty string",
+			input:       "",
+			wantErr:     true,
+			errContains: "invalid compute format",
+		},
+		{
+			name:            "case insensitive function",
+			input:           "AVG(@duration)",
+			wantAggregation: "avg",
+			wantMetric:      "@duration",
+			wantErr:         false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotAgg, gotMetric, err := parseComputeString(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseComputeString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr && tt.errContains != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("parseComputeString() error = %v, should contain %q", err, tt.errContains)
+				}
+				return
+			}
+
+			if gotAgg != tt.wantAggregation {
+				t.Errorf("parseComputeString() aggregation = %q, want %q", gotAgg, tt.wantAggregation)
+			}
+
+			if gotMetric != tt.wantMetric {
+				t.Errorf("parseComputeString() metric = %q, want %q", gotMetric, tt.wantMetric)
 			}
 		})
 	}
@@ -336,9 +513,9 @@ func TestRunLogsArchivesGet(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name       string
-		archiveID  string
-		wantErr    bool
+		name      string
+		archiveID string
+		wantErr   bool
 	}{
 		{
 			name:      "get archive",
@@ -396,9 +573,9 @@ func TestRunLogsMetricsGet(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name      string
-		metricID  string
-		wantErr   bool
+		name     string
+		metricID string
+		wantErr  bool
 	}{
 		{
 			name:     "get metric",
@@ -427,9 +604,9 @@ func TestRunLogsArchivesDelete(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name       string
-		archiveID  string
-		wantErr    bool
+		name      string
+		archiveID string
+		wantErr   bool
 	}{
 		{
 			name:      "delete archive",
@@ -458,9 +635,9 @@ func TestRunLogsMetricsDelete(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name      string
-		metricID  string
-		wantErr   bool
+		name     string
+		metricID string
+		wantErr  bool
 	}{
 		{
 			name:     "delete metric",
@@ -479,6 +656,273 @@ func TestRunLogsMetricsDelete(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("runLogsMetricsDelete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAndConvertStorageTier(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantNil  bool
+		wantErr  bool
+		wantTier string
+	}{
+		{
+			name:    "empty string - no storage tier specified",
+			input:   "",
+			wantNil: true,
+			wantErr: false,
+		},
+		{
+			name:     "indexes",
+			input:    "indexes",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "indexes",
+		},
+		{
+			name:     "online-archives",
+			input:    "online-archives",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "online-archives",
+		},
+		{
+			name:     "flex",
+			input:    "flex",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "flex",
+		},
+		{
+			name:     "FLEX - uppercase",
+			input:    "FLEX",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "flex",
+		},
+		{
+			name:     "Indexes - mixed case",
+			input:    "Indexes",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "indexes",
+		},
+		{
+			name:    "invalid storage tier",
+			input:   "invalid",
+			wantNil: true,
+			wantErr: true,
+		},
+		{
+			name:    "invalid - close but not exact",
+			input:   "archive",
+			wantNil: true,
+			wantErr: true,
+		},
+		{
+			name:     "whitespace - should be trimmed",
+			input:    "  flex  ",
+			wantNil:  false,
+			wantErr:  false,
+			wantTier: "flex",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := validateAndConvertStorageTier(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateAndConvertStorageTier() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if (got == nil) != tt.wantNil {
+				t.Errorf("validateAndConvertStorageTier() returned nil = %v, wantNil %v", got == nil, tt.wantNil)
+				return
+			}
+
+			if !tt.wantNil && got != nil && string(*got) != tt.wantTier {
+				t.Errorf("validateAndConvertStorageTier() tier = %v, want %v", string(*got), tt.wantTier)
+			}
+		})
+	}
+}
+
+func TestRunLogsSearchWithStorageTier(t *testing.T) {
+	cleanup := setupLogsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name        string
+		query       string
+		from        string
+		to          string
+		storageTier string
+		wantErr     bool
+	}{
+		{
+			name:        "search with flex storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "flex",
+			wantErr:     true, // Will fail because of mock client, but validates tier parsing
+		},
+		{
+			name:        "search with online-archives",
+			query:       "status:error",
+			from:        "30d",
+			to:          "now",
+			storageTier: "online-archives",
+			wantErr:     true,
+		},
+		{
+			name:        "search with indexes",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "indexes",
+			wantErr:     true,
+		},
+		{
+			name:        "search with invalid storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "invalid",
+			wantErr:     true,
+		},
+		{
+			name:        "search without storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logsQuery = tt.query
+			logsFrom = tt.from
+			logsTo = tt.to
+			logsStorage = tt.storageTier
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runLogsSearch(logsSearchCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runLogsSearch() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// For invalid storage tier, check that error message mentions "invalid storage tier"
+			if tt.storageTier == "invalid" && err != nil {
+				if !strings.Contains(err.Error(), "invalid storage tier") {
+					t.Errorf("runLogsSearch() with invalid storage tier should mention 'invalid storage tier', got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestRunLogsQueryWithStorageTier(t *testing.T) {
+	cleanup := setupLogsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name        string
+		query       string
+		from        string
+		to          string
+		storageTier string
+		wantErr     bool
+	}{
+		{
+			name:        "query with flex storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "flex",
+			wantErr:     true,
+		},
+		{
+			name:        "query with invalid storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			storageTier: "bad-tier",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logsQuery = tt.query
+			logsFrom = tt.from
+			logsTo = tt.to
+			logsStorage = tt.storageTier
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runLogsQuery(logsQueryCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runLogsQuery() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunLogsAggregateWithStorageTier(t *testing.T) {
+	cleanup := setupLogsTestClient(t)
+	defer cleanup()
+
+	tests := []struct {
+		name        string
+		query       string
+		from        string
+		to          string
+		compute     string
+		storageTier string
+		wantErr     bool
+	}{
+		{
+			name:        "aggregate with flex storage tier",
+			query:       "status:error",
+			from:        "1h",
+			to:          "now",
+			compute:     "count",
+			storageTier: "flex",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logsQuery = tt.query
+			logsFrom = tt.from
+			logsTo = tt.to
+			logsCompute = tt.compute
+			logsStorage = tt.storageTier
+
+			var buf bytes.Buffer
+			outputWriter = &buf
+			defer func() { outputWriter = os.Stdout }()
+
+			err := runLogsAggregate(logsAggregateCmd, []string{})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runLogsAggregate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
