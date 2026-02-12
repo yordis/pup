@@ -743,7 +743,8 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --to time: %w", err)
 	}
 
-	client, err := getClient()
+	// Logs API doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("POST", "/api/v2/logs/events/search")
 	if err != nil {
 		return err
 	}
@@ -894,7 +895,8 @@ func runLogsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --to time: %w", err)
 	}
 
-	client, err := getClient()
+	// Logs API doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("POST", "/api/v2/logs/events")
 	if err != nil {
 		return err
 	}
@@ -964,7 +966,8 @@ func runLogsQuery(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --to time: %w", err)
 	}
 
-	client, err := getClient()
+	// Logs API doesn't support OAuth, use API keys
+	client, err := getClientForEndpoint("POST", "/api/v2/logs/events")
 	if err != nil {
 		return err
 	}

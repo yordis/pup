@@ -247,6 +247,33 @@ func getClient() (*client.Client, error) {
 	return ddClient, nil
 }
 
+// getClientForEndpoint creates a client appropriate for the endpoint
+// If the endpoint doesn't support OAuth, it forces API key authentication
+func getClientForEndpoint(method, path string) (*client.Client, error) {
+	// Check if this endpoint requires API keys
+	if client.RequiresAPIKeyFallback(method, path) {
+		// This endpoint doesn't support OAuth, use API keys
+		if cfg.APIKey == "" || cfg.AppKey == "" {
+			return nil, fmt.Errorf(
+				"endpoint %s %s does not support OAuth authentication. "+
+					"Please set DD_API_KEY and DD_APP_KEY environment variables",
+				method, path,
+			)
+		}
+
+		// Try to use the mocked factory if in test mode (allows test to fail intentionally)
+		// This respects the clientFactory mock in tests
+		c, err := clientFactory(cfg)
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	}
+
+	// Endpoint supports OAuth, use standard client
+	return getClient()
+}
+
 // printOutput writes formatted output (for testing)
 func printOutput(format string, a ...any) {
 	_, _ = fmt.Fprintf(outputWriter, format, a...)

@@ -30,23 +30,36 @@ type Client struct {
 //  1. OAuth2 tokens (if available and valid)
 //  2. API keys (DD_API_KEY and DD_APP_KEY)
 func New(cfg *config.Config) (*Client, error) {
+	return NewWithOptions(cfg, false)
+}
+
+// NewWithAPIKeys creates a new Datadog API client forcing API key authentication
+// This is used for endpoints that don't support OAuth2
+func NewWithAPIKeys(cfg *config.Config) (*Client, error) {
+	return NewWithOptions(cfg, true)
+}
+
+// NewWithOptions creates a new Datadog API client with authentication options
+func NewWithOptions(cfg *config.Config, forceAPIKeys bool) (*Client, error) {
 	var ctx context.Context
 
-	// Try OAuth2 tokens first (preferred method)
-	store, err := storage.GetStorage(nil)
-	if err == nil {
-		tokens, err := store.LoadTokens(cfg.Site)
-		if err == nil && tokens != nil && !tokens.IsExpired() {
-			// Use OAuth2 Bearer token authentication
-			ctx = context.WithValue(
-				context.Background(),
-				datadog.ContextAccessToken,
-				tokens.AccessToken,
-			)
+	if !forceAPIKeys {
+		// Try OAuth2 tokens first (preferred method)
+		store, err := storage.GetStorage(nil)
+		if err == nil {
+			tokens, err := store.LoadTokens(cfg.Site)
+			if err == nil && tokens != nil && !tokens.IsExpired() {
+				// Use OAuth2 Bearer token authentication
+				ctx = context.WithValue(
+					context.Background(),
+					datadog.ContextAccessToken,
+					tokens.AccessToken,
+				)
+			}
 		}
 	}
 
-	// Fall back to API keys if OAuth not available
+	// Fall back to API keys if OAuth not available or forced
 	if ctx == nil {
 		if cfg.APIKey == "" || cfg.AppKey == "" {
 			return nil, fmt.Errorf(
@@ -122,9 +135,24 @@ func (c *Client) Config() *config.Config {
 	return c.config
 }
 
+// ValidateEndpointAuth checks if the current authentication is compatible with the endpoint
+func (c *Client) ValidateEndpointAuth(method, path string) error {
+	return ValidateEndpointAuth(c.ctx, c.config, method, path)
+}
+
+// GetAuthType returns the type of authentication being used by this client
+func (c *Client) GetAuthType() AuthType {
+	return GetAuthType(c.ctx)
+}
+
 // RawRequest makes an HTTP request with proper authentication headers.
 // This is used for APIs not covered by the typed datadog-api-client-go library.
 func (c *Client) RawRequest(method, path string, body io.Reader) (*http.Response, error) {
+	// Validate endpoint auth before making the request
+	if err := c.ValidateEndpointAuth(method, path); err != nil {
+		return nil, err
+	}
+
 	url := fmt.Sprintf("https://api.%s%s", c.config.Site, path)
 
 	req, err := http.NewRequest(method, url, body)
