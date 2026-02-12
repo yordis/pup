@@ -168,7 +168,9 @@ func TestMetricsCommands(t *testing.T) {
 
 ## CI/CD Pipeline
 
-GitHub Actions workflow runs on all branches with 3 parallel jobs:
+> **Note:** Pup uses Datadog CI products for enhanced monitoring and analytics.
+
+GitHub Actions workflow runs on all branches with 4 parallel jobs:
 
 ### 1. Test and Coverage
 
@@ -229,6 +231,21 @@ Enforces Go style and best practices.
 ```
 
 Verifies project builds and binary executes.
+
+### 4. Datadog Static Analysis (SAST)
+
+```yaml
+- name: Run Datadog Static Analysis
+  run: datadog-ci sast scan --service=pup --env=ci
+```
+
+Scans code for security vulnerabilities and quality issues on pull requests.
+
+See **[DATADOG_CI.md](DATADOG_CI.md)** for:
+- Test Visibility with orchestrion
+- Code Coverage upload to Datadog
+- CI Pipeline Visibility tracking
+- SAST configuration and results
 
 ## Coverage Badge
 
