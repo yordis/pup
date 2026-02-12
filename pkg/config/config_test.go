@@ -11,6 +11,7 @@ import (
 )
 
 func TestLoad(t *testing.T) {
+	t.Parallel()
 	// Save original env vars
 	origAPIKey := os.Getenv("DD_API_KEY")
 	origAppKey := os.Getenv("DD_APP_KEY")
@@ -85,6 +86,7 @@ func TestLoad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Clear all env vars
 			os.Unsetenv("DD_API_KEY")
 			os.Unsetenv("DD_APP_KEY")
@@ -119,6 +121,7 @@ func TestLoad(t *testing.T) {
 }
 
 func TestConfig_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		config  *Config
@@ -165,6 +168,7 @@ func TestConfig_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.config.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
@@ -174,6 +178,7 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestConfig_GetAPIURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		site string
@@ -218,6 +223,7 @@ func TestConfig_GetAPIURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			cfg := &Config{Site: tt.site}
 			got := cfg.GetAPIURL()
 			if got != tt.want {
@@ -228,6 +234,7 @@ func TestConfig_GetAPIURL(t *testing.T) {
 }
 
 func TestGetEnvWithDefault(t *testing.T) {
+	t.Parallel()
 	// Save original
 	origValue := os.Getenv("TEST_ENV_VAR")
 	defer os.Setenv("TEST_ENV_VAR", origValue)
@@ -267,6 +274,7 @@ func TestGetEnvWithDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if tt.setEnv {
 				os.Setenv(tt.key, tt.setValue)
 			} else {

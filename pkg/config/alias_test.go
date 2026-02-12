@@ -16,6 +16,7 @@ import (
 )
 
 func TestLoadAliases(t *testing.T) {
+	t.Parallel()
 	// Create a temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
@@ -49,6 +50,7 @@ func TestLoadAliases(t *testing.T) {
 }
 
 func TestSaveAliases(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
 
@@ -79,6 +81,7 @@ func TestSaveAliases(t *testing.T) {
 }
 
 func TestGetAlias(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
 
@@ -106,6 +109,7 @@ func TestGetAlias(t *testing.T) {
 }
 
 func TestSetAlias(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
 
@@ -138,6 +142,7 @@ func TestSetAlias(t *testing.T) {
 }
 
 func TestDeleteAlias(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
 
@@ -168,6 +173,7 @@ func TestDeleteAlias(t *testing.T) {
 }
 
 func TestImportAliases(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
 
@@ -244,6 +250,7 @@ func TestImportAliases(t *testing.T) {
 }
 
 func TestGetConfigPath(t *testing.T) {
+	t.Parallel()
 	t.Run("default config path", func(t *testing.T) {
 		// Reset to default
 		ConfigPathFunc = getDefaultConfigPath
@@ -257,6 +264,7 @@ func TestGetConfigPath(t *testing.T) {
 }
 
 func TestLoadAliasesErrorPaths(t *testing.T) {
+	t.Parallel()
 	t.Run("error getting config path", func(t *testing.T) {
 		originalGetConfigPath := ConfigPathFunc
 		ConfigPathFunc = func() (string, error) {
@@ -289,6 +297,7 @@ func TestLoadAliasesErrorPaths(t *testing.T) {
 }
 
 func TestSaveAliasesErrorPaths(t *testing.T) {
+	t.Parallel()
 	t.Run("error getting config path", func(t *testing.T) {
 		originalGetConfigPath := ConfigPathFunc
 		ConfigPathFunc = func() (string, error) {
@@ -339,6 +348,7 @@ func TestSaveAliasesErrorPaths(t *testing.T) {
 }
 
 func TestGetAliasErrorPath(t *testing.T) {
+	t.Parallel()
 	t.Run("error loading aliases", func(t *testing.T) {
 		originalGetConfigPath := ConfigPathFunc
 		ConfigPathFunc = func() (string, error) {
@@ -353,6 +363,7 @@ func TestGetAliasErrorPath(t *testing.T) {
 }
 
 func TestSetAliasErrorPath(t *testing.T) {
+	t.Parallel()
 	t.Run("error loading aliases", func(t *testing.T) {
 		originalGetConfigPath := ConfigPathFunc
 		ConfigPathFunc = func() (string, error) {
@@ -367,6 +378,7 @@ func TestSetAliasErrorPath(t *testing.T) {
 }
 
 func TestDeleteAliasErrorPath(t *testing.T) {
+	t.Parallel()
 	t.Run("error loading aliases", func(t *testing.T) {
 		originalGetConfigPath := ConfigPathFunc
 		ConfigPathFunc = func() (string, error) {
@@ -381,6 +393,7 @@ func TestDeleteAliasErrorPath(t *testing.T) {
 }
 
 func TestImportAliasesErrorPath(t *testing.T) {
+	t.Parallel()
 	t.Run("error loading existing aliases", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		importFile := filepath.Join(tmpDir, "import.yml")

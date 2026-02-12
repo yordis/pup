@@ -15,6 +15,7 @@ import (
 )
 
 func TestGet_NoAgent(t *testing.T) {
+	t.Parallel()
 	// Clear all agent environment variables
 	os.Unsetenv("CLAUDECODE")
 	os.Unsetenv("CLAUDE_CODE")
@@ -35,6 +36,7 @@ func TestGet_NoAgent(t *testing.T) {
 }
 
 func TestGet_WithClaudeCode(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		envVar  string
@@ -47,6 +49,7 @@ func TestGet_WithClaudeCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Clear all agent env vars first
 			os.Unsetenv("CLAUDECODE")
 			os.Unsetenv("CLAUDE_CODE")
@@ -74,6 +77,7 @@ func TestGet_WithClaudeCode(t *testing.T) {
 }
 
 func TestGet_WithCursor(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		envVal string
@@ -85,6 +89,7 @@ func TestGet_WithCursor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Clear all agent env vars first
 			os.Unsetenv("CLAUDECODE")
 			os.Unsetenv("CLAUDE_CODE")
@@ -111,6 +116,7 @@ func TestGet_WithCursor(t *testing.T) {
 }
 
 func TestGet_WithMultipleAgents(t *testing.T) {
+	t.Parallel()
 	// Test precedence: CLAUDECODE should win when both are set
 	os.Unsetenv("CLAUDECODE")
 	os.Unsetenv("CLAUDE_CODE")
@@ -135,6 +141,7 @@ func TestGet_WithMultipleAgents(t *testing.T) {
 }
 
 func TestDetectAgent(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		setup    func()
@@ -235,6 +242,7 @@ func TestDetectAgent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tt.setup()
 			defer tt.teardown()
 
@@ -247,6 +255,7 @@ func TestDetectAgent(t *testing.T) {
 }
 
 func TestGet_Format(t *testing.T) {
+	t.Parallel()
 	// Clear all agent env vars
 	os.Unsetenv("CLAUDECODE")
 	os.Unsetenv("CLAUDE_CODE")
