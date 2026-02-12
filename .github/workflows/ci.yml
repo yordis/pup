@@ -12,6 +12,7 @@ permissions:
   contents: write  # Needed to commit coverage badge on main branch
   pull-requests: write
   security-events: write  # Needed for Datadog SAST results
+  id-token: write # Needed to federate STS token to upload coverage
 
 env:
   DD_ENV: ci
@@ -39,6 +40,19 @@ jobs:
           go-version: '1.25'
           cache: true
 
+      - name: Get Datadog credentials
+        id: dd-sts # Needed to be able to reference this step's output later
+        uses: DataDog/dd-sts-action@main # Pin to the main branch to get auto updates for free, or to a specific commit hash if you want stability
+        with:
+          policy: public-datadog-pup-sts
+
+      - name: Configure Datadog Test Optimization
+        uses: datadog/test-visibility-github-action@v2
+        with:
+          languages: go
+          api_key: ${{ steps.dd-sts.outputs.api_key }}
+          site: datadoghq.com
+
       - name: Install Datadog CI tools
         run: |
           # Install orchestrion for Go test instrumentation
@@ -52,6 +66,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y bc
 
       - name: Run tests with coverage
+        env:
+          DD_CIVISIBILITY_ENABLED: true
+          DD_ENV: ci
         run: |
           # Run tests on all packages with race detection
           # Use orchestrion to instrument tests for Datadog CI Visibility
@@ -93,8 +110,8 @@ jobs:
       - name: Upload coverage to Datadog
         if: env.DD_API_KEY != ''
         env:
-          DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
-          DD_SITE: ${{ secrets.DD_SITE || 'datadoghq.com' }}
+          DATADOG_API_KEY: ${{ steps.dd-sts.outputs.api_key }}
+          DD_SITE: datadoghq.com
         run: |
           # Upload coverage reports to Datadog
           datadog-ci coverage upload --format=go-cover coverage.out
