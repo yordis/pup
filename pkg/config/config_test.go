@@ -11,7 +11,7 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	t.Parallel()
+	// NOTE: Not parallel - modifies env vars
 	// Save original env vars
 	origAPIKey := os.Getenv("DD_API_KEY")
 	origAppKey := os.Getenv("DD_APP_KEY")
@@ -86,7 +86,6 @@ func TestLoad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			// Clear all env vars
 			os.Unsetenv("DD_API_KEY")
 			os.Unsetenv("DD_APP_KEY")

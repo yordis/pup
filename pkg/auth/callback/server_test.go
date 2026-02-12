@@ -99,7 +99,7 @@ func TestServer_RedirectURI(t *testing.T) {
 }
 
 func TestServer_StartStop(t *testing.T) {
-	t.Parallel()
+	// NOTE: Not parallel - binds to network port
 	server, err := NewServer()
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
@@ -148,7 +148,7 @@ func TestServer_Stop_WhenNotStarted(t *testing.T) {
 }
 
 func TestServer_WaitForCallback_Success(t *testing.T) {
-	t.Parallel()
+	// NOTE: Not parallel - binds to network port
 	server, err := NewServer()
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
@@ -191,7 +191,7 @@ func TestServer_WaitForCallback_Success(t *testing.T) {
 }
 
 func TestServer_WaitForCallback_Error(t *testing.T) {
-	t.Parallel()
+	// NOTE: Not parallel - binds to network port
 	server, err := NewServer()
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
@@ -234,7 +234,7 @@ func TestServer_WaitForCallback_Error(t *testing.T) {
 }
 
 func TestServer_WaitForCallback_Timeout(t *testing.T) {
-	t.Parallel()
+	// NOTE: Not parallel - binds to network port
 	server, err := NewServer()
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
