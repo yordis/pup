@@ -825,72 +825,41 @@ func TestParseTimeParam_NowKeyword(t *testing.T) {
 	}
 }
 
-// TestV2TimeseriesTimestampConversion verifies that the timestamp conversion
-// used for the Datadog V2 timeseries API produces correct millisecond values.
-//
-// The V2 API expects timestamps in milliseconds. Previously, UnixMilli() was
-// used directly, but this could produce incorrect values due to sub-second
-// precision in the time.Time value propagating unexpected digits. Using
-// Unix() * 1000 truncates sub-second precision and produces clean millisecond
-// boundaries that the API accepts reliably.
+// TestV2TimeseriesTimestampConversion verifies that ParseTimeToUnixMilli
+// produces second-aligned millisecond timestamps suitable for Datadog APIs.
 func TestV2TimeseriesTimestampConversion(t *testing.T) {
 	tests := []struct {
-		name     string
-		timeStr  string
+		name    string
+		timeStr string
 	}{
-		{
-			name:    "now keyword",
-			timeStr: "now",
-		},
-		{
-			name:    "relative 1 hour",
-			timeStr: "1h",
-		},
-		{
-			name:    "relative 30 minutes",
-			timeStr: "30m",
-		},
-		{
-			name:    "relative 7 days",
-			timeStr: "7d",
-		},
-		{
-			name:    "unix timestamp",
-			timeStr: "1700000000",
-		},
+		{"now keyword", "now"},
+		{"relative 1 hour", "1h"},
+		{"relative 30 minutes", "30m"},
+		{"relative 7 days", "7d"},
+		{"unix timestamp", "1700000000"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := parseTimeParam(tt.timeStr)
+			msTimestamp, err := util.ParseTimeToUnixMilli(tt.timeStr)
 			if err != nil {
-				t.Fatalf("parseTimeParam(%q) unexpected error: %v", tt.timeStr, err)
+				t.Fatalf("ParseTimeToUnixMilli(%q) unexpected error: %v", tt.timeStr, err)
 			}
 
-			// This is the conversion used in runMetricsQuery for the V2 timeseries API.
-			// Using Unix() * 1000 ensures we get clean millisecond-boundary timestamps
-			// without sub-millisecond noise that UnixMilli() can include from
-			// time.Time's internal nanosecond precision.
-			msTimestamp := parsed.UTC().Unix() * 1000
-
-			// The millisecond timestamp must be positive
 			if msTimestamp <= 0 {
 				t.Errorf("expected positive millisecond timestamp, got %d", msTimestamp)
 			}
 
-			// It must be evenly divisible by 1000 (i.e., on a second boundary)
-			// This is the key property: Unix() * 1000 always produces second-aligned
-			// millisecond timestamps, whereas UnixMilli() can include sub-second
-			// components that cause API issues.
+			// Must be on a second boundary (divisible by 1000)
 			if msTimestamp%1000 != 0 {
 				t.Errorf("timestamp %d is not on a second boundary (remainder: %d)", msTimestamp, msTimestamp%1000)
 			}
 
-			// Verify round-trip: converting back should match the original second
+			// Verify round-trip: converting back should produce a valid second
 			roundTripped := time.Unix(msTimestamp/1000, 0)
-			if roundTripped.Unix() != parsed.UTC().Unix() {
-				t.Errorf("round-trip failed: original Unix=%d, round-tripped Unix=%d",
-					parsed.UTC().Unix(), roundTripped.Unix())
+			if roundTripped.Unix() != msTimestamp/1000 {
+				t.Errorf("round-trip failed: expected Unix=%d, got Unix=%d",
+					msTimestamp/1000, roundTripped.Unix())
 			}
 		})
 	}
