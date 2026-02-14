@@ -227,6 +227,33 @@ func TestNotebooksCreateCmd_BodyRequired(t *testing.T) {
 	}
 }
 
+func TestNotebooksUpdateCmd(t *testing.T) {
+	if notebooksUpdateCmd == nil {
+		t.Fatal("notebooksUpdateCmd is nil")
+	}
+
+	if notebooksUpdateCmd.Use != "update [notebook-id]" {
+		t.Errorf("Use = %s, want 'update [notebook-id]'", notebooksUpdateCmd.Use)
+	}
+
+	if notebooksUpdateCmd.Short == "" {
+		t.Error("Short description is empty")
+	}
+
+	if notebooksUpdateCmd.RunE == nil {
+		t.Error("RunE is nil")
+	}
+
+	if notebooksUpdateCmd.Args == nil {
+		t.Error("Args validator is nil")
+	}
+
+	flags := notebooksUpdateCmd.Flags()
+	if flags.Lookup("body") == nil {
+		t.Error("Missing --body flag")
+	}
+}
+
 func TestNotebooksCmd_ParentChild(t *testing.T) {
 	commands := notebooksCmd.Commands()
 
