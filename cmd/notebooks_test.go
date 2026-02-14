@@ -32,7 +32,7 @@ func TestNotebooksCmd(t *testing.T) {
 }
 
 func TestNotebooksCmd_Subcommands(t *testing.T) {
-	expectedCommands := []string{"list", "get", "delete"}
+	expectedCommands := []string{"list", "get", "create", "update", "delete"}
 
 	commands := notebooksCmd.Commands()
 
