@@ -727,6 +727,11 @@ func parseComputeString(compute string) (aggregation string, metric string, err 
 // Implementation functions
 
 func runLogsSearch(cmd *cobra.Command, args []string) error {
+	// In agent mode, use a larger default limit (200) unless explicitly set
+	if isAgentMode() && !cmd.Flags().Changed("limit") {
+		logsLimit = 200
+	}
+
 	// Validate storage tier before creating client
 	storageTier, err := validateAndConvertStorageTier(logsStorage)
 	if err != nil {
@@ -866,16 +871,25 @@ func runLogsSearch(cmd *cobra.Command, args []string) error {
 	finalResp := resp
 	if pageCount > 1 {
 		finalResp.SetData(allLogs)
-		printOutput("Fetched %d logs across %d pages\n\n", len(allLogs), pageCount)
+		if !isAgentMode() {
+			printOutput("Fetched %d logs across %d pages\n\n", len(allLogs), pageCount)
+		}
 	}
 
-	output, err := formatter.FormatOutput(finalResp, formatter.OutputFormat(outputFormat))
-	if err != nil {
-		return err
+	count := len(allLogs)
+	var meta *formatter.Metadata
+	if isAgentMode() {
+		meta = &formatter.Metadata{
+			Count:   &count,
+			Command: "logs search",
+		}
+		if count == logsLimit {
+			meta.Truncated = true
+			meta.NextAction = fmt.Sprintf("Results may be truncated at %d. Use --limit=%d or narrow the --query", logsLimit, logsLimit*2)
+		}
 	}
 
-	printOutput("%s\n", output)
-	return nil
+	return formatAndPrint(finalResp, meta)
 }
 
 func runLogsList(cmd *cobra.Command, args []string) error {

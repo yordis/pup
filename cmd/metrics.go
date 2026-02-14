@@ -583,13 +583,11 @@ func runMetricsQuery(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to query metrics: %w", err)
 	}
 
-	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
-	if err != nil {
-		return err
+	var meta *formatter.Metadata
+	if isAgentMode() {
+		meta = &formatter.Metadata{Command: "metrics query"}
 	}
-
-	printOutput("%s\n", output)
-	return nil
+	return formatAndPrint(resp, meta)
 }
 
 // runMetricsSearch executes the metrics search command using the v1 API
