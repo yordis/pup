@@ -6,6 +6,10 @@
 package cmd
 
 import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -103,6 +107,83 @@ func TestNotebooksDeleteCmd(t *testing.T) {
 
 	if notebooksDeleteCmd.Args == nil {
 		t.Error("Args validator is nil")
+	}
+}
+
+func TestReadBody_File(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "body.json")
+	content := []byte(`{"data":{"attributes":{"name":"test"}}}`)
+	if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := readBody("@" + tmpFile)
+	if err != nil {
+		t.Fatalf("readBody returned error: %v", err)
+	}
+	if !bytes.Equal(got, content) {
+		t.Errorf("got %s, want %s", got, content)
+	}
+}
+
+func TestReadBody_Stdin(t *testing.T) {
+	content := `{"data":{"attributes":{"name":"test"}}}`
+	origReader := inputReader
+	inputReader = strings.NewReader(content)
+	defer func() { inputReader = origReader }()
+
+	got, err := readBody("-")
+	if err != nil {
+		t.Fatalf("readBody returned error: %v", err)
+	}
+	if string(got) != content {
+		t.Errorf("got %s, want %s", got, content)
+	}
+}
+
+func TestReadBody_MissingFile(t *testing.T) {
+	_, err := readBody("@/nonexistent/path/body.json")
+	if err == nil {
+		t.Fatal("expected error for missing file")
+	}
+	if !strings.Contains(err.Error(), "failed to read body file") {
+		t.Errorf("error = %v, want 'failed to read body file'", err)
+	}
+}
+
+func TestReadBody_InvalidJSON(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "bad.json")
+	if err := os.WriteFile(tmpFile, []byte("not json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := readBody("@" + tmpFile)
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+	if !strings.Contains(err.Error(), "invalid JSON in body") {
+		t.Errorf("error = %v, want 'invalid JSON in body'", err)
+	}
+}
+
+func TestReadBody_InvalidJSON_Stdin(t *testing.T) {
+	origReader := inputReader
+	inputReader = strings.NewReader("not json")
+	defer func() { inputReader = origReader }()
+
+	_, err := readBody("-")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON from stdin")
+	}
+	if !strings.Contains(err.Error(), "invalid JSON in body") {
+		t.Errorf("error = %v, want 'invalid JSON in body'", err)
+	}
+}
+
+func TestReadBody_EmptyValue(t *testing.T) {
+	_, err := readBody("")
+	if err == nil {
+		t.Fatal("expected error for empty body value")
 	}
 }
 
