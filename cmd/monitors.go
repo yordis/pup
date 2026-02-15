@@ -400,13 +400,7 @@ func runMonitorsDelete(cmd *cobra.Command, args []string) error {
 		return formatAPIError("delete monitor", err, r)
 	}
 
-	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
-	if err != nil {
-		return err
-	}
-
-	printOutput("%s\n", output)
-	return nil
+	return formatAndPrint(resp, nil)
 }
 
 func runMonitorsSearch(cmd *cobra.Command, args []string) error {
@@ -436,11 +430,5 @@ func runMonitorsSearch(cmd *cobra.Command, args []string) error {
 		return formatAPIError("search monitors", err, r)
 	}
 
-	output, err := formatter.FormatOutput(resp, formatter.OutputFormat(outputFormat))
-	if err != nil {
-		return err
-	}
-
-	printOutput("%s\n", output)
-	return nil
+	return formatAndPrint(resp, nil)
 }
