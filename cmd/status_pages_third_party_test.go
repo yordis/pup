@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/datadog-labs/pup/pkg/config"
@@ -21,6 +22,7 @@ const testOutagesJSON = `{
       "provider_data": [
         {
           "provider_name": "aws-s3",
+          "provider_service": "S3",
           "display_name": "Amazon S3",
           "integration_id": "aws-s3",
           "status_url": "https://health.aws.amazon.com/health/status",
@@ -67,6 +69,17 @@ func setupThirdPartyTestServer(t *testing.T, statusCode int, body string) *httpt
 	}))
 }
 
+// redirectTransport intercepts all HTTP requests and redirects them to a test server.
+type redirectTransport struct {
+	target string
+}
+
+func (t *redirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.URL.Scheme = "http"
+	req.URL.Host = t.target[len("http://"):]
+	return http.DefaultTransport.RoundTrip(req)
+}
+
 func TestStatusPagesThirdPartyCmd(t *testing.T) {
 	if statusPagesThirdPartyCmd == nil {
 		t.Fatal("statusPagesThirdPartyCmd is nil")
@@ -97,26 +110,15 @@ func TestFetchThirdPartyOutages(t *testing.T) {
 	defer server.Close()
 
 	origClient := httpClient
-	origURL := thirdPartyOutagesURL
-	defer func() {
-		httpClient = origClient
-	}()
-
-	// Point to test server - we need to temporarily override the const via a variable trick
-	// Instead, use a helper that overrides the URL
+	defer func() { httpClient = origClient }()
 	httpClient = server.Client()
 
-	// We can't easily override a const, so test fetchThirdPartyOutages indirectly
-	// by testing the parsing and filtering functions directly
 	t.Run("parses valid response", func(t *testing.T) {
-		_ = origURL // suppress unused
-		// Test the HTTP fetch by creating a custom function
 		resp, err := httpClient.Get(server.URL)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		defer resp.Body.Close()
-
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("unexpected status: %d", resp.StatusCode)
 		}
@@ -167,7 +169,7 @@ func TestFilterProviders(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		filter     string
+		search     string
 		activeOnly bool
 		wantCount  int
 		wantNames  []string
@@ -177,20 +179,26 @@ func TestFilterProviders(t *testing.T) {
 			wantCount: 3,
 		},
 		{
-			name:      "filter by provider name",
-			filter:    "aws",
+			name:      "search by provider name",
+			search:    "aws",
 			wantCount: 1,
 			wantNames: []string{"aws-s3"},
 		},
 		{
-			name:      "filter by display name",
-			filter:    "google",
+			name:      "search by display name",
+			search:    "google",
 			wantCount: 1,
 			wantNames: []string{"gcp"},
 		},
 		{
-			name:      "filter case insensitive",
-			filter:    "STRIPE",
+			name:      "search by display name Amazon",
+			search:    "amazon",
+			wantCount: 1,
+			wantNames: []string{"aws-s3"},
+		},
+		{
+			name:      "search case insensitive",
+			search:    "STRIPE",
 			wantCount: 1,
 			wantNames: []string{"stripe"},
 		},
@@ -201,21 +209,21 @@ func TestFilterProviders(t *testing.T) {
 			wantNames:  []string{"aws-s3"},
 		},
 		{
-			name:       "filter and active combined",
-			filter:     "stripe",
+			name:       "search and active combined",
+			search:     "stripe",
 			activeOnly: true,
 			wantCount:  0,
 		},
 		{
 			name:      "no match",
-			filter:    "nonexistent",
+			search:    "nonexistent",
 			wantCount: 0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := filterProviders(providers, tt.filter, tt.activeOnly)
+			result := filterProviders(providers, tt.search, tt.activeOnly)
 			if len(result) != tt.wantCount {
 				t.Errorf("got %d providers, want %d", len(result), tt.wantCount)
 			}
@@ -230,34 +238,169 @@ func TestFilterProviders(t *testing.T) {
 	}
 }
 
+func TestProviderStatus(t *testing.T) {
+	tests := []struct {
+		name       string
+		provider   thirdPartyProvider
+		wantSignal string
+		wantStatus string
+	}{
+		{
+			name: "operational with no outages",
+			provider: thirdPartyProvider{
+				Outages: []thirdPartyOutage{},
+			},
+			wantSignal: "▲ UP",
+			wantStatus: "operational",
+		},
+		{
+			name: "operational with only resolved outages",
+			provider: thirdPartyProvider{
+				Outages: []thirdPartyOutage{
+					{Status: "resolved"},
+					{Status: "resolved"},
+				},
+			},
+			wantSignal: "▲ UP",
+			wantStatus: "operational",
+		},
+		{
+			name: "down with active outage",
+			provider: thirdPartyProvider{
+				Outages: []thirdPartyOutage{
+					{Status: "resolved"},
+					{Status: "active"},
+				},
+			},
+			wantSignal: "▼ DOWN",
+			wantStatus: "active",
+		},
+		{
+			name: "down with investigating outage",
+			provider: thirdPartyProvider{
+				Outages: []thirdPartyOutage{
+					{Status: "investigating"},
+				},
+			},
+			wantSignal: "▼ DOWN",
+			wantStatus: "investigating",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			signal, status := providerStatus(tt.provider)
+			if signal != tt.wantSignal {
+				t.Errorf("signal = %q, want %q", signal, tt.wantSignal)
+			}
+			if status != tt.wantStatus {
+				t.Errorf("status = %q, want %q", status, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestFormatThirdPartyTable(t *testing.T) {
+	providers := []thirdPartyProvider{
+		{
+			ProviderName:    "aws-s3",
+			DisplayName:     "Amazon S3",
+			ProviderService: "S3",
+			Outages: []thirdPartyOutage{
+				{Status: "active"},
+			},
+		},
+		{
+			ProviderName: "stripe",
+			DisplayName:  "Stripe",
+			Outages: []thirdPartyOutage{
+				{Status: "resolved"},
+			},
+		},
+	}
+
+	output := formatThirdPartyTable(providers)
+
+	// Verify headers
+	if !strings.Contains(output, "PROVIDER") {
+		t.Error("expected table to contain PROVIDER header")
+	}
+	if !strings.Contains(output, "DISPLAY NAME") {
+		t.Error("expected table to contain DISPLAY NAME header")
+	}
+	if !strings.Contains(output, "SERVICE") {
+		t.Error("expected table to contain SERVICE header")
+	}
+	if !strings.Contains(output, "SIGNAL") {
+		t.Error("expected table to contain SIGNAL header")
+	}
+	if !strings.Contains(output, "STATUS") {
+		t.Error("expected table to contain STATUS header")
+	}
+
+	// Verify data rows
+	if !strings.Contains(output, "aws-s3") {
+		t.Error("expected table to contain 'aws-s3'")
+	}
+	if !strings.Contains(output, "Amazon S3") {
+		t.Error("expected table to contain 'Amazon S3'")
+	}
+	if !strings.Contains(output, "S3") {
+		t.Error("expected table to contain 'S3' service")
+	}
+
+	// Verify signals
+	if !strings.Contains(output, "▼ DOWN") {
+		t.Error("expected table to contain '▼ DOWN' for aws-s3 with active outage")
+	}
+	if !strings.Contains(output, "▲ UP") {
+		t.Error("expected table to contain '▲ UP' for stripe with no active outages")
+	}
+}
+
+func TestFormatThirdPartyTable_Empty(t *testing.T) {
+	output := formatThirdPartyTable(nil)
+	// Should still render a table (with just headers)
+	if !strings.Contains(output, "PROVIDER") {
+		t.Error("expected empty table to still contain headers")
+	}
+}
+
+func setupThirdPartyRunTest(t *testing.T, serverURL string) func() {
+	t.Helper()
+	origClient := httpClient
+	origWriter := outputWriter
+	origSearch := thirdPartySearch
+	origActive := thirdPartyActiveOnly
+	origCfg := cfg
+	origFormat := outputFormat
+
+	httpClient = &http.Client{
+		Transport: &redirectTransport{target: serverURL},
+	}
+	cfg = &config.Config{Site: "datadoghq.com"}
+	thirdPartySearch = ""
+	thirdPartyActiveOnly = false
+	outputFormat = "json"
+
+	return func() {
+		httpClient = origClient
+		outputWriter = origWriter
+		thirdPartySearch = origSearch
+		thirdPartyActiveOnly = origActive
+		cfg = origCfg
+		outputFormat = origFormat
+	}
+}
+
 func TestRunStatusPagesThirdParty(t *testing.T) {
 	server := setupThirdPartyTestServer(t, http.StatusOK, testOutagesJSON)
 	defer server.Close()
-
-	origClient := httpClient
-	origWriter := outputWriter
-	origProvider := thirdPartyProviderFilter
-	origActive := thirdPartyActiveOnly
-	origCfg := cfg
-	defer func() {
-		httpClient = origClient
-		outputWriter = origWriter
-		thirdPartyProviderFilter = origProvider
-		thirdPartyActiveOnly = origActive
-		cfg = origCfg
-	}()
-
-	// Override the URL by replacing the httpClient with a transport that redirects
-	httpClient = &http.Client{
-		Transport: &redirectTransport{target: server.URL},
-	}
-	cfg = &config.Config{Site: "datadoghq.com"}
+	cleanup := setupThirdPartyRunTest(t, server.URL)
+	defer cleanup()
 
 	var buf bytes.Buffer
 	outputWriter = &buf
-
-	thirdPartyProviderFilter = ""
-	thirdPartyActiveOnly = false
 
 	err := runStatusPagesThirdParty(statusPagesThirdPartyCmd, []string{})
 	if err != nil {
@@ -268,42 +411,23 @@ func TestRunStatusPagesThirdParty(t *testing.T) {
 	if output == "" {
 		t.Error("expected output, got empty string")
 	}
-	// Verify key data appears in JSON output
-	if !bytes.Contains([]byte(output), []byte("aws-s3")) {
+	if !strings.Contains(output, "aws-s3") {
 		t.Error("expected output to contain 'aws-s3'")
 	}
-	if !bytes.Contains([]byte(output), []byte("stripe")) {
+	if !strings.Contains(output, "stripe") {
 		t.Error("expected output to contain 'stripe'")
 	}
 }
 
-func TestRunStatusPagesThirdParty_WithProviderFilter(t *testing.T) {
+func TestRunStatusPagesThirdParty_WithSearch(t *testing.T) {
 	server := setupThirdPartyTestServer(t, http.StatusOK, testOutagesJSON)
 	defer server.Close()
-
-	origClient := httpClient
-	origWriter := outputWriter
-	origProvider := thirdPartyProviderFilter
-	origActive := thirdPartyActiveOnly
-	origCfg := cfg
-	defer func() {
-		httpClient = origClient
-		outputWriter = origWriter
-		thirdPartyProviderFilter = origProvider
-		thirdPartyActiveOnly = origActive
-		cfg = origCfg
-	}()
-
-	httpClient = &http.Client{
-		Transport: &redirectTransport{target: server.URL},
-	}
-	cfg = &config.Config{Site: "datadoghq.com"}
+	cleanup := setupThirdPartyRunTest(t, server.URL)
+	defer cleanup()
 
 	var buf bytes.Buffer
 	outputWriter = &buf
-
-	thirdPartyProviderFilter = "stripe"
-	thirdPartyActiveOnly = false
+	thirdPartySearch = "stripe"
 
 	err := runStatusPagesThirdParty(statusPagesThirdPartyCmd, []string{})
 	if err != nil {
@@ -311,31 +435,92 @@ func TestRunStatusPagesThirdParty_WithProviderFilter(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !bytes.Contains([]byte(output), []byte("stripe")) {
+	if !strings.Contains(output, "stripe") {
 		t.Error("expected output to contain 'stripe'")
 	}
-	if bytes.Contains([]byte(output), []byte("aws-s3")) {
-		t.Error("expected output NOT to contain 'aws-s3' when filtering for stripe")
+	if strings.Contains(output, "aws-s3") {
+		t.Error("expected output NOT to contain 'aws-s3' when searching for stripe")
+	}
+}
+
+func TestRunStatusPagesThirdParty_SearchByDisplayName(t *testing.T) {
+	server := setupThirdPartyTestServer(t, http.StatusOK, testOutagesJSON)
+	defer server.Close()
+	cleanup := setupThirdPartyRunTest(t, server.URL)
+	defer cleanup()
+
+	var buf bytes.Buffer
+	outputWriter = &buf
+	thirdPartySearch = "Amazon"
+
+	err := runStatusPagesThirdParty(statusPagesThirdPartyCmd, []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "aws-s3") {
+		t.Error("expected searching 'Amazon' to match display name 'Amazon S3'")
+	}
+	if strings.Contains(output, "stripe") {
+		t.Error("expected output NOT to contain 'stripe' when searching for Amazon")
+	}
+}
+
+func TestRunStatusPagesThirdParty_TableFormat(t *testing.T) {
+	server := setupThirdPartyTestServer(t, http.StatusOK, testOutagesJSON)
+	defer server.Close()
+	cleanup := setupThirdPartyRunTest(t, server.URL)
+	defer cleanup()
+
+	var buf bytes.Buffer
+	outputWriter = &buf
+	outputFormat = "table"
+
+	err := runStatusPagesThirdParty(statusPagesThirdPartyCmd, []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "PROVIDER") {
+		t.Error("expected table headers in output")
+	}
+	if !strings.Contains(output, "▼ DOWN") {
+		t.Error("expected DOWN signal for aws-s3 with active outage")
+	}
+	if !strings.Contains(output, "▲ UP") {
+		t.Error("expected UP signal for operational providers")
+	}
+}
+
+func TestRunStatusPagesThirdParty_TableFormatEmpty(t *testing.T) {
+	server := setupThirdPartyTestServer(t, http.StatusOK, testOutagesJSON)
+	defer server.Close()
+	cleanup := setupThirdPartyRunTest(t, server.URL)
+	defer cleanup()
+
+	var buf bytes.Buffer
+	outputWriter = &buf
+	outputFormat = "table"
+	thirdPartySearch = "nonexistent"
+
+	err := runStatusPagesThirdParty(statusPagesThirdPartyCmd, []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "No results found") {
+		t.Errorf("expected 'No results found', got: %s", output)
 	}
 }
 
 func TestRunStatusPagesThirdParty_ServerError(t *testing.T) {
 	server := setupThirdPartyTestServer(t, http.StatusInternalServerError, "error")
 	defer server.Close()
-
-	origClient := httpClient
-	origWriter := outputWriter
-	origCfg := cfg
-	defer func() {
-		httpClient = origClient
-		outputWriter = origWriter
-		cfg = origCfg
-	}()
-
-	httpClient = &http.Client{
-		Transport: &redirectTransport{target: server.URL},
-	}
-	cfg = &config.Config{Site: "datadoghq.com"}
+	cleanup := setupThirdPartyRunTest(t, server.URL)
+	defer cleanup()
 
 	var buf bytes.Buffer
 	outputWriter = &buf
@@ -346,34 +531,11 @@ func TestRunStatusPagesThirdParty_ServerError(t *testing.T) {
 	}
 }
 
-// redirectTransport intercepts all HTTP requests and redirects them to a test server.
-type redirectTransport struct {
-	target string
-}
-
-func (t *redirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.URL.Scheme = "http"
-	req.URL.Host = t.target[len("http://"):]
-	return http.DefaultTransport.RoundTrip(req)
-}
-
 func TestRunStatusPagesThirdParty_InvalidJSON(t *testing.T) {
 	server := setupThirdPartyTestServer(t, http.StatusOK, "not json")
 	defer server.Close()
-
-	origClient := httpClient
-	origWriter := outputWriter
-	origCfg := cfg
-	defer func() {
-		httpClient = origClient
-		outputWriter = origWriter
-		cfg = origCfg
-	}()
-
-	httpClient = &http.Client{
-		Transport: &redirectTransport{target: server.URL},
-	}
-	cfg = &config.Config{Site: "datadoghq.com"}
+	cleanup := setupThirdPartyRunTest(t, server.URL)
+	defer cleanup()
 
 	var buf bytes.Buffer
 	outputWriter = &buf
@@ -385,6 +547,5 @@ func TestRunStatusPagesThirdParty_InvalidJSON(t *testing.T) {
 }
 
 func init() {
-	// Ensure outputWriter is reset to stdout for other tests
 	_ = os.Stdout
 }

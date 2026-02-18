@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datadog-labs/pup/pkg/formatter"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -56,8 +59,8 @@ type thirdPartyOutage struct {
 }
 
 var (
-	thirdPartyProviderFilter string
-	thirdPartyActiveOnly     bool
+	thirdPartySearch     string
+	thirdPartyActiveOnly bool
 )
 
 var statusPagesThirdPartyCmd = &cobra.Command{
@@ -73,11 +76,14 @@ EXAMPLES:
   # List all third-party outage signals
   pup status-pages third-party
 
-  # Filter by provider
-  pup status-pages third-party --provider=aws
+  # Search by provider or display name
+  pup status-pages third-party --search=amazon
 
   # Show only active outages
   pup status-pages third-party --active
+
+  # Table view with search
+  pup status-pages third-party --output=table --search=aws
 
 AUTHENTICATION:
   This command does not require Datadog authentication.
@@ -86,7 +92,7 @@ AUTHENTICATION:
 }
 
 func init() {
-	statusPagesThirdPartyCmd.Flags().StringVar(&thirdPartyProviderFilter, "provider", "", "Filter by provider name (case-insensitive substring match)")
+	statusPagesThirdPartyCmd.Flags().StringVar(&thirdPartySearch, "search", "", "Search by provider name or display name (case-insensitive)")
 	statusPagesThirdPartyCmd.Flags().BoolVar(&thirdPartyActiveOnly, "active", false, "Show only providers with active (unresolved) outages")
 	statusPagesCmd.AddCommand(statusPagesThirdPartyCmd)
 }
@@ -115,18 +121,18 @@ func fetchThirdPartyOutages() (*thirdPartyOutagesResponse, error) {
 	return &result, nil
 }
 
-func filterProviders(providers []thirdPartyProvider, nameFilter string, activeOnly bool) []thirdPartyProvider {
-	if nameFilter == "" && !activeOnly {
+func filterProviders(providers []thirdPartyProvider, search string, activeOnly bool) []thirdPartyProvider {
+	if search == "" && !activeOnly {
 		return providers
 	}
 
-	filter := strings.ToLower(nameFilter)
+	query := strings.ToLower(search)
 	var filtered []thirdPartyProvider
 	for _, p := range providers {
-		if nameFilter != "" {
+		if search != "" {
 			name := strings.ToLower(p.ProviderName)
 			display := strings.ToLower(p.DisplayName)
-			if !strings.Contains(name, filter) && !strings.Contains(display, filter) {
+			if !strings.Contains(name, query) && !strings.Contains(display, query) {
 				continue
 			}
 		}
@@ -147,13 +153,48 @@ func filterProviders(providers []thirdPartyProvider, nameFilter string, activeOn
 	return filtered
 }
 
+// providerStatus returns an ASCII signal and status string for a provider.
+func providerStatus(p thirdPartyProvider) (signal string, status string) {
+	for _, o := range p.Outages {
+		if o.Status != "resolved" {
+			return "▼ DOWN", o.Status
+		}
+	}
+	return "▲ UP", "operational"
+}
+
+// formatThirdPartyTable renders providers as a custom table with signal indicators.
+func formatThirdPartyTable(providers []thirdPartyProvider) string {
+	var buf bytes.Buffer
+	table := tablewriter.NewWriter(&buf)
+	table.Header("PROVIDER", "DISPLAY NAME", "SERVICE", "SIGNAL", "STATUS")
+
+	for _, p := range providers {
+		signal, status := providerStatus(p)
+		_ = table.Append(p.ProviderName, p.DisplayName, p.ProviderService, signal, status)
+	}
+
+	_ = table.Render()
+	return buf.String()
+}
+
 func runStatusPagesThirdParty(cmd *cobra.Command, args []string) error {
 	data, err := fetchThirdPartyOutages()
 	if err != nil {
 		return err
 	}
 
-	providers := filterProviders(data.Data.Attributes.ProviderData, thirdPartyProviderFilter, thirdPartyActiveOnly)
+	providers := filterProviders(data.Data.Attributes.ProviderData, thirdPartySearch, thirdPartyActiveOnly)
+
+	// Custom table rendering for human-readable output
+	if formatter.OutputFormat(outputFormat) == formatter.FormatTable {
+		if len(providers) == 0 {
+			printOutput("No results found\n")
+			return nil
+		}
+		printOutput("%s", formatThirdPartyTable(providers))
+		return nil
+	}
 
 	return formatAndPrint(providers, nil)
 }
