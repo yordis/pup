@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
-	"github.com/DataDog/pup/pkg/auth/dcr"
-	"github.com/DataDog/pup/pkg/auth/storage"
-	"github.com/DataDog/pup/pkg/config"
-	"github.com/DataDog/pup/pkg/useragent"
+	"github.com/datadog-labs/pup/pkg/auth/dcr"
+	"github.com/datadog-labs/pup/pkg/auth/storage"
+	"github.com/datadog-labs/pup/pkg/config"
+	"github.com/datadog-labs/pup/pkg/useragent"
 )
 
 // Client wraps the Datadog API client

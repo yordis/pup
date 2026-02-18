@@ -17,11 +17,11 @@ Go-based CLI wrapper for Datadog APIs. Provides OAuth2 + API key authentication 
 
 ```bash
 # Install via Homebrew (recommended)
-brew tap datadog/pack
+brew tap datadog-labs/pack
 brew install pup
 
 # Or clone and build from source
-git clone https://github.com/DataDog/pup.git && cd pup
+git clone https://github.com/datadog-labs/pup.git && cd pup
 go build -o pup .
 
 # Authenticate (OAuth2 recommended)
@@ -205,5 +205,5 @@ Apache 2.0 - Copyright 2024-present Datadog, Inc.
 
 ## Support
 
-- Issues: [GitHub Issues](https://github.com/DataDog/pup/issues)
+- Issues: [GitHub Issues](https://github.com/datadog-labs/pup/issues)
 - Community: [Datadog Community](https://community.datadoghq.com/)

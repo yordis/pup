@@ -1,6 +1,6 @@
 # Homebrew Tap Setup Guide
 
-This guide documents the setup required to enable automatic Homebrew formula publishing to the `DataDog/homebrew-pack` tap using dd-octo-sts for secure, short-lived token access.
+This guide documents the setup required to enable automatic Homebrew formula publishing to the `datadog-labs/homebrew-pack` tap using dd-octo-sts for secure, short-lived token access.
 
 ## Overview
 
@@ -10,7 +10,7 @@ When a new release is tagged, the release workflow will:
 3. Use GoReleaser to build binaries and push formula to `homebrew-pack`
 4. Token automatically expires after 1 hour and is revoked after the workflow completes
 
-Users can then install via: `brew install datadog/pack/pup`
+Users can then install via: `brew install datadog-labs/pack/pup`
 
 ## Why dd-octo-sts?
 
@@ -25,8 +25,8 @@ Users can then install via: `brew install datadog/pack/pup`
 
 ### 1. Repository Setup
 
-The `DataDog/homebrew-pack` repository must:
-- ✅ Exist at https://github.com/DataDog/homebrew-pack
+The `datadog-labs/homebrew-pack` repository must:
+- ✅ Exist at https://github.com/datadog-labs/homebrew-pack
 - ✅ Be public (or have appropriate access configured)
 - ✅ Have the trust policy merged to the default branch
 - ✅ Follow Homebrew tap naming conventions (`homebrew-*` prefix)
@@ -46,7 +46,7 @@ See [Step 3: Protect Release Tags](#step-3-protect-release-tags-recommended) bel
 
 1. Clone the `homebrew-pack` repository:
    ```bash
-   git clone https://github.com/DataDog/homebrew-pack.git
+   git clone https://github.com/datadog-labs/homebrew-pack.git
    cd homebrew-pack
    ```
 
@@ -61,15 +61,15 @@ See [Step 3: Protect Release Tags](#step-3-protect-release-tags-recommended) bel
    issuer: https://token.actions.githubusercontent.com
 
    # Allow releases from semantic version tags (v1.2.3, v0.1.0, etc.)
-   subject_pattern: repo:DataDog/pup:ref:refs/tags/v[0-9]+\.[0-9]+\.[0-9]+
+   subject_pattern: repo:datadog-labs/pup:ref:refs/tags/v[0-9]+\.[0-9]+\.[0-9]+
 
    # Defense-in-depth: additional claim validation
    claim_pattern:
-     repository: DataDog/pup
+     repository: datadog-labs/pup
      ref: refs/tags/v[0-9]+\.[0-9]+\.[0-9]+
      ref_type: tag
      event_name: push
-     job_workflow_ref: DataDog/pup/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+
+     job_workflow_ref: datadog-labs/pup/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+
 
    # Grant write access to push formula updates
    permissions:
@@ -101,7 +101,7 @@ The `pup` repository workflow is already configured (see `.github/workflows/rele
   uses: DataDog/dd-octo-sts-action@acaa02eee7e3bb0839e4272dacb37b8f3b58ba80 # v1.0.3
   id: octo-sts
   with:
-    scope: DataDog/homebrew-pack
+    scope: datadog-labs/homebrew-pack
     policy: pup-release
 
 - name: Run GoReleaser
@@ -122,7 +122,7 @@ The `pup` repository workflow is already configured (see `.github/workflows/rele
 
 **How to set up tag protection:**
 
-1. Go to: https://github.com/DataDog/pup/settings/rules/new
+1. Go to: https://github.com/datadog-labs/pup/settings/rules/new
 
 2. Create a **Tag ruleset**:
    - **Ruleset name**: `Protect Release Tags`
@@ -148,7 +148,7 @@ The `pup` repository workflow is already configured (see `.github/workflows/rele
 
 If tag rulesets are too complex, use a protected environment:
 
-1. Go to: https://github.com/DataDog/pup/settings/environments/new
+1. Go to: https://github.com/datadog-labs/pup/settings/environments/new
 2. Create environment named `release`
 3. Add required reviewers
 4. Update workflow to use environment:
@@ -165,7 +165,7 @@ If tag rulesets are too complex, use a protected environment:
 
 Before creating your first release with Homebrew tap publishing:
 
-- [ ] `DataDog/homebrew-pack` repository exists and is public
+- [ ] `datadog-labs/homebrew-pack` repository exists and is public
 - [ ] Trust policy merged to default branch in `homebrew-pack`
 - [ ] Trust Policy Validation check passed on the policy PR
 - [ ] Release workflow in `pup` includes dd-octo-sts-action step
@@ -190,18 +190,18 @@ To test without affecting production:
    **Note**: If you protected tags, ensure you have permission to create them.
 
 3. Monitor the GitHub Actions workflow:
-   - Go to: https://github.com/DataDog/pup/actions
+   - Go to: https://github.com/datadog-labs/pup/actions
    - Check the "Release" workflow run
    - Verify the "Get Homebrew tap token via dd-octo-sts" step succeeds
    - Verify GoReleaser successfully pushes to `homebrew-pack`
 
 4. Verify the formula was created:
-   - Check: https://github.com/DataDog/homebrew-pack/blob/main/Formula/pup.rb
+   - Check: https://github.com/datadog-labs/homebrew-pack/blob/main/Formula/pup.rb
    - The formula should be auto-generated with version `0.9.0-beta.1`
 
 5. Test installation (optional):
    ```bash
-   brew tap datadog/pack
+   brew tap datadog-labs/pack
    brew install pup
    pup version
    ```
@@ -227,11 +227,11 @@ Once testing is successful:
    - Get short-lived token via dd-octo-sts
    - Build binaries for all platforms
    - Create GitHub release with artifacts
-   - Push `pup.rb` formula to `DataDog/homebrew-pack`
+   - Push `pup.rb` formula to `datadog-labs/homebrew-pack`
 
 3. Users can install via:
    ```bash
-   brew tap datadog/pack
+   brew tap datadog-labs/pack
    brew install pup
    ```
 
@@ -271,7 +271,7 @@ Once testing is successful:
 **Cause**: Incorrect scope or policy name in workflow.
 
 **Solution**:
-1. Verify `scope: DataDog/homebrew-pack` in workflow
+1. Verify `scope: datadog-labs/homebrew-pack` in workflow
 2. Verify `policy: pup-release` matches filename (without `.sts.yaml`)
 3. Check for typos in repository owner/name
 
@@ -280,7 +280,7 @@ Once testing is successful:
 **Cause**: Tag protection enabled but you're not in the bypass list.
 
 **Solution**:
-1. Go to: https://github.com/DataDog/pup/settings/rules
+1. Go to: https://github.com/datadog-labs/pup/settings/rules
 2. Find the "Protect Release Tags" ruleset
 3. Add your username to the bypass list
 4. Or temporarily disable the ruleset for testing
@@ -311,14 +311,14 @@ To modify the trust policy (e.g., change permissions, add constraints):
 
 **Allow pre-release tags** (e.g., `v1.0.0-beta.1`):
 ```yaml
-subject_pattern: repo:DataDog/pup:ref:refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?
+subject_pattern: repo:datadog-labs/pup:ref:refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?
 claim_pattern:
   ref: refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?
 ```
 
 **Restrict to specific major versions**:
 ```yaml
-subject_pattern: repo:DataDog/pup:ref:refs/tags/v1\.[0-9]+\.[0-9]+
+subject_pattern: repo:datadog-labs/pup:ref:refs/tags/v1\.[0-9]+\.[0-9]+
 ```
 
 **Add workflow approval via protected environment**:
