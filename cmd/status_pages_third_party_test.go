@@ -12,9 +12,14 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/datadog-labs/pup/pkg/config"
 )
+
+// fixedTime is used across sparkline tests so outage timestamps are deterministic.
+// 2024-01-15 00:00:00 UTC
+var fixedTime = time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 
 const testOutagesJSON = `{
   "data": {
@@ -78,6 +83,26 @@ func (t *redirectTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	req.URL.Scheme = "http"
 	req.URL.Host = t.target[len("http://"):]
 	return http.DefaultTransport.RoundTrip(req)
+}
+
+// stripANSI removes ANSI escape codes for test assertions.
+func stripANSI(s string) string {
+	var b strings.Builder
+	inEscape := false
+	for _, r := range s {
+		if r == '\033' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if r == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 func TestStatusPagesThirdPartyCmd(t *testing.T) {
@@ -238,61 +263,43 @@ func TestFilterProviders(t *testing.T) {
 	}
 }
 
-func TestProviderStatus(t *testing.T) {
+func TestProviderCurrentStatus(t *testing.T) {
 	tests := []struct {
 		name       string
 		provider   thirdPartyProvider
-		wantSignal string
 		wantStatus string
 	}{
 		{
-			name: "operational with no outages",
-			provider: thirdPartyProvider{
-				Outages: []thirdPartyOutage{},
-			},
-			wantSignal: "▲ UP",
+			name:       "operational with no outages",
+			provider:   thirdPartyProvider{Outages: []thirdPartyOutage{}},
 			wantStatus: "operational",
 		},
 		{
 			name: "operational with only resolved outages",
 			provider: thirdPartyProvider{
-				Outages: []thirdPartyOutage{
-					{Status: "resolved"},
-					{Status: "resolved"},
-				},
+				Outages: []thirdPartyOutage{{Status: "resolved"}, {Status: "resolved"}},
 			},
-			wantSignal: "▲ UP",
 			wantStatus: "operational",
 		},
 		{
-			name: "down with active outage",
+			name: "active outage",
 			provider: thirdPartyProvider{
-				Outages: []thirdPartyOutage{
-					{Status: "resolved"},
-					{Status: "active"},
-				},
+				Outages: []thirdPartyOutage{{Status: "resolved"}, {Status: "active"}},
 			},
-			wantSignal: "▼ DOWN",
 			wantStatus: "active",
 		},
 		{
-			name: "down with investigating outage",
+			name: "investigating outage",
 			provider: thirdPartyProvider{
-				Outages: []thirdPartyOutage{
-					{Status: "investigating"},
-				},
+				Outages: []thirdPartyOutage{{Status: "investigating"}},
 			},
-			wantSignal: "▼ DOWN",
 			wantStatus: "investigating",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signal, status := providerStatus(tt.provider)
-			if signal != tt.wantSignal {
-				t.Errorf("signal = %q, want %q", signal, tt.wantSignal)
-			}
+			status := providerCurrentStatus(tt.provider)
 			if status != tt.wantStatus {
 				t.Errorf("status = %q, want %q", status, tt.wantStatus)
 			}
@@ -300,21 +307,116 @@ func TestProviderStatus(t *testing.T) {
 	}
 }
 
+func TestBuildSparkline(t *testing.T) {
+	origTimeNow := timeNow
+	defer func() { timeNow = origTimeNow }()
+	timeNow = func() time.Time { return fixedTime }
+
+	nowMs := fixedTime.UnixMilli()
+
+	t.Run("all green when no outages", func(t *testing.T) {
+		p := thirdPartyProvider{
+			MonitoringStartDate: nowMs - 60*dayMs, // started 60 days ago
+			Outages:             []thirdPartyOutage{},
+		}
+		raw := buildSparkline(p)
+		plain := stripANSI(raw)
+		if len([]rune(plain)) != sparklineWidth {
+			t.Errorf("sparkline length = %d, want %d", len([]rune(plain)), sparklineWidth)
+		}
+		if strings.Contains(raw, ansiRed) {
+			t.Error("expected no red blocks for provider with no outages")
+		}
+		if !strings.Contains(raw, ansiGreen) {
+			t.Error("expected green blocks for operational provider")
+		}
+	})
+
+	t.Run("red block for active outage today", func(t *testing.T) {
+		p := thirdPartyProvider{
+			MonitoringStartDate: nowMs - 60*dayMs,
+			Outages: []thirdPartyOutage{
+				{Start: nowMs - dayMs/2, End: 0, Status: "active"}, // started 12h ago, ongoing
+			},
+		}
+		raw := buildSparkline(p)
+		if !strings.Contains(raw, ansiRed) {
+			t.Error("expected red block for active outage")
+		}
+		if !strings.Contains(raw, ansiGreen) {
+			t.Error("expected green blocks for non-outage days")
+		}
+	})
+
+	t.Run("red block for resolved outage in range", func(t *testing.T) {
+		// outage from 5 days ago lasting 1 day
+		p := thirdPartyProvider{
+			MonitoringStartDate: nowMs - 60*dayMs,
+			Outages: []thirdPartyOutage{
+				{Start: nowMs - 5*dayMs, End: nowMs - 4*dayMs, Status: "resolved"},
+			},
+		}
+		raw := buildSparkline(p)
+		if !strings.Contains(raw, ansiRed) {
+			t.Error("expected red block for resolved outage within 30-day window")
+		}
+	})
+
+	t.Run("dim dots for pre-monitoring period", func(t *testing.T) {
+		// monitoring started 10 days ago, so first 20 buckets should be dim dots
+		p := thirdPartyProvider{
+			MonitoringStartDate: nowMs - 10*dayMs,
+			Outages:             []thirdPartyOutage{},
+		}
+		raw := buildSparkline(p)
+		plain := stripANSI(raw)
+		dotCount := strings.Count(plain, "·")
+		if dotCount < 19 {
+			t.Errorf("expected at least 19 dim dots for 10-day monitoring, got %d", dotCount)
+		}
+		if !strings.Contains(raw, ansiDim) {
+			t.Error("expected dim ANSI codes for pre-monitoring period")
+		}
+	})
+
+	t.Run("outage outside window not shown", func(t *testing.T) {
+		// outage was 45 days ago (outside 30-day window)
+		p := thirdPartyProvider{
+			MonitoringStartDate: nowMs - 60*dayMs,
+			Outages: []thirdPartyOutage{
+				{Start: nowMs - 45*dayMs, End: nowMs - 44*dayMs, Status: "resolved"},
+			},
+		}
+		raw := buildSparkline(p)
+		if strings.Contains(raw, ansiRed) {
+			t.Error("expected no red blocks for outage outside 30-day window")
+		}
+	})
+}
+
 func TestFormatThirdPartyTable(t *testing.T) {
+	origTimeNow := timeNow
+	defer func() { timeNow = origTimeNow }()
+	timeNow = func() time.Time { return fixedTime }
+
+	nowMs := fixedTime.UnixMilli()
+
 	providers := []thirdPartyProvider{
 		{
-			ProviderName:    "aws-s3",
-			DisplayName:     "Amazon S3",
-			ProviderService: "S3",
+			ProviderName:         "aws-s3",
+			DisplayName:          "Amazon S3",
+			ProviderService:      "S3",
+			MonitoringStartDate:  nowMs - 60*dayMs,
 			Outages: []thirdPartyOutage{
-				{Status: "active"},
+				{Start: nowMs - dayMs/2, End: 0, Status: "active"},
 			},
 		},
 		{
-			ProviderName: "stripe",
-			DisplayName:  "Stripe",
+			ProviderName:         "stripe",
+			DisplayName:          "Stripe",
+			MonitoringStartDate:  nowMs - 60*dayMs,
 			Outages: []thirdPartyOutage{
-				{Status: "resolved"},
+				{Start: nowMs - 45*dayMs, End: nowMs - 44*dayMs, Status: "resolved"},
 			},
 		},
 	}
@@ -322,45 +424,41 @@ func TestFormatThirdPartyTable(t *testing.T) {
 	output := formatThirdPartyTable(providers)
 
 	// Verify headers
-	if !strings.Contains(output, "PROVIDER") {
-		t.Error("expected table to contain PROVIDER header")
-	}
-	if !strings.Contains(output, "DISPLAY NAME") {
-		t.Error("expected table to contain DISPLAY NAME header")
-	}
-	if !strings.Contains(output, "SERVICE") {
-		t.Error("expected table to contain SERVICE header")
-	}
-	if !strings.Contains(output, "SIGNAL") {
-		t.Error("expected table to contain SIGNAL header")
-	}
-	if !strings.Contains(output, "STATUS") {
-		t.Error("expected table to contain STATUS header")
+	for _, header := range []string{"PROVIDER", "DISPLAY NAME", "SERVICE", "UPTIME", "STATUS"} {
+		if !strings.Contains(output, header) {
+			t.Errorf("expected table to contain header %q", header)
+		}
 	}
 
-	// Verify data rows
+	// Verify data
 	if !strings.Contains(output, "aws-s3") {
 		t.Error("expected table to contain 'aws-s3'")
 	}
 	if !strings.Contains(output, "Amazon S3") {
 		t.Error("expected table to contain 'Amazon S3'")
 	}
-	if !strings.Contains(output, "S3") {
-		t.Error("expected table to contain 'S3' service")
+
+	// Verify sparkline contains colored blocks
+	if !strings.Contains(output, "█") {
+		t.Error("expected table to contain sparkline block characters")
 	}
 
-	// Verify signals
-	if !strings.Contains(output, "▼ DOWN") {
-		t.Error("expected table to contain '▼ DOWN' for aws-s3 with active outage")
+	// aws-s3 has active outage → should show red
+	if !strings.Contains(output, ansiRed) {
+		t.Error("expected red in sparkline for provider with active outage")
 	}
-	if !strings.Contains(output, "▲ UP") {
-		t.Error("expected table to contain '▲ UP' for stripe with no active outages")
+
+	// Status column
+	if !strings.Contains(output, "active") {
+		t.Error("expected 'active' status for aws-s3")
+	}
+	if !strings.Contains(output, "operational") {
+		t.Error("expected 'operational' status for stripe (outage outside window)")
 	}
 }
 
 func TestFormatThirdPartyTable_Empty(t *testing.T) {
 	output := formatThirdPartyTable(nil)
-	// Should still render a table (with just headers)
 	if !strings.Contains(output, "PROVIDER") {
 		t.Error("expected empty table to still contain headers")
 	}
@@ -374,6 +472,7 @@ func setupThirdPartyRunTest(t *testing.T, serverURL string) func() {
 	origActive := thirdPartyActiveOnly
 	origCfg := cfg
 	origFormat := outputFormat
+	origTimeNow := timeNow
 
 	httpClient = &http.Client{
 		Transport: &redirectTransport{target: serverURL},
@@ -382,6 +481,7 @@ func setupThirdPartyRunTest(t *testing.T, serverURL string) func() {
 	thirdPartySearch = ""
 	thirdPartyActiveOnly = false
 	outputFormat = "json"
+	timeNow = func() time.Time { return fixedTime }
 
 	return func() {
 		httpClient = origClient
@@ -390,6 +490,7 @@ func setupThirdPartyRunTest(t *testing.T, serverURL string) func() {
 		thirdPartyActiveOnly = origActive
 		cfg = origCfg
 		outputFormat = origFormat
+		timeNow = origTimeNow
 	}
 }
 
@@ -483,14 +584,17 @@ func TestRunStatusPagesThirdParty_TableFormat(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "PROVIDER") {
-		t.Error("expected table headers in output")
+	if !strings.Contains(output, "UPTIME") {
+		t.Error("expected table header 'UPTIME' in output")
 	}
-	if !strings.Contains(output, "▼ DOWN") {
-		t.Error("expected DOWN signal for aws-s3 with active outage")
+	if !strings.Contains(output, "█") {
+		t.Error("expected sparkline block characters in table output")
 	}
-	if !strings.Contains(output, "▲ UP") {
-		t.Error("expected UP signal for operational providers")
+	if !strings.Contains(output, "active") {
+		t.Error("expected 'active' status for aws-s3")
+	}
+	if !strings.Contains(output, "operational") {
+		t.Error("expected 'operational' status for providers without active outages")
 	}
 }
 

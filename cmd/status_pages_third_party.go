@@ -153,25 +153,76 @@ func filterProviders(providers []thirdPartyProvider, search string, activeOnly b
 	return filtered
 }
 
-// providerStatus returns an ASCII signal and status string for a provider.
-func providerStatus(p thirdPartyProvider) (signal string, status string) {
+const (
+	sparklineWidth = 30 // number of day-buckets in the chart
+	dayMs          = int64(24 * 60 * 60 * 1000)
+
+	ansiGreen = "\033[32m"
+	ansiRed   = "\033[31m"
+	ansiDim   = "\033[2m"
+	ansiReset = "\033[0m"
+)
+
+// timeNow is injectable for testing.
+var timeNow = time.Now
+
+// providerCurrentStatus returns the current status string for a provider.
+func providerCurrentStatus(p thirdPartyProvider) string {
 	for _, o := range p.Outages {
 		if o.Status != "resolved" {
-			return "▼ DOWN", o.Status
+			return o.Status
 		}
 	}
-	return "▲ UP", "operational"
+	return "operational"
 }
 
-// formatThirdPartyTable renders providers as a custom table with signal indicators.
+// buildSparkline generates a 30-character colored sparkline showing the last 30 days.
+// Green █ = operational, Red █ = outage, Dim · = before monitoring started.
+func buildSparkline(p thirdPartyProvider) string {
+	now := timeNow().UnixMilli()
+	var b strings.Builder
+
+	for i := sparklineWidth - 1; i >= 0; i-- {
+		bucketStart := now - int64(i+1)*dayMs
+		bucketEnd := now - int64(i)*dayMs
+
+		if bucketEnd <= p.MonitoringStartDate {
+			b.WriteString(ansiDim + "·" + ansiReset)
+			continue
+		}
+
+		hasOutage := false
+		for _, o := range p.Outages {
+			outageEnd := o.End
+			if outageEnd == 0 {
+				outageEnd = now // active outage
+			}
+			if o.Start < bucketEnd && outageEnd > bucketStart {
+				hasOutage = true
+				break
+			}
+		}
+
+		if hasOutage {
+			b.WriteString(ansiRed + "█" + ansiReset)
+		} else {
+			b.WriteString(ansiGreen + "█" + ansiReset)
+		}
+	}
+
+	return b.String()
+}
+
+// formatThirdPartyTable renders providers as a custom table with sparkline charts.
 func formatThirdPartyTable(providers []thirdPartyProvider) string {
 	var buf bytes.Buffer
 	table := tablewriter.NewWriter(&buf)
-	table.Header("PROVIDER", "DISPLAY NAME", "SERVICE", "SIGNAL", "STATUS")
+	table.Header("PROVIDER", "DISPLAY NAME", "SERVICE", "UPTIME", "STATUS")
 
 	for _, p := range providers {
-		signal, status := providerStatus(p)
-		_ = table.Append(p.ProviderName, p.DisplayName, p.ProviderService, signal, status)
+		chart := buildSparkline(p)
+		status := providerCurrentStatus(p)
+		_ = table.Append(p.ProviderName, p.DisplayName, p.ProviderService, chart, status)
 	}
 
 	_ = table.Render()
