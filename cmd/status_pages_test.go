@@ -29,7 +29,7 @@ func TestStatusPagesCmd(t *testing.T) {
 }
 
 func TestStatusPagesCmd_Subcommands(t *testing.T) {
-	expectedCommands := []string{"pages", "components", "degradations"}
+	expectedCommands := []string{"pages", "components", "degradations", "third-party"}
 	commands := statusPagesCmd.Commands()
 	commandMap := make(map[string]bool)
 	for _, cmd := range commands {
