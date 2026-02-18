@@ -2,7 +2,7 @@
 
 **NOTICE: This is in Preview mode, we are fine tuning the interactions and bugs that arise. Please file issues or submit PRs. Thank you for your early interest!**
 
-[![CI](https://github.com/DataDog/pup/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DataDog/pup/actions/workflows/ci.yml)
+[![CI](https://github.com/datadog-labs/pup/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/datadog-labs/pup/actions/workflows/ci.yml)
 [![Go Version](https://img.shields.io/badge/go-1.25+-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
@@ -25,7 +25,7 @@ Pup implements **38 of 85+ available Datadog APIs** (44.7% coverage).
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
-💡 **Tip:** Use Ctrl/Cmd+F to search for specific APIs. [Request features via GitHub Issues](https://github.com/DataDog/pup/issues).
+💡 **Tip:** Use Ctrl/Cmd+F to search for specific APIs. [Request features via GitHub Issues](https://github.com/datadog-labs/pup/issues).
 
 ---
 
@@ -156,19 +156,19 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 ### Homebrew (macOS/Linux) - Coming soon!
 
 ```bash
-brew tap datadog/pack
-brew install datadog/pack/pup
+brew tap datadog-labs/pack
+brew install datadog-labs/pack/pup
 ```
 
 ### Go Install
 
 ```bash
-go install github.com/DataDog/pup@latest
+go install github.com/datadog-labs/pup@latest
 ```
 
 ### Manual Download
 
-Download pre-built binaries from the [latest release](https://github.com/DataDog/pup/releases/latest).
+Download pre-built binaries from the [latest release](https://github.com/datadog-labs/pup/releases/latest).
 
 ## Authentication
 

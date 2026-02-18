@@ -32,9 +32,9 @@ builds:
         goarch: arm
     ldflags:
       - -s -w
-      - -X github.com/DataDog/pup/internal/version.Version={{.Version}}
-      - -X github.com/DataDog/pup/internal/version.GitCommit={{.Commit}}
-      - -X github.com/DataDog/pup/internal/version.BuildDate={{.Date}}
+      - -X github.com/datadog-labs/pup/internal/version.Version={{.Version}}
+      - -X github.com/datadog-labs/pup/internal/version.GitCommit={{.Commit}}
+      - -X github.com/datadog-labs/pup/internal/version.BuildDate={{.Date}}
 
 archives:
   - id: pup
@@ -85,7 +85,7 @@ signs:
 # GitHub Release
 release:
   github:
-    owner: DataDog
+    owner: datadog-labs
     name: pup
   draft: false
   prerelease: auto
@@ -100,13 +100,13 @@ release:
 
     ```bash
     # Linux (x86_64)
-    curl -L https://github.com/DataDog/pup/releases/download/{{ .Tag }}/pup_{{ .Version }}_Linux_x86_64.tar.gz | tar xz
+    curl -L https://github.com/datadog-labs/pup/releases/download/{{ .Tag }}/pup_{{ .Version }}_Linux_x86_64.tar.gz | tar xz
 
     # macOS (Apple Silicon)
-    curl -L https://github.com/DataDog/pup/releases/download/{{ .Tag }}/pup_{{ .Version }}_Darwin_arm64.tar.gz | tar xz
+    curl -L https://github.com/datadog-labs/pup/releases/download/{{ .Tag }}/pup_{{ .Version }}_Darwin_arm64.tar.gz | tar xz
 
     # macOS (Intel)
-    curl -L https://github.com/DataDog/pup/releases/download/{{ .Tag }}/pup_{{ .Version }}_Darwin_x86_64.tar.gz | tar xz
+    curl -L https://github.com/datadog-labs/pup/releases/download/{{ .Tag }}/pup_{{ .Version }}_Darwin_x86_64.tar.gz | tar xz
     ```
 
     ### Verifying Signatures
@@ -123,9 +123,9 @@ release:
   footer: |
     ### What's Changed
 
-    See the [CHANGELOG](https://github.com/DataDog/pup/blob/{{ .Tag }}/CHANGELOG.md) for details.
+    See the [CHANGELOG](https://github.com/datadog-labs/pup/blob/{{ .Tag }}/CHANGELOG.md) for details.
 
-    **Full Changelog**: https://github.com/DataDog/pup/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/datadog-labs/pup/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 changelog:
   use: github
@@ -157,10 +157,10 @@ changelog:
 homebrew_casks:
   - name: pup
     repository:
-      owner: DataDog
+      owner: datadog-labs
       name: homebrew-pack
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    homepage: https://github.com/DataDog/pup
+    homepage: https://github.com/datadog-labs/pup
     description: "Datadog API CLI - OAuth2 + API key authentication for Datadog APIs"
     license: Apache-2.0
     commit_author:
@@ -174,7 +174,7 @@ homebrew_casks:
       zsh: "completions/pup.zsh"
       fish: "completions/pup.fish"
     url:
-      verified: github.com/DataDog/pup/releases/download
+      verified: github.com/datadog-labs/pup/releases/download
 
 # Announce releases
 announce:

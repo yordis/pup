@@ -1,4 +1,4 @@
-module github.com/DataDog/pup
+module github.com/datadog-labs/pup
 
 go 1.25
 
