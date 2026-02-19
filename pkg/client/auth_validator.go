@@ -61,6 +61,9 @@ var endpointsWithoutOAuth = []EndpointAuthRequirement{
 	{Path: "/api/v2/app_keys/", Method: "POST", SupportsOAuth: false, RequiresAPIKeys: true, Reason: "App Keys management missing OAuth implementation in spec"},
 	{Path: "/api/v2/app_keys/", Method: "DELETE", SupportsOAuth: false, RequiresAPIKeys: true, Reason: "App Keys management missing OAuth implementation in spec"},
 
+	// Events V2 Search API - OAuth not supported
+	{Path: "/api/v2/events/search", Method: "POST", SupportsOAuth: false, RequiresAPIKeys: true, Reason: "Events V2 search API does not support OAuth authentication"},
+
 	// Error Tracking API - OAuth not working in practice
 	{Path: "/api/v2/error_tracking/issues/search", Method: "POST", SupportsOAuth: false, RequiresAPIKeys: true, Reason: "Error Tracking API requires API keys"},
 	{Path: "/api/v2/error_tracking/issues/", Method: "GET", SupportsOAuth: false, RequiresAPIKeys: true, Reason: "Error Tracking API requires API keys"},
