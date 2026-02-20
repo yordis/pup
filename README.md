@@ -245,7 +245,7 @@ export DD_SITE="datadoghq.com"
 pup monitors list
 ```
 
-This is the only authentication method available in the WASM build. See the [WASM](#wasm) section below.
+API key authentication (`DD_API_KEY` + `DD_APP_KEY`) also works in WASM. See the [WASM](#wasm) section below.
 
 ### Authentication Priority
 
@@ -347,12 +347,47 @@ pup incidents get abc-123-def
 
 ## Environment Variables
 
-- `DD_ACCESS_TOKEN`: Bearer token for stateless auth (highest priority, required for WASM)
+- `DD_ACCESS_TOKEN`: Bearer token for stateless auth (highest priority)
 - `DD_API_KEY`: Datadog API key (optional if using OAuth2 or DD_ACCESS_TOKEN)
 - `DD_APP_KEY`: Datadog Application key (optional if using OAuth2 or DD_ACCESS_TOKEN)
 - `DD_SITE`: Datadog site (default: datadoghq.com)
 - `DD_AUTO_APPROVE`: Auto-approve destructive operations (true/false)
 - `DD_TOKEN_STORAGE`: Token storage backend (keychain or file, default: auto-detect)
+
+## Agent Mode
+
+When pup is invoked by an AI coding agent, it automatically switches to **agent mode** which returns structured JSON responses optimized for machine consumption (including metadata, error details, and hints). Agent mode also auto-approves confirmation prompts.
+
+Agent mode is **auto-detected** when any of these environment variables are set to `1` or `true`:
+
+| Variable | Agent |
+|----------|-------|
+| `CLAUDE_CODE` or `CLAUDECODE` | Claude Code |
+| `CURSOR_AGENT` | Cursor |
+| `CODEX` or `OPENAI_CODEX` | OpenAI Codex |
+| `AIDER` | Aider |
+| `CLINE` | Cline |
+| `WINDSURF_AGENT` | Windsurf |
+| `GITHUB_COPILOT` | GitHub Copilot |
+| `AMAZON_Q` or `AWS_Q_DEVELOPER` | Amazon Q |
+| `GEMINI_CODE_ASSIST` | Gemini Code Assist |
+| `SRC_CODY` | Sourcegraph Cody |
+| `FORCE_AGENT_MODE` | Any agent (manual override) |
+
+You can also enable it explicitly with the `--agent` flag or by setting `FORCE_AGENT_MODE=1`:
+
+```bash
+# Auto-detected (e.g., running inside Claude Code)
+pup monitors list
+
+# Explicit flag
+pup monitors list --agent
+
+# Environment variable override
+FORCE_AGENT_MODE=1 pup monitors list
+```
+
+If you are integrating pup into an AI agent workflow, make sure the appropriate environment variable is set so responses are optimized for your agent. Without it, pup defaults to human-friendly output.
 
 ## WASM
 
@@ -369,17 +404,21 @@ cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" .
 
 ### Authentication
 
-The WASM build uses **stateless authentication only** — keychain storage and browser-based OAuth login are not available. Set `DD_ACCESS_TOKEN` with a pre-obtained bearer token:
+The WASM build supports **stateless authentication** — keychain storage and browser-based OAuth login are not available. Use either `DD_ACCESS_TOKEN` or API keys:
 
 ```bash
+# Option 1: Bearer token
 DD_ACCESS_TOKEN="your-token" DD_SITE="datadoghq.com" deno run pup.wasm monitors list
+
+# Option 2: API keys
+DD_API_KEY="your-api-key" DD_APP_KEY="your-app-key" deno run pup.wasm monitors list
 ```
 
 The `pup auth status` command works in WASM and reports which credentials are configured. The `login`, `logout`, and `refresh` subcommands return guidance to use `DD_ACCESS_TOKEN`.
 
 ### Limitations
 
-- No local token storage (keychain/file) — use `DD_ACCESS_TOKEN`
+- No local token storage (keychain/file) — use `DD_ACCESS_TOKEN` or API keys
 - No browser-based OAuth login flow
 - Networking relies on the host runtime's Fetch API
 
