@@ -1,11 +1,14 @@
 use anyhow::Result;
 use datadog_api_client::datadogV1::api_monitors::{
-    DeleteMonitorOptionalParams, GetMonitorOptionalParams, ListMonitorsOptionalParams, MonitorsAPI,
+    DeleteMonitorOptionalParams, GetMonitorOptionalParams, ListMonitorsOptionalParams,
+    MonitorsAPI, SearchMonitorsOptionalParams,
 };
+use datadog_api_client::datadogV1::model::Monitor;
 
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
+use crate::util;
 
 pub async fn list(
     cfg: &Config,
@@ -14,7 +17,6 @@ pub async fn list(
     limit: i32,
 ) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-
     let api = if let Some(http_client) = client::make_bearer_client(cfg) {
         MonitorsAPI::with_client_and_config(dd_cfg, http_client)
     } else {
@@ -42,9 +44,7 @@ pub async fn list(
         return Ok(());
     }
 
-    // Truncate to requested limit
     let monitors: Vec<_> = monitors.into_iter().take(limit as usize).collect();
-
     formatter::output(cfg, &monitors)?;
     Ok(())
 }
@@ -60,6 +60,57 @@ pub async fn get(cfg: &Config, monitor_id: i64) -> Result<()> {
         .get_monitor(monitor_id, GetMonitorOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get monitor: {:?}", e))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn create(cfg: &Config, file: &str) -> Result<()> {
+    let body: Monitor = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = if let Some(http_client) = client::make_bearer_client(cfg) {
+        MonitorsAPI::with_client_and_config(dd_cfg, http_client)
+    } else {
+        MonitorsAPI::with_config(dd_cfg)
+    };
+    let resp = api
+        .create_monitor(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create monitor: {:?}", e))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn update(cfg: &Config, monitor_id: i64, file: &str) -> Result<()> {
+    let body: datadog_api_client::datadogV1::model::MonitorUpdateRequest =
+        util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = if let Some(http_client) = client::make_bearer_client(cfg) {
+        MonitorsAPI::with_client_and_config(dd_cfg, http_client)
+    } else {
+        MonitorsAPI::with_config(dd_cfg)
+    };
+    let resp = api
+        .update_monitor(monitor_id, body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update monitor: {:?}", e))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn search(cfg: &Config, query: Option<String>) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = if let Some(http_client) = client::make_bearer_client(cfg) {
+        MonitorsAPI::with_client_and_config(dd_cfg, http_client)
+    } else {
+        MonitorsAPI::with_config(dd_cfg)
+    };
+
+    let mut params = SearchMonitorsOptionalParams::default();
+    if let Some(q) = query {
+        params = params.query(q);
+    }
+
+    let resp = api
+        .search_monitors(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to search monitors: {:?}", e))?;
     formatter::output(cfg, &resp)
 }
 

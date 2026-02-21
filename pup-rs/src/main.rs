@@ -7,7 +7,7 @@ mod useragent;
 mod util;
 mod version;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "pup", version = version::VERSION, about = "Datadog API CLI (Rust)")]
@@ -226,6 +226,11 @@ enum Commands {
         #[command(subcommand)]
         action: AuthActions,
     },
+    /// Generate shell completions
+    Completions {
+        /// Shell to generate completions for
+        shell: clap_complete::Shell,
+    },
     /// Show version information
     Version,
     /// Validate configuration
@@ -246,6 +251,12 @@ enum MonitorActions {
     },
     /// Get monitor details
     Get { monitor_id: i64 },
+    /// Create a monitor from JSON file
+    Create { #[arg(long)] file: String },
+    /// Update a monitor from JSON file
+    Update { monitor_id: i64, #[arg(long)] file: String },
+    /// Search monitors
+    Search { #[arg(long)] query: Option<String> },
     /// Delete a monitor
     Delete { monitor_id: i64 },
 }
@@ -285,6 +296,10 @@ enum DashboardActions {
     List,
     /// Get dashboard details
     Get { id: String },
+    /// Create a dashboard from JSON file
+    Create { #[arg(long)] file: String },
+    /// Update a dashboard from JSON file
+    Update { id: String, #[arg(long)] file: String },
     /// Delete a dashboard
     Delete { id: String },
 }
@@ -1083,6 +1098,15 @@ async fn main() -> anyhow::Result<()> {
                 MonitorActions::Get { monitor_id } => {
                     commands::monitors::get(&cfg, monitor_id).await?;
                 }
+                MonitorActions::Create { file } => {
+                    commands::monitors::create(&cfg, &file).await?;
+                }
+                MonitorActions::Update { monitor_id, file } => {
+                    commands::monitors::update(&cfg, monitor_id, &file).await?;
+                }
+                MonitorActions::Search { query } => {
+                    commands::monitors::search(&cfg, query).await?;
+                }
                 MonitorActions::Delete { monitor_id } => {
                     commands::monitors::delete(&cfg, monitor_id).await?;
                 }
@@ -1120,6 +1144,12 @@ async fn main() -> anyhow::Result<()> {
             match action {
                 DashboardActions::List => commands::dashboards::list(&cfg).await?,
                 DashboardActions::Get { id } => commands::dashboards::get(&cfg, &id).await?,
+                DashboardActions::Create { file } => {
+                    commands::dashboards::create(&cfg, &file).await?;
+                }
+                DashboardActions::Update { id, file } => {
+                    commands::dashboards::update(&cfg, &id, &file).await?;
+                }
                 DashboardActions::Delete { id } => commands::dashboards::delete(&cfg, &id).await?,
             }
         }
@@ -1630,6 +1660,14 @@ async fn main() -> anyhow::Result<()> {
             AuthActions::Token => commands::auth::token(&cfg)?,
         },
         // --- Utility ---
+        Commands::Completions { shell } => {
+            clap_complete::generate(
+                shell,
+                &mut Cli::command(),
+                "pup",
+                &mut std::io::stdout(),
+            );
+        }
         Commands::Version => println!("{}", version::build_info()),
         Commands::Test => commands::test::run(&cfg)?,
     }

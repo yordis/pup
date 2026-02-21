@@ -72,6 +72,15 @@ fn now_millis() -> i64 {
     Utc::now().timestamp() * 1000
 }
 
+/// Read a JSON file and deserialize into the specified type.
+/// Used by create/update commands that accept `--file` input.
+pub fn read_json_file<T: serde::de::DeserializeOwned>(path: &str) -> Result<T> {
+    let contents = std::fs::read_to_string(path)
+        .map_err(|e| anyhow::anyhow!("failed to read file {path:?}: {e}"))?;
+    serde_json::from_str(&contents)
+        .map_err(|e| anyhow::anyhow!("failed to parse JSON from {path:?}: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -50,3 +50,4 @@ aes-gcm = "0.10"
 
 # Browser opening for OAuth login
 open = "5"
+clap_complete = "4.5.66"
