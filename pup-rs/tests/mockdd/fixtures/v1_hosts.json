@@ -1,0 +1,1 @@
+{"host_list":[{"name":"host1","up":true,"apps":["agent"],"tags_by_source":{"datadog":["env:test"]}}],"total_matching":1}

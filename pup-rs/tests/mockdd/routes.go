@@ -84,7 +84,7 @@ func buildRoutes() []Route {
 
 		// Tags
 		{"GET", "/api/v1/tags/hosts", "v1_tags.json"},
-		{"GET", "/api/v1/tags/hosts/{host}", "v1_tags.json"},
+		{"GET", "/api/v1/tags/hosts/{host}", "v1_host_tags.json"},
 		{"POST", "/api/v1/tags/hosts/{host}", "v1_tags.json"},
 		{"PUT", "/api/v1/tags/hosts/{host}", "v1_tags.json"},
 		{"DELETE", "/api/v1/tags/hosts/{host}", "v1_deleted.json"},
@@ -95,7 +95,7 @@ func buildRoutes() []Route {
 
 		// Notebooks
 		{"GET", "/api/v1/notebooks", "v1_notebooks.json"},
-		{"GET", "/api/v1/notebooks/{id}", "v1_notebooks.json"},
+		{"GET", "/api/v1/notebooks/{id}", "v1_notebook.json"},
 		{"POST", "/api/v1/notebooks", "v1_notebooks.json"},
 		{"PUT", "/api/v1/notebooks/{id}", "v1_notebooks.json"},
 		{"DELETE", "/api/v1/notebooks/{id}", "v1_deleted.json"},
@@ -188,17 +188,18 @@ func buildRoutes() []Route {
 		// Cases
 		{"POST", "/api/v2/cases/search", "v2_cases.json"},
 		{"GET", "/api/v2/cases", "v2_cases.json"},
-		{"GET", "/api/v2/cases/{id}", "v2_generic_data.json"},
 		{"POST", "/api/v2/cases", "v2_generic_data.json"},
+		// Projects must be BEFORE /cases/{id} to prevent "projects" matching as {id}
+		{"GET", "/api/v2/cases/projects", "v2_generic_list.json"},
+		{"GET", "/api/v2/cases/projects/{id}", "v2_generic_data.json"},
+		{"POST", "/api/v2/cases/projects", "v2_generic_data.json"},
+		{"DELETE", "/api/v2/cases/projects/{id}", "v2_ok.json"},
+		{"GET", "/api/v2/cases/{id}", "v2_generic_data.json"},
 		{"POST", "/api/v2/cases/{id}/archive", "v2_generic_data.json"},
 		{"POST", "/api/v2/cases/{id}/unarchive", "v2_generic_data.json"},
 		{"POST", "/api/v2/cases/{id}/assign", "v2_generic_data.json"},
 		{"POST", "/api/v2/cases/{id}/priority", "v2_generic_data.json"},
 		{"POST", "/api/v2/cases/{id}/status", "v2_generic_data.json"},
-		{"GET", "/api/v2/cases/projects", "v2_generic_list.json"},
-		{"GET", "/api/v2/cases/projects/{id}", "v2_generic_data.json"},
-		{"POST", "/api/v2/cases/projects", "v2_generic_data.json"},
-		{"DELETE", "/api/v2/cases/projects/{id}", "v2_ok.json"},
 		{"POST", "/api/v2/cases/{id}/jira/issue", "v2_generic_data.json"},
 		{"POST", "/api/v2/cases/{id}/jira/link", "v2_generic_data.json"},
 		{"DELETE", "/api/v2/cases/{id}/jira/unlink", "v2_ok.json"},
@@ -262,27 +263,37 @@ func buildRoutes() []Route {
 		{"POST", "/api/v2/application_keys", "v2_generic_data.json"},
 		{"DELETE", "/api/v2/application_keys/{id}", "v2_ok.json"},
 
-		// Teams / On-Call
+		// Teams / On-Call (Go uses /teams, Rust uses /team for single-get)
 		{"GET", "/api/v2/teams", "v2_teams.json"},
-		{"GET", "/api/v2/teams/{id}", "v2_generic_data.json"},
+		{"GET", "/api/v2/teams/{id}", "v2_team.json"},
+		{"GET", "/api/v2/team/{id}", "v2_team.json"},
 		{"POST", "/api/v2/teams", "v2_generic_data.json"},
 		{"PATCH", "/api/v2/teams/{id}", "v2_generic_data.json"},
 		{"DELETE", "/api/v2/teams/{id}", "v2_ok.json"},
 
-		// Fleet
+		// Fleet (Rust uses /api/unstable/, Go uses /api/v2/)
 		{"GET", "/api/v2/fleet/agents", "v2_fleet_agents.json"},
+		{"GET", "/api/unstable/fleet/agents", "v2_fleet_agents.json"},
 		{"GET", "/api/v2/fleet/agents/{id}", "v2_generic_data.json"},
+		{"GET", "/api/unstable/fleet/agents/{id}", "v2_generic_data.json"},
 		{"GET", "/api/v2/fleet/agents/versions", "v2_generic_list.json"},
+		{"GET", "/api/unstable/fleet/agents/versions", "v2_generic_list.json"},
 		{"GET", "/api/v2/fleet/deployments", "v2_generic_list.json"},
+		{"GET", "/api/unstable/fleet/deployments", "v2_generic_list.json"},
 		{"GET", "/api/v2/fleet/deployments/{id}", "v2_generic_data.json"},
+		{"GET", "/api/unstable/fleet/deployments/{id}", "v2_generic_data.json"},
 		{"POST", "/api/v2/fleet/deployments/configure", "v2_generic_data.json"},
 		{"POST", "/api/v2/fleet/deployments/upgrade", "v2_generic_data.json"},
 		{"GET", "/api/v2/fleet/schedules", "v2_generic_list.json"},
+		{"GET", "/api/unstable/fleet/schedules", "v2_generic_list.json"},
 		{"GET", "/api/v2/fleet/schedules/{id}", "v2_generic_data.json"},
+		{"GET", "/api/unstable/fleet/schedules/{id}", "v2_generic_data.json"},
 		{"POST", "/api/v2/fleet/schedules", "v2_generic_data.json"},
 		{"PATCH", "/api/v2/fleet/schedules/{id}", "v2_generic_data.json"},
+		{"PATCH", "/api/unstable/fleet/schedules/{id}", "v2_generic_data.json"},
 		{"POST", "/api/v2/fleet/schedules/{id}/trigger", "v2_ok.json"},
 		{"DELETE", "/api/v2/fleet/schedules/{id}", "v2_ok.json"},
+		{"DELETE", "/api/unstable/fleet/schedules/{id}", "v2_ok.json"},
 
 		// Audit Logs
 		{"POST", "/api/v2/audit/events/search", "v2_generic_list.json"},
@@ -326,8 +337,9 @@ func buildRoutes() []Route {
 		{"GET", "/api/v2/hamr/connections/org", "v2_hamr.json"},
 		{"POST", "/api/v2/hamr/connections/org", "v2_hamr.json"},
 
-		// Data Governance
+		// Data Governance (Go uses /config/rules, Rust uses /config)
 		{"GET", "/api/v2/sensitive-data-scanner/config/rules", "v2_generic_list.json"},
+		{"GET", "/api/v2/sensitive-data-scanner/config", "v2_scanner_config.json"},
 
 		// Investigations
 		{"GET", "/api/v2/investigations", "v2_generic_list.json"},
