@@ -343,6 +343,10 @@ enum SloActions {
     List,
     /// Get SLO details
     Get { id: String },
+    /// Create an SLO from JSON file
+    Create { #[arg(long)] file: String },
+    /// Update an SLO from JSON file
+    Update { id: String, #[arg(long)] file: String },
     /// Delete an SLO
     Delete { id: String },
 }
@@ -419,6 +423,8 @@ enum DowntimeActions {
     List,
     /// Get downtime details
     Get { id: String },
+    /// Create a downtime from JSON file
+    Create { #[arg(long)] file: String },
     /// Cancel a downtime
     Cancel { id: String },
 }
@@ -622,6 +628,10 @@ enum ApiKeyActions {
     List,
     /// Get API key details
     Get { key_id: String },
+    /// Create an API key
+    Create { #[arg(long)] name: String },
+    /// Delete an API key
+    Delete { key_id: String },
 }
 
 // ---- App Keys ----
@@ -659,6 +669,8 @@ enum NotebookActions {
     List,
     /// Get notebook details
     Get { notebook_id: i64 },
+    /// Delete a notebook
+    Delete { notebook_id: i64 },
 }
 
 // ---- RUM ----
@@ -1176,6 +1188,10 @@ async fn main() -> anyhow::Result<()> {
             match action {
                 SloActions::List => commands::slos::list(&cfg).await?,
                 SloActions::Get { id } => commands::slos::get(&cfg, &id).await?,
+                SloActions::Create { file } => commands::slos::create(&cfg, &file).await?,
+                SloActions::Update { id, file } => {
+                    commands::slos::update(&cfg, &id, &file).await?;
+                }
                 SloActions::Delete { id } => commands::slos::delete(&cfg, &id).await?,
             }
         }
@@ -1225,6 +1241,9 @@ async fn main() -> anyhow::Result<()> {
             match action {
                 DowntimeActions::List => commands::downtime::list(&cfg).await?,
                 DowntimeActions::Get { id } => commands::downtime::get(&cfg, &id).await?,
+                DowntimeActions::Create { file } => {
+                    commands::downtime::create(&cfg, &file).await?;
+                }
                 DowntimeActions::Cancel { id } => commands::downtime::cancel(&cfg, &id).await?,
             }
         }
@@ -1365,6 +1384,12 @@ async fn main() -> anyhow::Result<()> {
             match action {
                 ApiKeyActions::List => commands::api_keys::list(&cfg).await?,
                 ApiKeyActions::Get { key_id } => commands::api_keys::get(&cfg, &key_id).await?,
+                ApiKeyActions::Create { name } => {
+                    commands::api_keys::create(&cfg, &name).await?;
+                }
+                ApiKeyActions::Delete { key_id } => {
+                    commands::api_keys::delete(&cfg, &key_id).await?;
+                }
             }
         }
         // --- App Keys ---
@@ -1394,6 +1419,9 @@ async fn main() -> anyhow::Result<()> {
                 NotebookActions::List => commands::notebooks::list(&cfg).await?,
                 NotebookActions::Get { notebook_id } => {
                     commands::notebooks::get(&cfg, notebook_id).await?;
+                }
+                NotebookActions::Delete { notebook_id } => {
+                    commands::notebooks::delete(&cfg, notebook_id).await?;
                 }
             }
         }

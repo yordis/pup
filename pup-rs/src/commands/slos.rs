@@ -3,10 +3,12 @@ use datadog_api_client::datadogV1::api_service_level_objectives::{
     DeleteSLOOptionalParams, GetSLOOptionalParams, ListSLOsOptionalParams,
     ServiceLevelObjectivesAPI,
 };
+use datadog_api_client::datadogV1::model::{ServiceLevelObjective, ServiceLevelObjectiveRequest};
 
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
+use crate::util;
 
 pub async fn list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
@@ -31,6 +33,34 @@ pub async fn get(cfg: &Config, id: &str) -> Result<()> {
         .get_slo(id.to_string(), GetSLOOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get SLO: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn create(cfg: &Config, file: &str) -> Result<()> {
+    let body: ServiceLevelObjectiveRequest = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceLevelObjectivesAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceLevelObjectivesAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .create_slo(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create SLO: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn update(cfg: &Config, id: &str, file: &str) -> Result<()> {
+    let body: ServiceLevelObjective = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceLevelObjectivesAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceLevelObjectivesAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .update_slo(id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update SLO: {e:?}"))?;
     formatter::output(cfg, &resp)
 }
 
