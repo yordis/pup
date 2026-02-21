@@ -65,6 +65,30 @@ enum Commands {
     /// Manage service catalog
     #[command(name = "service-catalog")]
     ServiceCatalog { #[command(subcommand)] action: ServiceCatalogActions },
+    /// Manage API keys
+    #[command(name = "api-keys")]
+    ApiKeys { #[command(subcommand)] action: ApiKeyActions },
+    /// Manage application keys
+    #[command(name = "app-keys")]
+    AppKeys { #[command(subcommand)] action: AppKeyActions },
+    /// Query usage data
+    Usage { #[command(subcommand)] action: UsageActions },
+    /// Manage notebooks
+    Notebooks { #[command(subcommand)] action: NotebookActions },
+    /// RUM (Real User Monitoring)
+    Rum { #[command(subcommand)] action: RumActions },
+    /// CI/CD visibility
+    Cicd { #[command(subcommand)] action: CicdActions },
+    /// Manage on-call teams
+    #[command(name = "on-call")]
+    OnCall { #[command(subcommand)] action: OnCallActions },
+    /// Fleet automation
+    Fleet { #[command(subcommand)] action: FleetActions },
+    /// Data governance
+    #[command(name = "data-governance")]
+    DataGovernance { #[command(subcommand)] action: DataGovActions },
+    /// Miscellaneous (IP ranges)
+    Misc { #[command(subcommand)] action: MiscActions },
     /// Authentication (OAuth2)
     Auth { #[command(subcommand)] action: AuthActions },
     /// Show version information
@@ -363,6 +387,169 @@ enum ServiceCatalogActions {
     Get { service_name: String },
 }
 
+// ---- API Keys ----
+#[derive(Subcommand)]
+enum ApiKeyActions {
+    /// List API keys
+    List,
+    /// Get API key details
+    Get { key_id: String },
+}
+
+// ---- App Keys ----
+#[derive(Subcommand)]
+enum AppKeyActions {
+    /// List application keys
+    List,
+    /// Get application key details
+    Get { key_id: String },
+}
+
+// ---- Usage ----
+#[derive(Subcommand)]
+enum UsageActions {
+    /// Get usage summary
+    Summary {
+        #[arg(long, default_value = "30d")] start: String,
+        #[arg(long)] end: Option<String>,
+    },
+    /// Get hourly usage
+    Hourly {
+        #[arg(long, default_value = "1d")] start: String,
+        #[arg(long)] end: Option<String>,
+    },
+}
+
+// ---- Notebooks ----
+#[derive(Subcommand)]
+enum NotebookActions {
+    /// List notebooks
+    List,
+    /// Get notebook details
+    Get { notebook_id: i64 },
+}
+
+// ---- RUM ----
+#[derive(Subcommand)]
+enum RumActions {
+    /// Manage RUM applications
+    Apps { #[command(subcommand)] action: RumAppActions },
+    /// List RUM events
+    Events {
+        #[arg(long, default_value = "1h")] from: String,
+        #[arg(long, default_value = "now")] to: String,
+        #[arg(long, default_value_t = 100)] limit: i32,
+    },
+}
+
+#[derive(Subcommand)]
+enum RumAppActions {
+    /// List RUM apps (requires API keys)
+    List,
+    /// Get RUM app details (requires API keys)
+    Get { app_id: String },
+}
+
+// ---- CI/CD ----
+#[derive(Subcommand)]
+enum CicdActions {
+    /// List CI pipelines
+    Pipelines {
+        #[arg(long)] query: Option<String>,
+        #[arg(long, default_value = "1h")] from: String,
+        #[arg(long, default_value = "now")] to: String,
+        #[arg(long, default_value_t = 50)] limit: i32,
+    },
+    /// List CI tests
+    Tests {
+        #[arg(long)] query: Option<String>,
+        #[arg(long, default_value = "1h")] from: String,
+        #[arg(long, default_value = "now")] to: String,
+        #[arg(long, default_value_t = 50)] limit: i32,
+    },
+}
+
+// ---- On-Call ----
+#[derive(Subcommand)]
+enum OnCallActions {
+    /// Manage on-call teams
+    Teams { #[command(subcommand)] action: OnCallTeamActions },
+}
+
+#[derive(Subcommand)]
+enum OnCallTeamActions {
+    /// List teams
+    List,
+    /// Get team details
+    Get { team_id: String },
+    /// Delete a team
+    Delete { team_id: String },
+    /// List team memberships
+    Memberships {
+        team_id: String,
+        #[arg(long, default_value_t = 100)] page_size: i64,
+    },
+}
+
+// ---- Fleet ----
+#[derive(Subcommand)]
+enum FleetActions {
+    /// Manage fleet agents
+    Agents { #[command(subcommand)] action: FleetAgentActions },
+    /// Manage fleet deployments
+    Deployments { #[command(subcommand)] action: FleetDeploymentActions },
+    /// Manage fleet schedules
+    Schedules { #[command(subcommand)] action: FleetScheduleActions },
+}
+
+#[derive(Subcommand)]
+enum FleetAgentActions {
+    /// List agents
+    List { #[arg(long)] page_size: Option<i64> },
+    /// Get agent details
+    Get { agent_key: String },
+    /// List agent versions
+    Versions,
+}
+
+#[derive(Subcommand)]
+enum FleetDeploymentActions {
+    /// List deployments
+    List { #[arg(long)] page_size: Option<i64> },
+    /// Get deployment details
+    Get { deployment_id: String },
+}
+
+#[derive(Subcommand)]
+enum FleetScheduleActions {
+    /// List schedules
+    List,
+    /// Get schedule details
+    Get { schedule_id: String },
+}
+
+// ---- Data Governance ----
+#[derive(Subcommand)]
+enum DataGovActions {
+    /// List scanner rules
+    #[command(name = "scanner-rules")]
+    ScannerRules { #[command(subcommand)] action: DataGovScannerActions },
+}
+
+#[derive(Subcommand)]
+enum DataGovScannerActions {
+    /// List rules
+    List,
+}
+
+// ---- Misc ----
+#[derive(Subcommand)]
+enum MiscActions {
+    /// Get IP ranges
+    #[command(name = "ip-ranges")]
+    IpRanges,
+}
+
 // ---- Auth ----
 #[derive(Subcommand)]
 enum AuthActions {
@@ -617,6 +804,134 @@ async fn main() -> anyhow::Result<()> {
                 ServiceCatalogActions::Get { service_name } => {
                     commands::service_catalog::get(&cfg, &service_name).await?;
                 }
+            }
+        }
+        // --- API Keys ---
+        Commands::ApiKeys { action } => {
+            cfg.validate_auth()?;
+            match action {
+                ApiKeyActions::List => commands::api_keys::list(&cfg).await?,
+                ApiKeyActions::Get { key_id } => commands::api_keys::get(&cfg, &key_id).await?,
+            }
+        }
+        // --- App Keys ---
+        Commands::AppKeys { action } => {
+            cfg.validate_auth()?;
+            match action {
+                AppKeyActions::List => commands::app_keys::list(&cfg).await?,
+                AppKeyActions::Get { key_id } => commands::app_keys::get(&cfg, &key_id).await?,
+            }
+        }
+        // --- Usage ---
+        Commands::Usage { action } => {
+            cfg.validate_auth()?;
+            match action {
+                UsageActions::Summary { start, end } => {
+                    commands::usage::summary(&cfg, start, end).await?;
+                }
+                UsageActions::Hourly { start, end } => {
+                    commands::usage::hourly(&cfg, start, end).await?;
+                }
+            }
+        }
+        // --- Notebooks ---
+        Commands::Notebooks { action } => {
+            cfg.validate_auth()?;
+            match action {
+                NotebookActions::List => commands::notebooks::list(&cfg).await?,
+                NotebookActions::Get { notebook_id } => {
+                    commands::notebooks::get(&cfg, notebook_id).await?;
+                }
+            }
+        }
+        // --- RUM ---
+        Commands::Rum { action } => {
+            cfg.validate_auth()?;
+            match action {
+                RumActions::Apps { action } => match action {
+                    RumAppActions::List => commands::rum::apps_list(&cfg).await?,
+                    RumAppActions::Get { app_id } => commands::rum::apps_get(&cfg, &app_id).await?,
+                },
+                RumActions::Events { from, to, limit } => {
+                    commands::rum::events_list(&cfg, from, to, limit).await?;
+                }
+            }
+        }
+        // --- CI/CD ---
+        Commands::Cicd { action } => {
+            cfg.validate_auth()?;
+            match action {
+                CicdActions::Pipelines { query, from, to, limit } => {
+                    commands::cicd::pipelines_list(&cfg, query, from, to, limit).await?;
+                }
+                CicdActions::Tests { query, from, to, limit } => {
+                    commands::cicd::tests_list(&cfg, query, from, to, limit).await?;
+                }
+            }
+        }
+        // --- On-Call ---
+        Commands::OnCall { action } => {
+            cfg.validate_auth()?;
+            match action {
+                OnCallActions::Teams { action } => match action {
+                    OnCallTeamActions::List => commands::on_call::teams_list(&cfg).await?,
+                    OnCallTeamActions::Get { team_id } => {
+                        commands::on_call::teams_get(&cfg, &team_id).await?;
+                    }
+                    OnCallTeamActions::Delete { team_id } => {
+                        commands::on_call::teams_delete(&cfg, &team_id).await?;
+                    }
+                    OnCallTeamActions::Memberships { team_id, page_size } => {
+                        commands::on_call::memberships_list(&cfg, &team_id, page_size).await?;
+                    }
+                },
+            }
+        }
+        // --- Fleet ---
+        Commands::Fleet { action } => {
+            cfg.validate_auth()?;
+            match action {
+                FleetActions::Agents { action } => match action {
+                    FleetAgentActions::List { page_size } => {
+                        commands::fleet::agents_list(&cfg, page_size).await?;
+                    }
+                    FleetAgentActions::Get { agent_key } => {
+                        commands::fleet::agents_get(&cfg, &agent_key).await?;
+                    }
+                    FleetAgentActions::Versions => commands::fleet::agents_versions(&cfg).await?,
+                },
+                FleetActions::Deployments { action } => match action {
+                    FleetDeploymentActions::List { page_size } => {
+                        commands::fleet::deployments_list(&cfg, page_size).await?;
+                    }
+                    FleetDeploymentActions::Get { deployment_id } => {
+                        commands::fleet::deployments_get(&cfg, &deployment_id).await?;
+                    }
+                },
+                FleetActions::Schedules { action } => match action {
+                    FleetScheduleActions::List => commands::fleet::schedules_list(&cfg).await?,
+                    FleetScheduleActions::Get { schedule_id } => {
+                        commands::fleet::schedules_get(&cfg, &schedule_id).await?;
+                    }
+                },
+            }
+        }
+        // --- Data Governance ---
+        Commands::DataGovernance { action } => {
+            cfg.validate_auth()?;
+            match action {
+                DataGovActions::ScannerRules { action } => match action {
+                    DataGovScannerActions::List => {
+                        commands::data_governance::scanner_rules_list(&cfg).await?;
+                    }
+                },
+            }
+        }
+        // --- Misc ---
+        Commands::Misc { action } => {
+            cfg.validate_auth()?;
+            match action {
+                MiscActions::IpRanges => commands::misc::ip_ranges(&cfg).await?,
             }
         }
         // --- Auth ---
