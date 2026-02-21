@@ -216,6 +216,33 @@ enum Commands {
         #[command(subcommand)]
         action: InvestigationActions,
     },
+    /// Network monitoring (placeholder)
+    Network {
+        #[command(subcommand)]
+        action: NetworkActions,
+    },
+    /// Observability pipelines (placeholder)
+    #[command(name = "obs-pipelines")]
+    ObsPipelines {
+        #[command(subcommand)]
+        action: ObsPipelinesActions,
+    },
+    /// Scorecards (placeholder)
+    Scorecards {
+        #[command(subcommand)]
+        action: ScorecardsActions,
+    },
+    /// Distributed traces (placeholder)
+    Traces {
+        #[command(subcommand)]
+        action: TracesActions,
+    },
+    /// Agent management (placeholder)
+    #[command(name = "agent")]
+    Agent {
+        #[command(subcommand)]
+        action: AgentActions,
+    },
     /// Manage command aliases
     Alias {
         #[command(subcommand)]
@@ -525,6 +552,11 @@ enum SecurityActions {
         #[command(subcommand)]
         action: SecuritySignalActions,
     },
+    /// Search security findings
+    Findings {
+        #[command(subcommand)]
+        action: SecurityFindingActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -547,6 +579,17 @@ enum SecuritySignalActions {
         to: String,
         #[arg(long, default_value_t = 100)]
         limit: i32,
+    },
+}
+
+#[derive(Subcommand)]
+enum SecurityFindingActions {
+    /// Search findings
+    Search {
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value_t = 100)]
+        limit: i64,
     },
 }
 
@@ -597,6 +640,11 @@ enum CaseActions {
     },
     /// Get case details
     Get { case_id: String },
+    /// Create a case from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
     /// Manage projects
     Projects {
         #[command(subcommand)]
@@ -698,6 +746,15 @@ enum RumAppActions {
     List,
     /// Get RUM app details (requires API keys)
     Get { app_id: String },
+    /// Create a RUM app (requires API keys)
+    Create {
+        #[arg(long)]
+        name: String,
+        #[arg(long, name = "type")]
+        app_type: Option<String>,
+    },
+    /// Delete a RUM app (requires API keys)
+    Delete { app_id: String },
 }
 
 // ---- CI/CD ----
@@ -743,6 +800,21 @@ enum OnCallTeamActions {
     List,
     /// Get team details
     Get { team_id: String },
+    /// Create a team
+    Create {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        handle: String,
+    },
+    /// Update a team
+    Update {
+        team_id: String,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        handle: String,
+    },
     /// Delete a team
     Delete { team_id: String },
     /// List team memberships
@@ -795,6 +867,8 @@ enum FleetDeploymentActions {
     },
     /// Get deployment details
     Get { deployment_id: String },
+    /// Cancel a deployment
+    Cancel { deployment_id: String },
 }
 
 #[derive(Subcommand)]
@@ -803,6 +877,8 @@ enum FleetScheduleActions {
     List,
     /// Get schedule details
     Get { schedule_id: String },
+    /// Delete a schedule
+    Delete { schedule_id: String },
 }
 
 // ---- Data Governance ----
@@ -953,6 +1029,9 @@ enum IntegrationActions {
 enum JiraActions {
     /// List Jira accounts
     Accounts,
+    /// Delete a Jira account
+    #[command(name = "delete-account")]
+    DeleteAccount { account_id: String },
     /// Manage Jira templates
     Templates {
         #[command(subcommand)]
@@ -985,6 +1064,8 @@ enum ServiceNowTemplateActions {
     List,
     /// Get template details
     Get { template_id: String },
+    /// Delete a template
+    Delete { template_id: String },
 }
 
 // ---- Cost ----
@@ -1054,6 +1135,41 @@ enum InvestigationActions {
     },
     /// Get investigation details
     Get { investigation_id: String },
+}
+
+// ---- Network (placeholder) ----
+#[derive(Subcommand)]
+enum NetworkActions {
+    /// List network devices/monitors
+    List,
+}
+
+// ---- Obs Pipelines (placeholder) ----
+#[derive(Subcommand)]
+enum ObsPipelinesActions {
+    /// List observability pipelines
+    List,
+}
+
+// ---- Scorecards (placeholder) ----
+#[derive(Subcommand)]
+enum ScorecardsActions {
+    /// List scorecards
+    List,
+}
+
+// ---- Traces (placeholder) ----
+#[derive(Subcommand)]
+enum TracesActions {
+    /// List traces
+    List,
+}
+
+// ---- Agent (placeholder) ----
+#[derive(Subcommand)]
+enum AgentActions {
+    /// Generate agent schema
+    Schema,
 }
 
 // ---- Alias ----
@@ -1327,6 +1443,11 @@ async fn main() -> anyhow::Result<()> {
                         commands::security::signals_search(&cfg, query, from, to, limit).await?;
                     }
                 },
+                SecurityActions::Findings { action } => match action {
+                    SecurityFindingActions::Search { query, limit } => {
+                        commands::security::findings_search(&cfg, query, limit).await?;
+                    }
+                },
             }
         }
         // --- Organizations ---
@@ -1360,6 +1481,9 @@ async fn main() -> anyhow::Result<()> {
                     commands::cases::search(&cfg, query, page_size).await?;
                 }
                 CaseActions::Get { case_id } => commands::cases::get(&cfg, &case_id).await?,
+                CaseActions::Create { file } => {
+                    commands::cases::create(&cfg, &file).await?;
+                }
                 CaseActions::Projects { action } => match action {
                     CaseProjectActions::List => commands::cases::projects_list(&cfg).await?,
                     CaseProjectActions::Get { project_id } => {
@@ -1432,6 +1556,12 @@ async fn main() -> anyhow::Result<()> {
                 RumActions::Apps { action } => match action {
                     RumAppActions::List => commands::rum::apps_list(&cfg).await?,
                     RumAppActions::Get { app_id } => commands::rum::apps_get(&cfg, &app_id).await?,
+                    RumAppActions::Create { name, app_type } => {
+                        commands::rum::apps_create(&cfg, &name, app_type).await?;
+                    }
+                    RumAppActions::Delete { app_id } => {
+                        commands::rum::apps_delete(&cfg, &app_id).await?;
+                    }
                 },
                 RumActions::Events { from, to, limit } => {
                     commands::rum::events_list(&cfg, from, to, limit).await?;
@@ -1469,6 +1599,16 @@ async fn main() -> anyhow::Result<()> {
                     OnCallTeamActions::Get { team_id } => {
                         commands::on_call::teams_get(&cfg, &team_id).await?;
                     }
+                    OnCallTeamActions::Create { name, handle } => {
+                        commands::on_call::teams_create(&cfg, &name, &handle).await?;
+                    }
+                    OnCallTeamActions::Update {
+                        team_id,
+                        name,
+                        handle,
+                    } => {
+                        commands::on_call::teams_update(&cfg, &team_id, &name, &handle).await?;
+                    }
                     OnCallTeamActions::Delete { team_id } => {
                         commands::on_call::teams_delete(&cfg, &team_id).await?;
                     }
@@ -1498,11 +1638,17 @@ async fn main() -> anyhow::Result<()> {
                     FleetDeploymentActions::Get { deployment_id } => {
                         commands::fleet::deployments_get(&cfg, &deployment_id).await?;
                     }
+                    FleetDeploymentActions::Cancel { deployment_id } => {
+                        commands::fleet::deployments_cancel(&cfg, &deployment_id).await?;
+                    }
                 },
                 FleetActions::Schedules { action } => match action {
                     FleetScheduleActions::List => commands::fleet::schedules_list(&cfg).await?,
                     FleetScheduleActions::Get { schedule_id } => {
                         commands::fleet::schedules_get(&cfg, &schedule_id).await?;
+                    }
+                    FleetScheduleActions::Delete { schedule_id } => {
+                        commands::fleet::schedules_delete(&cfg, &schedule_id).await?;
                     }
                 },
             }
@@ -1600,6 +1746,9 @@ async fn main() -> anyhow::Result<()> {
                     JiraActions::Accounts => {
                         commands::integrations::jira_accounts_list(&cfg).await?
                     }
+                    JiraActions::DeleteAccount { account_id } => {
+                        commands::integrations::jira_accounts_delete(&cfg, &account_id).await?;
+                    }
                     JiraActions::Templates { action } => match action {
                         JiraTemplateActions::List => {
                             commands::integrations::jira_templates_list(&cfg).await?
@@ -1620,6 +1769,13 @@ async fn main() -> anyhow::Result<()> {
                         ServiceNowTemplateActions::Get { template_id } => {
                             commands::integrations::servicenow_templates_get(&cfg, &template_id)
                                 .await?;
+                        }
+                        ServiceNowTemplateActions::Delete { template_id } => {
+                            commands::integrations::servicenow_templates_delete(
+                                &cfg,
+                                &template_id,
+                            )
+                            .await?;
                         }
                     },
                 },
@@ -1674,6 +1830,26 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        // --- Network (placeholder) ---
+        Commands::Network { action } => match action {
+            NetworkActions::List => commands::network::list()?,
+        },
+        // --- Obs Pipelines (placeholder) ---
+        Commands::ObsPipelines { action } => match action {
+            ObsPipelinesActions::List => commands::obs_pipelines::list()?,
+        },
+        // --- Scorecards (placeholder) ---
+        Commands::Scorecards { action } => match action {
+            ScorecardsActions::List => commands::scorecards::list()?,
+        },
+        // --- Traces (placeholder) ---
+        Commands::Traces { action } => match action {
+            TracesActions::List => commands::traces::list()?,
+        },
+        // --- Agent (placeholder) ---
+        Commands::Agent { action } => match action {
+            AgentActions::Schema => commands::agent::schema()?,
+        },
         // --- Alias ---
         Commands::Alias { action } => match action {
             AliasActions::List => commands::alias::list()?,

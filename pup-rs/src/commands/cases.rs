@@ -2,6 +2,7 @@ use anyhow::Result;
 use datadog_api_client::datadogV2::api_case_management::{
     CaseManagementAPI, SearchCasesOptionalParams,
 };
+use datadog_api_client::datadogV2::model::CaseCreateRequest;
 
 use crate::client;
 use crate::config::Config;
@@ -31,6 +32,20 @@ pub async fn get(cfg: &Config, case_id: &str) -> Result<()> {
         .get_case(case_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get case: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn create(cfg: &Config, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => CaseManagementAPI::with_client_and_config(dd_cfg, c),
+        None => CaseManagementAPI::with_config(dd_cfg),
+    };
+    let body: CaseCreateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .create_case(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create case: {e:?}"))?;
     formatter::output(cfg, &resp)
 }
 

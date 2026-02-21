@@ -50,6 +50,21 @@ pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => JiraIntegrationAPI::with_config(dd_cfg),
+    };
+    let uuid = Uuid::parse_str(account_id)
+        .map_err(|e| anyhow::anyhow!("invalid account UUID '{account_id}': {e}"))?;
+    api.delete_jira_account(uuid)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete Jira account: {e:?}"))?;
+    eprintln!("Jira account {account_id} deleted.");
+    Ok(())
+}
+
 // ---- ServiceNow ----
 
 pub async fn servicenow_instances_list(cfg: &Config) -> Result<()> {
@@ -91,4 +106,19 @@ pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result
         .await
         .map_err(|e| anyhow::anyhow!("failed to get ServiceNow template: {e:?}"))?;
     formatter::output(cfg, &resp)
+}
+
+pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceNowIntegrationAPI::with_config(dd_cfg),
+    };
+    let uuid = Uuid::parse_str(template_id)
+        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    api.delete_service_now_template(uuid)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete ServiceNow template: {e:?}"))?;
+    eprintln!("ServiceNow template {template_id} deleted.");
+    Ok(())
 }

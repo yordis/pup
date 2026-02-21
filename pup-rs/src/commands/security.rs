@@ -1,7 +1,7 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_security_monitoring::{
-    ListSecurityMonitoringRulesOptionalParams, SearchSecurityMonitoringSignalsOptionalParams,
-    SecurityMonitoringAPI,
+    ListFindingsOptionalParams, ListSecurityMonitoringRulesOptionalParams,
+    SearchSecurityMonitoringSignalsOptionalParams, SecurityMonitoringAPI,
 };
 use datadog_api_client::datadogV2::model::{
     SecurityMonitoringSignalListRequest, SecurityMonitoringSignalListRequestFilter,
@@ -72,5 +72,26 @@ pub async fn signals_search(
         .search_security_monitoring_signals(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search signals: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn findings_search(
+    cfg: &Config,
+    query: Option<String>,
+    limit: i64,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => SecurityMonitoringAPI::with_client_and_config(dd_cfg, c),
+        None => SecurityMonitoringAPI::with_config(dd_cfg),
+    };
+    let mut params = ListFindingsOptionalParams::default().page_limit(limit);
+    if let Some(q) = query {
+        params = params.filter_tags(q);
+    }
+    let resp = api
+        .list_findings(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to search findings: {e:?}"))?;
     formatter::output(cfg, &resp)
 }

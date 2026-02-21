@@ -109,3 +109,29 @@ pub async fn schedules_get(cfg: &Config, schedule_id: &str) -> Result<()> {
         .map_err(|e| anyhow::anyhow!("failed to get schedule: {e:?}"))?;
     formatter::output(cfg, &resp)
 }
+
+pub async fn schedules_delete(cfg: &Config, schedule_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => FleetAutomationAPI::with_client_and_config(dd_cfg, c),
+        None => FleetAutomationAPI::with_config(dd_cfg),
+    };
+    api.delete_fleet_schedule(schedule_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete schedule: {e:?}"))?;
+    eprintln!("Fleet schedule {schedule_id} deleted.");
+    Ok(())
+}
+
+pub async fn deployments_cancel(cfg: &Config, deployment_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => FleetAutomationAPI::with_client_and_config(dd_cfg, c),
+        None => FleetAutomationAPI::with_config(dd_cfg),
+    };
+    api.cancel_fleet_deployment(deployment_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to cancel deployment: {e:?}"))?;
+    eprintln!("Fleet deployment {deployment_id} cancelled.");
+    Ok(())
+}
