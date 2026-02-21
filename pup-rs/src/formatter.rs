@@ -16,12 +16,38 @@ pub struct Metadata {
     pub next_action: Option<String>,
 }
 
-/// Agent mode wrapper: { data, metadata }
+/// Agent mode wrapper: { status, data, metadata }
 #[derive(Serialize)]
 struct AgentEnvelope<'a, T: Serialize> {
+    status: &'static str,
     data: &'a T,
     #[serde(skip_serializing_if = "Option::is_none")]
     metadata: Option<&'a Metadata>,
+}
+
+/// Non-agent success wrapper: { status, data }
+#[derive(Serialize)]
+struct SuccessEnvelope<'a, T: Serialize> {
+    status: &'static str,
+    data: &'a T,
+}
+
+/// Recursively sort all JSON object keys alphabetically.
+fn sort_json_value(v: serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(map) => {
+            let mut sorted: std::collections::BTreeMap<String, serde_json::Value> =
+                std::collections::BTreeMap::new();
+            for (k, val) in map {
+                sorted.insert(k, sort_json_value(val));
+            }
+            serde_json::Value::Object(sorted.into_iter().collect())
+        }
+        serde_json::Value::Array(arr) => {
+            serde_json::Value::Array(arr.into_iter().map(sort_json_value).collect())
+        }
+        other => other,
+    }
 }
 
 /// Format and print data to stdout.
@@ -32,12 +58,14 @@ pub fn format_and_print<T: Serialize>(
     meta: Option<&Metadata>,
 ) -> Result<()> {
     if agent_mode {
-        // Agent mode always outputs JSON with envelope
+        let sorted_data = sort_json_value(serde_json::to_value(data)?);
         let envelope = AgentEnvelope {
-            data,
+            status: "success",
+            data: &sorted_data,
             metadata: meta,
         };
-        let json = serde_json::to_string_pretty(&envelope)?;
+        let envelope_val = sort_json_value(serde_json::to_value(&envelope)?);
+        let json = serde_json::to_string_pretty(&envelope_val)?;
         println!("{json}");
         return Ok(());
     }
@@ -55,13 +83,25 @@ pub fn output<T: Serialize>(cfg: &crate::config::Config, data: &T) -> Result<()>
 }
 
 pub fn print_json<T: Serialize>(data: &T) -> Result<()> {
-    let json = serde_json::to_string_pretty(data)?;
+    let sorted_data = sort_json_value(serde_json::to_value(data)?);
+    let envelope = SuccessEnvelope {
+        status: "success",
+        data: &sorted_data,
+    };
+    let envelope_val = sort_json_value(serde_json::to_value(&envelope)?);
+    let json = serde_json::to_string_pretty(&envelope_val)?;
     println!("{json}");
     Ok(())
 }
 
 fn print_yaml<T: Serialize>(data: &T) -> Result<()> {
-    let yaml = serde_yaml::to_string(data)?;
+    let sorted_data = sort_json_value(serde_json::to_value(data)?);
+    let envelope = SuccessEnvelope {
+        status: "success",
+        data: &sorted_data,
+    };
+    let envelope_val = sort_json_value(serde_json::to_value(&envelope)?);
+    let yaml = serde_yaml::to_string(&envelope_val)?;
     print!("{yaml}");
     Ok(())
 }

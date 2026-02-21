@@ -221,6 +221,8 @@ static UNSTABLE_OPS: &[&str] = &[
     "v2.get_hamr_org_connection",
     // Entity Risk Scores (1)
     "v2.list_entity_risk_scores",
+    // Security Findings (1)
+    "v2.list_findings",
     // SLO Status (1)
     "v2.get_slo_status",
     // Flaky Tests (1)
@@ -549,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_unstable_ops_count() {
-        assert_eq!(UNSTABLE_OPS.len(), 63);
+        assert_eq!(UNSTABLE_OPS.len(), 64);
     }
 
     #[test]

@@ -170,7 +170,7 @@ pub async fn archives_delete(cfg: &Config, archive_id: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete log archive: {:?}", e))?;
 
-    eprintln!("Log archive {archive_id} deleted.");
+    println!("Log archive {archive_id} deleted.");
     Ok(())
 }
 
@@ -252,4 +252,62 @@ pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
 
     formatter::output(cfg, &resp)?;
     Ok(())
+}
+
+pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!(
+            "logs metrics delete requires API key authentication (DD_API_KEY + DD_APP_KEY).\n\
+             This endpoint does not support bearer token auth."
+        );
+    }
+
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = LogsMetricsAPI::with_config(dd_cfg);
+
+    api.delete_logs_metric(metric_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete log-based metric: {:?}", e))?;
+
+    println!("Log-based metric {metric_id} deleted.");
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Restriction Queries (raw HTTP - not available in typed client)
+// ---------------------------------------------------------------------------
+
+async fn raw_get(cfg: &Config, path: &str) -> Result<serde_json::Value> {
+    let url = format!("{}{}", cfg.api_base_url(), path);
+    let client = reqwest::Client::new();
+    let mut req = client.get(&url);
+
+    if let Some(token) = &cfg.access_token {
+        req = req.header("Authorization", format!("Bearer {token}"));
+    } else if let (Some(api_key), Some(app_key)) = (&cfg.api_key, &cfg.app_key) {
+        req = req
+            .header("DD-API-KEY", api_key.as_str())
+            .header("DD-APPLICATION-KEY", app_key.as_str());
+    } else {
+        bail!("no authentication configured");
+    }
+
+    let resp = req.header("Accept", "application/json").send().await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        bail!("API error (HTTP {status}): {body}");
+    }
+    Ok(resp.json().await?)
+}
+
+pub async fn restriction_queries_list(cfg: &Config) -> Result<()> {
+    let data = raw_get(cfg, "/api/v2/logs/config/restriction_queries").await?;
+    formatter::output(cfg, &data)
+}
+
+pub async fn restriction_queries_get(cfg: &Config, query_id: &str) -> Result<()> {
+    let path = format!("/api/v2/logs/config/restriction_queries/{query_id}");
+    let data = raw_get(cfg, &path).await?;
+    formatter::output(cfg, &data)
 }

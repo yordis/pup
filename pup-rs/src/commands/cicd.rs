@@ -4,11 +4,16 @@ use datadog_api_client::datadogV2::api_ci_visibility_pipelines::{
 };
 use datadog_api_client::datadogV2::api_ci_visibility_tests::{
     CIVisibilityTestsAPI, ListCIAppTestEventsOptionalParams,
+    SearchCIAppTestEventsOptionalParams,
 };
-use datadog_api_client::datadogV2::api_ci_visibility_tests::SearchCIAppTestEventsOptionalParams;
+use datadog_api_client::datadogV2::api_dora_metrics::DORAMetricsAPI;
+use datadog_api_client::datadogV2::api_test_optimization::{
+    SearchFlakyTestsOptionalParams, TestOptimizationAPI,
+};
 use datadog_api_client::datadogV2::model::{
     CIAppPipelineEventsRequest, CIAppPipelinesQueryFilter, CIAppQueryPageOptions, CIAppSort,
-    CIAppTestEventsRequest, CIAppTestsQueryFilter,
+    CIAppTestEventsRequest, CIAppTestsQueryFilter, DORADeploymentPatchRequest,
+    FlakyTestsSearchRequest, UpdateFlakyTestsRequest,
 };
 
 use crate::client;
@@ -240,5 +245,94 @@ pub async fn tests_aggregate(
         .search_ci_app_test_events(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to aggregate test events: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- Pipelines Get ----
+
+pub async fn pipelines_get(cfg: &Config, pipeline_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => CIVisibilityPipelinesAPI::with_client_and_config(dd_cfg, c),
+        None => CIVisibilityPipelinesAPI::with_config(dd_cfg),
+    };
+
+    let filter = CIAppPipelinesQueryFilter::new().query(pipeline_id.to_string());
+
+    let body = CIAppPipelineEventsRequest::new().filter(filter);
+
+    let params = SearchCIAppPipelineEventsOptionalParams::default().body(body);
+    let resp = api
+        .search_ci_app_pipeline_events(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get pipeline: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- DORA Metrics ----
+
+pub async fn dora_patch_deployment(
+    cfg: &Config,
+    deployment_id: &str,
+    file: &str,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => DORAMetricsAPI::with_client_and_config(dd_cfg, c),
+        None => DORAMetricsAPI::with_config(dd_cfg),
+    };
+    let body: DORADeploymentPatchRequest = crate::util::read_json_file(file)?;
+    api.patch_dora_deployment(deployment_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to patch DORA deployment: {e:?}"))?;
+    println!("DORA deployment '{deployment_id}' patched successfully.");
+    Ok(())
+}
+
+// ---- Flaky Tests ----
+
+pub async fn flaky_tests_search(
+    cfg: &Config,
+    query: Option<String>,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => TestOptimizationAPI::with_client_and_config(dd_cfg, c),
+        None => TestOptimizationAPI::with_config(dd_cfg),
+    };
+
+    let mut body = FlakyTestsSearchRequest::new();
+    if let Some(q) = query {
+        use datadog_api_client::datadogV2::model::{
+            FlakyTestsSearchFilter, FlakyTestsSearchRequestAttributes,
+            FlakyTestsSearchRequestData, FlakyTestsSearchRequestDataType,
+        };
+        let filter = FlakyTestsSearchFilter::new().query(q);
+        let attrs = FlakyTestsSearchRequestAttributes::new().filter(filter);
+        let data = FlakyTestsSearchRequestData::new()
+            .attributes(attrs)
+            .type_(FlakyTestsSearchRequestDataType::SEARCH_FLAKY_TESTS_REQUEST);
+        body = body.data(data);
+    }
+
+    let params = SearchFlakyTestsOptionalParams::default().body(body);
+    let resp = api
+        .search_flaky_tests(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to search flaky tests: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn flaky_tests_update(cfg: &Config, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => TestOptimizationAPI::with_client_and_config(dd_cfg, c),
+        None => TestOptimizationAPI::with_config(dd_cfg),
+    };
+    let body: UpdateFlakyTestsRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .update_flaky_tests(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update flaky tests: {e:?}"))?;
     formatter::output(cfg, &resp)
 }

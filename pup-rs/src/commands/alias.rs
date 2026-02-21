@@ -31,7 +31,7 @@ fn save_aliases(aliases: &BTreeMap<String, String>) -> Result<()> {
 pub fn list() -> Result<()> {
     let aliases = load_aliases()?;
     if aliases.is_empty() {
-        eprintln!("No aliases configured.");
+        println!("No aliases configured.");
         return Ok(());
     }
     for (name, command) in &aliases {
@@ -44,7 +44,7 @@ pub fn set(name: String, command: String) -> Result<()> {
     let mut aliases = load_aliases()?;
     aliases.insert(name.clone(), command.clone());
     save_aliases(&aliases)?;
-    eprintln!("Alias set: {name} = {command}");
+    println!("Alias set: {name} = {command}");
     Ok(())
 }
 
@@ -56,6 +56,33 @@ pub fn delete(names: Vec<String>) -> Result<()> {
         }
     }
     save_aliases(&aliases)?;
-    eprintln!("Deleted {} alias(es).", names.len());
+    println!("Deleted {} alias(es).", names.len());
+    Ok(())
+}
+
+pub fn import(file: &str) -> Result<()> {
+    let contents = std::fs::read_to_string(file)
+        .with_context(|| format!("failed to read alias file: {file}"))?;
+
+    // Try YAML first, then JSON
+    let imported: BTreeMap<String, String> = if file.ends_with(".json") {
+        serde_json::from_str(&contents)
+            .with_context(|| format!("failed to parse JSON from {file}"))?
+    } else {
+        serde_yaml::from_str(&contents)
+            .with_context(|| format!("failed to parse YAML from {file}"))?
+    };
+
+    if imported.is_empty() {
+        bail!("no aliases found in {file}");
+    }
+
+    let mut aliases = load_aliases()?;
+    let count = imported.len();
+    for (name, command) in imported {
+        aliases.insert(name, command);
+    }
+    save_aliases(&aliases)?;
+    println!("Imported {count} alias(es) from {file}.");
     Ok(())
 }

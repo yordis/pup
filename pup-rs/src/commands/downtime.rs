@@ -57,6 +57,6 @@ pub async fn cancel(cfg: &Config, id: &str) -> Result<()> {
     api.cancel_downtime(id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to cancel downtime: {e:?}"))?;
-    eprintln!("Downtime {id} cancelled.");
+    println!("Downtime {id} cancelled.");
     Ok(())
 }

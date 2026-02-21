@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use datadog_api_client::datadogV2::api_incidents::{
     CreateGlobalIncidentHandleOptionalParams, GetIncidentOptionalParams, IncidentsAPI,
     ListGlobalIncidentHandlesOptionalParams, ListIncidentAttachmentsOptionalParams,
-    ListIncidentsOptionalParams,
+    ListIncidentsOptionalParams, UpdateGlobalIncidentHandleOptionalParams,
 };
 
 use crate::client;
@@ -72,8 +72,8 @@ pub async fn attachments_delete(
     attachment_id: &str,
 ) -> Result<()> {
     let url = format!(
-        "https://{}/api/v2/incidents/{}/attachments/{}",
-        cfg.api_host(),
+        "{}/api/v2/incidents/{}/attachments/{}",
+        cfg.api_base_url(),
         incident_id,
         attachment_id
     );
@@ -96,7 +96,7 @@ pub async fn attachments_delete(
         let body = resp.text().await.unwrap_or_default();
         bail!("failed to delete incident attachment (HTTP {status}): {body}");
     }
-    eprintln!("Incident attachment {attachment_id} deleted from incident {incident_id}.");
+    println!("Incident attachment {attachment_id} deleted from incident {incident_id}.");
     Ok(())
 }
 
@@ -150,12 +150,22 @@ pub async fn handles_create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+pub async fn handles_update(cfg: &Config, file: &str) -> Result<()> {
+    let body = util::read_json_file(file)?;
+    let api = make_api(cfg);
+    let resp = api
+        .update_global_incident_handle(body, UpdateGlobalIncidentHandleOptionalParams::default())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update incident handle: {:?}", e))?;
+    formatter::output(cfg, &resp)
+}
+
 pub async fn handles_delete(cfg: &Config, _handle_id: &str) -> Result<()> {
     let api = make_api(cfg);
     api.delete_global_incident_handle()
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete incident handle: {:?}", e))?;
-    eprintln!("Incident handle deleted.");
+    println!("Incident handle deleted.");
     Ok(())
 }
 
@@ -191,11 +201,21 @@ pub async fn postmortem_templates_create(cfg: &Config, file: &str) -> Result<()>
     formatter::output(cfg, &resp)
 }
 
+pub async fn postmortem_templates_update(cfg: &Config, template_id: &str, file: &str) -> Result<()> {
+    let body = util::read_json_file(file)?;
+    let api = make_api(cfg);
+    let resp = api
+        .update_incident_postmortem_template(template_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update postmortem template: {:?}", e))?;
+    formatter::output(cfg, &resp)
+}
+
 pub async fn postmortem_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
     let api = make_api(cfg);
     api.delete_incident_postmortem_template(template_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete postmortem template: {:?}", e))?;
-    eprintln!("Postmortem template {template_id} deleted.");
+    println!("Postmortem template {template_id} deleted.");
     Ok(())
 }

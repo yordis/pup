@@ -8,7 +8,7 @@ use crate::util;
 /// APM commands use raw HTTP because they hit internal/unstable endpoints
 /// not covered by the typed DD API client.
 async fn raw_get(cfg: &Config, path: &str) -> Result<serde_json::Value> {
-    let url = format!("https://{}{}", cfg.api_host(), path);
+    let url = format!("{}{}", cfg.api_base_url(), path);
     let client = reqwest::Client::new();
     let mut req = client.get(&url);
 
@@ -45,6 +45,78 @@ pub async fn services_stats(cfg: &Config, env: String, from: String, to: String)
     let from_ts = util::parse_time_to_unix(&from)?;
     let to_ts = util::parse_time_to_unix(&to)?;
     let path = format!("/api/v2/apm/services/stats?start={from_ts}&end={to_ts}&filter[env]={env}");
+    let data = raw_get(cfg, &path).await?;
+    formatter::output(cfg, &data)
+}
+
+pub async fn entities_list(cfg: &Config, from: String, to: String) -> Result<()> {
+    let from_ts = util::parse_time_to_unix(&from)?;
+    let to_ts = util::parse_time_to_unix(&to)?;
+    let path = format!("/api/unstable/apm/entities?start={from_ts}&end={to_ts}");
+    let data = raw_get(cfg, &path).await?;
+    formatter::output(cfg, &data)
+}
+
+pub async fn dependencies_list(
+    cfg: &Config,
+    env: String,
+    from: String,
+    to: String,
+) -> Result<()> {
+    let from_ts = util::parse_time_to_unix(&from)?;
+    let to_ts = util::parse_time_to_unix(&to)?;
+    let path = format!(
+        "/api/v1/service_dependencies?start={from_ts}&end={to_ts}&env={env}"
+    );
+    let data = raw_get(cfg, &path).await?;
+    formatter::output(cfg, &data)
+}
+
+pub async fn services_operations(
+    cfg: &Config,
+    service: String,
+    env: String,
+    from: String,
+    to: String,
+) -> Result<()> {
+    let from_ts = util::parse_time_to_unix(&from)?;
+    let to_ts = util::parse_time_to_unix(&to)?;
+    let path = format!(
+        "/api/v1/trace/operation_names/{service}?env={env}&start={from_ts}&end={to_ts}"
+    );
+    let data = raw_get(cfg, &path).await?;
+    formatter::output(cfg, &data)
+}
+
+pub async fn services_resources(
+    cfg: &Config,
+    service: String,
+    operation: String,
+    env: String,
+    from: String,
+    to: String,
+) -> Result<()> {
+    let from_ts = util::parse_time_to_unix(&from)?;
+    let to_ts = util::parse_time_to_unix(&to)?;
+    let path = format!(
+        "/api/ui/apm/resources?service={service}&operation={operation}&env={env}&start={from_ts}&end={to_ts}"
+    );
+    let data = raw_get(cfg, &path).await?;
+    formatter::output(cfg, &data)
+}
+
+pub async fn flow_map(
+    cfg: &Config,
+    query: String,
+    limit: i64,
+    from: String,
+    to: String,
+) -> Result<()> {
+    let from_ts = util::parse_time_to_unix(&from)?;
+    let to_ts = util::parse_time_to_unix(&to)?;
+    let path = format!(
+        "/api/ui/apm/flow-map?query={query}&limit={limit}&start={from_ts}&end={to_ts}"
+    );
     let data = raw_get(cfg, &path).await?;
     formatter::output(cfg, &data)
 }

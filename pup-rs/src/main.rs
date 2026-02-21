@@ -248,6 +248,18 @@ enum Commands {
         #[command(subcommand)]
         action: AliasActions,
     },
+    /// Product analytics
+    #[command(name = "product-analytics")]
+    ProductAnalytics {
+        #[command(subcommand)]
+        action: ProductAnalyticsActions,
+    },
+    /// Static analysis
+    #[command(name = "static-analysis")]
+    StaticAnalysis {
+        #[command(subcommand)]
+        action: StaticAnalysisActions,
+    },
     /// Authentication (OAuth2)
     Auth {
         #[command(subcommand)]
@@ -349,6 +361,20 @@ enum LogActions {
         #[command(subcommand)]
         action: LogMetricActions,
     },
+    /// Manage log restriction queries
+    #[command(name = "restriction-queries")]
+    RestrictionQueries {
+        #[command(subcommand)]
+        action: LogRestrictionQueryActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum LogRestrictionQueryActions {
+    /// List restriction queries
+    List,
+    /// Get restriction query details
+    Get { query_id: String },
 }
 
 #[derive(Subcommand)]
@@ -375,6 +401,8 @@ enum LogMetricActions {
     List,
     /// Get metric details
     Get { metric_id: String },
+    /// Delete a log-based metric
+    Delete { metric_id: String },
 }
 
 // ---- Incidents ----
@@ -441,6 +469,11 @@ enum IncidentHandleActions {
         #[arg(long)]
         file: String,
     },
+    /// Update a global incident handle from JSON file
+    Update {
+        #[arg(long)]
+        file: String,
+    },
     /// Delete a global incident handle
     Delete { handle_id: String },
 }
@@ -453,6 +486,12 @@ enum IncidentPostmortemActions {
     Get { template_id: String },
     /// Create a postmortem template from JSON file
     Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a postmortem template from JSON file
+    Update {
+        template_id: String,
         #[arg(long)]
         file: String,
     },
@@ -513,6 +552,17 @@ enum MetricActions {
         #[command(subcommand)]
         action: MetricMetadataActions,
     },
+    /// Manage metric tags
+    Tags {
+        #[command(subcommand)]
+        action: MetricTagActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum MetricTagActions {
+    /// List tags for a metric
+    List { metric_name: String },
 }
 
 #[derive(Subcommand)]
@@ -540,6 +590,14 @@ enum SloActions {
     Update { id: String, #[arg(long)] file: String },
     /// Delete an SLO
     Delete { id: String },
+    /// Get SLO status
+    Status {
+        id: String,
+        #[arg(long)]
+        from_ts: i64,
+        #[arg(long)]
+        to_ts: i64,
+    },
 }
 
 // ---- Synthetics ----
@@ -554,6 +612,11 @@ enum SyntheticsActions {
     Locations {
         #[command(subcommand)]
         action: SyntheticsLocationActions,
+    },
+    /// Manage synthetic suites
+    Suites {
+        #[command(subcommand)]
+        action: SyntheticsSuiteActions,
     },
 }
 
@@ -578,6 +641,33 @@ enum SyntheticsTestActions {
 enum SyntheticsLocationActions {
     /// List test locations
     List,
+}
+
+#[derive(Subcommand)]
+enum SyntheticsSuiteActions {
+    /// List synthetic suites
+    List {
+        #[arg(long)]
+        query: Option<String>,
+    },
+    /// Get suite details
+    Get { suite_id: String },
+    /// Create a suite from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a suite from JSON file
+    Update {
+        suite_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete suites
+    Delete {
+        /// Suite IDs to delete
+        suite_ids: Vec<String>,
+    },
 }
 
 // ---- Events ----
@@ -676,6 +766,8 @@ enum InfraHostActions {
         #[arg(long, default_value_t = 100)]
         count: i64,
     },
+    /// Get host details
+    Get { hostname: String },
 }
 
 // ---- Audit Logs ----
@@ -721,6 +813,18 @@ enum SecurityActions {
         #[command(subcommand)]
         action: SecurityFindingActions,
     },
+    /// Manage content packs
+    #[command(name = "content-packs")]
+    ContentPacks {
+        #[command(subcommand)]
+        action: SecurityContentPackActions,
+    },
+    /// Manage entity risk scores
+    #[command(name = "risk-scores")]
+    RiskScores {
+        #[command(subcommand)]
+        action: SecurityRiskScoreActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -729,6 +833,12 @@ enum SecurityRuleActions {
     List,
     /// Get rule details
     Get { rule_id: String },
+    /// Bulk export rules
+    #[command(name = "bulk-export")]
+    BulkExport {
+        /// Rule IDs to export
+        rule_ids: Vec<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -754,6 +864,25 @@ enum SecurityFindingActions {
         query: Option<String>,
         #[arg(long, default_value_t = 100)]
         limit: i64,
+    },
+}
+
+#[derive(Subcommand)]
+enum SecurityContentPackActions {
+    /// List content packs
+    List,
+    /// Activate a content pack
+    Activate { pack_id: String },
+    /// Deactivate a content pack
+    Deactivate { pack_id: String },
+}
+
+#[derive(Subcommand)]
+enum SecurityRiskScoreActions {
+    /// List entity risk scores
+    List {
+        #[arg(long)]
+        query: Option<String>,
     },
 }
 
@@ -784,12 +913,52 @@ enum CloudActions {
         #[command(subcommand)]
         action: CloudSubActions,
     },
+    /// OCI integration
+    Oci {
+        #[command(subcommand)]
+        action: CloudOciActions,
+    },
 }
 
 #[derive(Subcommand)]
 enum CloudSubActions {
     /// List integrations
     List,
+}
+
+#[derive(Subcommand)]
+enum CloudOciActions {
+    /// Manage OCI tenancies
+    Tenancies {
+        #[command(subcommand)]
+        action: CloudOciTenancyActions,
+    },
+    /// List OCI products
+    Products {
+        /// Product keys to query
+        product_keys: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CloudOciTenancyActions {
+    /// List OCI tenancies
+    List,
+    /// Get OCI tenancy details
+    Get { tenancy_id: String },
+    /// Create an OCI tenancy from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update an OCI tenancy from JSON file
+    Update {
+        tenancy_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete an OCI tenancy
+    Delete { tenancy_id: String },
 }
 
 // ---- Cases ----
@@ -813,10 +982,40 @@ enum CaseActions {
     Archive { case_id: String },
     /// Unarchive a case
     Unarchive { case_id: String },
+    /// Assign a case to a user
+    Assign {
+        case_id: String,
+        #[arg(long)]
+        user_id: String,
+    },
+    /// Update case priority
+    #[command(name = "update-priority")]
+    UpdatePriority {
+        case_id: String,
+        #[arg(long)]
+        priority: String,
+    },
+    /// Update case status
+    #[command(name = "update-status")]
+    UpdateStatus {
+        case_id: String,
+        #[arg(long)]
+        status: String,
+    },
     /// Manage projects
     Projects {
         #[command(subcommand)]
         action: CaseProjectActions,
+    },
+    /// Jira integration for cases
+    Jira {
+        #[command(subcommand)]
+        action: CaseJiraActions,
+    },
+    /// ServiceNow integration for cases
+    Servicenow {
+        #[command(subcommand)]
+        action: CaseServicenowActions,
     },
 }
 
@@ -826,6 +1025,75 @@ enum CaseProjectActions {
     List,
     /// Get project details
     Get { project_id: String },
+    /// Create a project
+    Create {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        key: String,
+    },
+    /// Delete a project
+    Delete { project_id: String },
+    /// Manage notification rules
+    #[command(name = "notification-rules")]
+    NotificationRules {
+        #[command(subcommand)]
+        action: CaseNotificationRuleActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum CaseJiraActions {
+    /// Create a Jira issue for a case
+    #[command(name = "create-issue")]
+    CreateIssue {
+        case_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Link a Jira issue to a case
+    Link {
+        case_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Unlink a Jira issue from a case
+    Unlink { case_id: String },
+}
+
+#[derive(Subcommand)]
+enum CaseServicenowActions {
+    /// Create a ServiceNow ticket for a case
+    #[command(name = "create-ticket")]
+    CreateTicket {
+        case_id: String,
+        #[arg(long)]
+        file: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CaseNotificationRuleActions {
+    /// List notification rules for a project
+    List { project_id: String },
+    /// Create a notification rule from JSON file
+    Create {
+        project_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a notification rule from JSON file
+    Update {
+        project_id: String,
+        rule_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a notification rule
+    Delete {
+        project_id: String,
+        rule_id: String,
+    },
 }
 
 // ---- Service Catalog ----
@@ -857,6 +1125,10 @@ enum AppKeyActions {
     List,
     /// Get application key details
     Get { key_id: String },
+    /// Register an application key
+    Register { key_id: String },
+    /// Unregister an application key
+    Unregister { key_id: String },
 }
 
 // ---- Usage ----
@@ -890,6 +1162,12 @@ enum NotebookActions {
         #[arg(long)]
         file: String,
     },
+    /// Update a notebook from JSON file
+    Update {
+        notebook_id: i64,
+        #[arg(long)]
+        file: String,
+    },
     /// Delete a notebook
     Delete { notebook_id: i64 },
 }
@@ -915,6 +1193,27 @@ enum RumActions {
     Sessions {
         #[command(subcommand)]
         action: RumSessionActions,
+    },
+    /// Manage RUM metrics
+    Metrics {
+        #[command(subcommand)]
+        action: RumMetricActions,
+    },
+    /// Manage RUM retention filters
+    #[command(name = "retention-filters")]
+    RetentionFilters {
+        #[command(subcommand)]
+        action: RumRetentionFilterActions,
+    },
+    /// Manage RUM replay playlists
+    Playlists {
+        #[command(subcommand)]
+        action: RumPlaylistActions,
+    },
+    /// Query RUM heatmaps
+    Heatmaps {
+        #[command(subcommand)]
+        action: RumHeatmapActions,
     },
 }
 
@@ -954,21 +1253,85 @@ enum RumSessionActions {
         #[arg(long, default_value_t = 100)]
         limit: i32,
     },
+    /// List RUM sessions
+    List {
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i32,
+    },
+}
+
+#[derive(Subcommand)]
+enum RumMetricActions {
+    /// List RUM metrics
+    List,
+    /// Get RUM metric details
+    Get { metric_id: String },
+    /// Create a RUM metric from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a RUM metric from JSON file
+    Update {
+        metric_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a RUM metric
+    Delete { metric_id: String },
+}
+
+#[derive(Subcommand)]
+enum RumRetentionFilterActions {
+    /// List retention filters for an app
+    List { app_id: String },
+    /// Get retention filter details
+    Get { app_id: String, filter_id: String },
+    /// Create a retention filter from JSON file
+    Create {
+        app_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a retention filter from JSON file
+    Update {
+        app_id: String,
+        filter_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a retention filter
+    Delete { app_id: String, filter_id: String },
+}
+
+#[derive(Subcommand)]
+enum RumPlaylistActions {
+    /// List RUM replay playlists
+    List,
+    /// Get RUM replay playlist details
+    Get { playlist_id: i32 },
+}
+
+#[derive(Subcommand)]
+enum RumHeatmapActions {
+    /// Query heatmap snapshots for a view
+    Query {
+        #[arg(long)]
+        view_name: String,
+    },
 }
 
 // ---- CI/CD ----
 #[derive(Subcommand)]
 enum CicdActions {
-    /// List CI pipelines
+    /// CI pipelines
     Pipelines {
-        #[arg(long)]
-        query: Option<String>,
-        #[arg(long, default_value = "1h")]
-        from: String,
-        #[arg(long, default_value = "now")]
-        to: String,
-        #[arg(long, default_value_t = 50)]
-        limit: i32,
+        #[command(subcommand)]
+        action: CicdPipelineActions,
     },
     /// List CI tests
     Tests {
@@ -980,6 +1343,34 @@ enum CicdActions {
         #[command(subcommand)]
         action: CicdEventActions,
     },
+    /// DORA metrics
+    Dora {
+        #[command(subcommand)]
+        action: CicdDoraActions,
+    },
+    /// Flaky tests
+    #[command(name = "flaky-tests")]
+    FlakyTests {
+        #[command(subcommand)]
+        action: CicdFlakyTestActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum CicdPipelineActions {
+    /// List CI pipelines
+    List {
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
+    },
+    /// Get CI pipeline details
+    Get { pipeline_id: String },
 }
 
 #[derive(Subcommand)]
@@ -1038,6 +1429,31 @@ enum CicdEventActions {
         from: String,
         #[arg(long, default_value = "now")]
         to: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CicdDoraActions {
+    /// Patch a DORA deployment
+    #[command(name = "patch-deployment")]
+    PatchDeployment {
+        deployment_id: String,
+        #[arg(long)]
+        file: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CicdFlakyTestActions {
+    /// Search flaky tests
+    Search {
+        #[arg(long)]
+        query: Option<String>,
+    },
+    /// Update flaky tests from JSON file
+    Update {
+        #[arg(long)]
+        file: String,
     },
 }
 
@@ -1170,13 +1586,19 @@ enum FleetScheduleActions {
     List,
     /// Get schedule details
     Get { schedule_id: String },
-    /// Delete a schedule
-    Delete { schedule_id: String },
     /// Create a schedule from JSON file
     Create {
         #[arg(long)]
         file: String,
     },
+    /// Update a schedule from JSON file
+    Update {
+        schedule_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a schedule
+    Delete { schedule_id: String },
     /// Trigger a schedule
     Trigger { schedule_id: String },
 }
@@ -1256,6 +1678,11 @@ enum HamrActions {
 enum HamrConnectionActions {
     /// Get HAMR org connection
     Get,
+    /// Create HAMR org connection from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
 }
 
 // ---- Status Pages ----
@@ -1276,6 +1703,12 @@ enum StatusPageActions {
         #[command(subcommand)]
         action: StatusPageDegradationActions,
     },
+    /// Third-party status pages
+    #[command(name = "third-party")]
+    ThirdParty {
+        #[command(subcommand)]
+        action: StatusPageThirdPartyActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1284,6 +1717,17 @@ enum StatusPagePageActions {
     List,
     /// Get status page details
     Get { page_id: String },
+    /// Create a status page from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a status page from JSON file
+    Update {
+        page_id: String,
+        #[arg(long)]
+        file: String,
+    },
     /// Delete a status page
     Delete { page_id: String },
 }
@@ -1296,6 +1740,19 @@ enum StatusPageComponentActions {
     Get {
         page_id: String,
         component_id: String,
+    },
+    /// Create a component from JSON file
+    Create {
+        page_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a component from JSON file
+    Update {
+        page_id: String,
+        component_id: String,
+        #[arg(long)]
+        file: String,
     },
     /// Delete a component
     Delete {
@@ -1313,11 +1770,30 @@ enum StatusPageDegradationActions {
         page_id: String,
         degradation_id: String,
     },
+    /// Create a degradation from JSON file
+    Create {
+        page_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a degradation from JSON file
+    Update {
+        page_id: String,
+        degradation_id: String,
+        #[arg(long)]
+        file: String,
+    },
     /// Delete a degradation
     Delete {
         page_id: String,
         degradation_id: String,
     },
+}
+
+#[derive(Subcommand)]
+enum StatusPageThirdPartyActions {
+    /// List third-party status pages
+    List,
 }
 
 // ---- Integrations ----
@@ -1333,15 +1809,30 @@ enum IntegrationActions {
         #[command(subcommand)]
         action: ServiceNowActions,
     },
+    /// Slack integration
+    Slack {
+        #[command(subcommand)]
+        action: SlackActions,
+    },
+    /// PagerDuty integration
+    Pagerduty {
+        #[command(subcommand)]
+        action: PagerdutyActions,
+    },
+    /// Webhooks integration
+    Webhooks {
+        #[command(subcommand)]
+        action: WebhooksActions,
+    },
 }
 
 #[derive(Subcommand)]
 enum JiraActions {
-    /// List Jira accounts
-    Accounts,
-    /// Delete a Jira account
-    #[command(name = "delete-account")]
-    DeleteAccount { account_id: String },
+    /// Manage Jira accounts
+    Accounts {
+        #[command(subcommand)]
+        action: JiraAccountActions,
+    },
     /// Manage Jira templates
     Templates {
         #[command(subcommand)]
@@ -1350,30 +1841,87 @@ enum JiraActions {
 }
 
 #[derive(Subcommand)]
+enum JiraAccountActions {
+    /// List Jira accounts
+    List,
+    /// Delete a Jira account
+    Delete { account_id: String },
+}
+
+#[derive(Subcommand)]
 enum JiraTemplateActions {
     /// List templates
     List,
     /// Get template details
     Get { template_id: String },
+    /// Create a template from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a template from JSON file
+    Update {
+        template_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a template
+    Delete { template_id: String },
 }
 
 #[derive(Subcommand)]
 enum ServiceNowActions {
-    /// List ServiceNow instances
-    Instances,
+    /// Manage ServiceNow instances
+    Instances {
+        #[command(subcommand)]
+        action: ServiceNowInstanceActions,
+    },
     /// Manage ServiceNow templates
     Templates {
         #[command(subcommand)]
         action: ServiceNowTemplateActions,
     },
-    /// List ServiceNow users for an instance
-    Users { instance_name: String },
-    /// List ServiceNow assignment groups for an instance
+    /// Manage ServiceNow users
+    Users {
+        #[command(subcommand)]
+        action: ServiceNowUserActions,
+    },
+    /// Manage ServiceNow assignment groups
     #[command(name = "assignment-groups")]
-    AssignmentGroups { instance_name: String },
-    /// List ServiceNow business services for an instance
+    AssignmentGroups {
+        #[command(subcommand)]
+        action: ServiceNowAssignmentGroupActions,
+    },
+    /// Manage ServiceNow business services
     #[command(name = "business-services")]
-    BusinessServices { instance_name: String },
+    BusinessServices {
+        #[command(subcommand)]
+        action: ServiceNowBusinessServiceActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum ServiceNowInstanceActions {
+    /// List ServiceNow instances
+    List,
+}
+
+#[derive(Subcommand)]
+enum ServiceNowUserActions {
+    /// List ServiceNow users for an instance
+    List { instance_name: String },
+}
+
+#[derive(Subcommand)]
+enum ServiceNowAssignmentGroupActions {
+    /// List ServiceNow assignment groups for an instance
+    List { instance_name: String },
+}
+
+#[derive(Subcommand)]
+enum ServiceNowBusinessServiceActions {
+    /// List ServiceNow business services for an instance
+    List { instance_name: String },
 }
 
 #[derive(Subcommand)]
@@ -1382,8 +1930,37 @@ enum ServiceNowTemplateActions {
     List,
     /// Get template details
     Get { template_id: String },
+    /// Create a template from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a template from JSON file
+    Update {
+        template_id: String,
+        #[arg(long)]
+        file: String,
+    },
     /// Delete a template
     Delete { template_id: String },
+}
+
+#[derive(Subcommand)]
+enum SlackActions {
+    /// List Slack channels
+    List,
+}
+
+#[derive(Subcommand)]
+enum PagerdutyActions {
+    /// List PagerDuty services
+    List,
+}
+
+#[derive(Subcommand)]
+enum WebhooksActions {
+    /// List webhooks
+    List,
 }
 
 // ---- Cost ----
@@ -1414,6 +1991,8 @@ enum MiscActions {
     /// Get IP ranges
     #[command(name = "ip-ranges")]
     IpRanges,
+    /// Validate API key / check status
+    Status,
 }
 
 // ---- APM ----
@@ -1423,6 +2002,28 @@ enum ApmActions {
     Services {
         #[command(subcommand)]
         action: ApmServiceActions,
+    },
+    /// List APM entities
+    Entities {
+        #[command(subcommand)]
+        action: ApmEntityActions,
+    },
+    /// List APM dependencies
+    Dependencies {
+        #[command(subcommand)]
+        action: ApmDependencyActions,
+    },
+    /// APM flow map
+    #[command(name = "flow-map")]
+    FlowMap {
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i64,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
     },
 }
 
@@ -1446,6 +2047,54 @@ enum ApmServiceActions {
         #[arg(long)]
         to: String,
     },
+    /// List operations for a service
+    Operations {
+        #[arg(long)]
+        service: String,
+        #[arg(long)]
+        env: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+    },
+    /// List resources for a service operation
+    Resources {
+        #[arg(long)]
+        service: String,
+        #[arg(long)]
+        operation: String,
+        #[arg(long)]
+        env: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum ApmEntityActions {
+    /// List APM entities
+    List {
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum ApmDependencyActions {
+    /// List APM service dependencies
+    List {
+        #[arg(long)]
+        env: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+    },
 }
 
 // ---- Investigations ----
@@ -1460,12 +2109,39 @@ enum InvestigationActions {
     },
     /// Get investigation details
     Get { investigation_id: String },
+    /// Trigger an investigation from JSON file
+    Trigger {
+        #[arg(long)]
+        file: String,
+    },
 }
 
 // ---- Network (placeholder) ----
 #[derive(Subcommand)]
 enum NetworkActions {
     /// List network devices/monitors
+    List,
+    /// Network flows
+    Flows {
+        #[command(subcommand)]
+        action: NetworkFlowActions,
+    },
+    /// Network devices
+    Devices {
+        #[command(subcommand)]
+        action: NetworkDeviceActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum NetworkFlowActions {
+    /// List network flows
+    List,
+}
+
+#[derive(Subcommand)]
+enum NetworkDeviceActions {
+    /// List network devices
     List,
 }
 
@@ -1474,6 +2150,8 @@ enum NetworkActions {
 enum ObsPipelinesActions {
     /// List observability pipelines
     List,
+    /// Get observability pipeline details
+    Get { pipeline_id: String },
 }
 
 // ---- Scorecards (placeholder) ----
@@ -1481,6 +2159,8 @@ enum ObsPipelinesActions {
 enum ScorecardsActions {
     /// List scorecards
     List,
+    /// Get scorecard details
+    Get { scorecard_id: String },
 }
 
 // ---- Traces (placeholder) ----
@@ -1495,6 +2175,8 @@ enum TracesActions {
 enum AgentActions {
     /// Generate agent schema
     Schema,
+    /// Show agent management guide
+    Guide,
 }
 
 // ---- Alias ----
@@ -1506,6 +2188,88 @@ enum AliasActions {
     Set { name: String, command: String },
     /// Delete aliases
     Delete { names: Vec<String> },
+    /// Import aliases from a file
+    Import {
+        #[arg(long)]
+        file: String,
+    },
+}
+
+// ---- Product Analytics ----
+#[derive(Subcommand)]
+enum ProductAnalyticsActions {
+    /// Product analytics events
+    Events {
+        #[command(subcommand)]
+        action: ProductAnalyticsEventActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum ProductAnalyticsEventActions {
+    /// Send a product analytics event from JSON file
+    Send {
+        #[arg(long)]
+        file: String,
+    },
+}
+
+// ---- Static Analysis ----
+#[derive(Subcommand)]
+enum StaticAnalysisActions {
+    /// Manage AST results
+    Ast {
+        #[command(subcommand)]
+        action: StaticAnalysisAstActions,
+    },
+    /// Manage custom rulesets
+    #[command(name = "custom-rulesets")]
+    CustomRulesets {
+        #[command(subcommand)]
+        action: StaticAnalysisCustomRulesetActions,
+    },
+    /// Manage SCA results
+    Sca {
+        #[command(subcommand)]
+        action: StaticAnalysisScaActions,
+    },
+    /// Manage coverage
+    Coverage {
+        #[command(subcommand)]
+        action: StaticAnalysisCoverageActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum StaticAnalysisAstActions {
+    /// List AST results
+    List,
+    /// Get AST result details
+    Get { id: String },
+}
+
+#[derive(Subcommand)]
+enum StaticAnalysisCustomRulesetActions {
+    /// List custom rulesets
+    List,
+    /// Get custom ruleset details
+    Get { id: String },
+}
+
+#[derive(Subcommand)]
+enum StaticAnalysisScaActions {
+    /// List SCA results
+    List,
+    /// Get SCA result details
+    Get { id: String },
+}
+
+#[derive(Subcommand)]
+enum StaticAnalysisCoverageActions {
+    /// List coverage results
+    List,
+    /// Get coverage result details
+    Get { id: String },
 }
 
 // ---- Auth ----
@@ -1622,6 +2386,17 @@ async fn main() -> anyhow::Result<()> {
                     LogMetricActions::Get { metric_id } => {
                         commands::logs::metrics_get(&cfg, &metric_id).await?;
                     }
+                    LogMetricActions::Delete { metric_id } => {
+                        commands::logs::metrics_delete(&cfg, &metric_id).await?;
+                    }
+                },
+                LogActions::RestrictionQueries { action } => match action {
+                    LogRestrictionQueryActions::List => {
+                        commands::logs::restriction_queries_list(&cfg).await?;
+                    }
+                    LogRestrictionQueryActions::Get { query_id } => {
+                        commands::logs::restriction_queries_get(&cfg, &query_id).await?;
+                    }
                 },
             }
         }
@@ -1662,6 +2437,9 @@ async fn main() -> anyhow::Result<()> {
                     IncidentHandleActions::Create { file } => {
                         commands::incidents::handles_create(&cfg, &file).await?;
                     }
+                    IncidentHandleActions::Update { file } => {
+                        commands::incidents::handles_update(&cfg, &file).await?;
+                    }
                     IncidentHandleActions::Delete { handle_id } => {
                         commands::incidents::handles_delete(&cfg, &handle_id).await?;
                     }
@@ -1675,6 +2453,10 @@ async fn main() -> anyhow::Result<()> {
                     }
                     IncidentPostmortemActions::Create { file } => {
                         commands::incidents::postmortem_templates_create(&cfg, &file).await?;
+                    }
+                    IncidentPostmortemActions::Update { template_id, file } => {
+                        commands::incidents::postmortem_templates_update(&cfg, &template_id, &file)
+                            .await?;
                     }
                     IncidentPostmortemActions::Delete { template_id } => {
                         commands::incidents::postmortem_templates_delete(&cfg, &template_id)
@@ -1722,6 +2504,11 @@ async fn main() -> anyhow::Result<()> {
                         commands::metrics::metadata_update(&cfg, &metric_name, &file).await?;
                     }
                 },
+                MetricActions::Tags { action } => match action {
+                    MetricTagActions::List { metric_name } => {
+                        commands::metrics::tags_list(&cfg, &metric_name).await?;
+                    }
+                },
             }
         }
         // --- SLOs ---
@@ -1735,6 +2522,9 @@ async fn main() -> anyhow::Result<()> {
                     commands::slos::update(&cfg, &id, &file).await?;
                 }
                 SloActions::Delete { id } => commands::slos::delete(&cfg, &id).await?,
+                SloActions::Status { id, from_ts, to_ts } => {
+                    commands::slos::status(&cfg, &id, from_ts, to_ts).await?;
+                }
             }
         }
         // --- Synthetics ---
@@ -1753,6 +2543,23 @@ async fn main() -> anyhow::Result<()> {
                 SyntheticsActions::Locations { action } => match action {
                     SyntheticsLocationActions::List => {
                         commands::synthetics::locations_list(&cfg).await?;
+                    }
+                },
+                SyntheticsActions::Suites { action } => match action {
+                    SyntheticsSuiteActions::List { query } => {
+                        commands::synthetics::suites_list(&cfg, query).await?;
+                    }
+                    SyntheticsSuiteActions::Get { suite_id } => {
+                        commands::synthetics::suites_get(&cfg, &suite_id).await?;
+                    }
+                    SyntheticsSuiteActions::Create { file } => {
+                        commands::synthetics::suites_create(&cfg, &file).await?;
+                    }
+                    SyntheticsSuiteActions::Update { suite_id, file } => {
+                        commands::synthetics::suites_update(&cfg, &suite_id, &file).await?;
+                    }
+                    SyntheticsSuiteActions::Delete { suite_ids } => {
+                        commands::synthetics::suites_delete(&cfg, suite_ids).await?;
                     }
                 },
             }
@@ -1829,6 +2636,9 @@ async fn main() -> anyhow::Result<()> {
                     } => {
                         commands::infrastructure::hosts_list(&cfg, filter, sort, count).await?;
                     }
+                    InfraHostActions::Get { hostname } => {
+                        commands::infrastructure::hosts_get(&cfg, &hostname).await?;
+                    }
                 },
             }
         }
@@ -1858,6 +2668,9 @@ async fn main() -> anyhow::Result<()> {
                     SecurityRuleActions::Get { rule_id } => {
                         commands::security::rules_get(&cfg, &rule_id).await?;
                     }
+                    SecurityRuleActions::BulkExport { rule_ids } => {
+                        commands::security::rules_bulk_export(&cfg, rule_ids).await?;
+                    }
                 },
                 SecurityActions::Signals { action } => match action {
                     SecuritySignalActions::Search {
@@ -1872,6 +2685,22 @@ async fn main() -> anyhow::Result<()> {
                 SecurityActions::Findings { action } => match action {
                     SecurityFindingActions::Search { query, limit } => {
                         commands::security::findings_search(&cfg, query, limit).await?;
+                    }
+                },
+                SecurityActions::ContentPacks { action } => match action {
+                    SecurityContentPackActions::List => {
+                        commands::security::content_packs_list(&cfg).await?;
+                    }
+                    SecurityContentPackActions::Activate { pack_id } => {
+                        commands::security::content_packs_activate(&cfg, &pack_id).await?;
+                    }
+                    SecurityContentPackActions::Deactivate { pack_id } => {
+                        commands::security::content_packs_deactivate(&cfg, &pack_id).await?;
+                    }
+                },
+                SecurityActions::RiskScores { action } => match action {
+                    SecurityRiskScoreActions::List { query } => {
+                        commands::security::risk_scores_list(&cfg, query).await?;
                     }
                 },
             }
@@ -1897,6 +2726,28 @@ async fn main() -> anyhow::Result<()> {
                 CloudActions::Azure { action } => match action {
                     CloudSubActions::List => commands::cloud::azure_list(&cfg).await?,
                 },
+                CloudActions::Oci { action } => match action {
+                    CloudOciActions::Tenancies { action } => match action {
+                        CloudOciTenancyActions::List => {
+                            commands::cloud::oci_tenancies_list(&cfg).await?;
+                        }
+                        CloudOciTenancyActions::Get { tenancy_id } => {
+                            commands::cloud::oci_tenancies_get(&cfg, &tenancy_id).await?;
+                        }
+                        CloudOciTenancyActions::Create { file } => {
+                            commands::cloud::oci_tenancies_create(&cfg, &file).await?;
+                        }
+                        CloudOciTenancyActions::Update { tenancy_id, file } => {
+                            commands::cloud::oci_tenancies_update(&cfg, &tenancy_id, &file).await?;
+                        }
+                        CloudOciTenancyActions::Delete { tenancy_id } => {
+                            commands::cloud::oci_tenancies_delete(&cfg, &tenancy_id).await?;
+                        }
+                    },
+                    CloudOciActions::Products { product_keys } => {
+                        commands::cloud::oci_products_list(&cfg, &product_keys).await?;
+                    }
+                },
             }
         }
         // --- Cases ---
@@ -1916,10 +2767,79 @@ async fn main() -> anyhow::Result<()> {
                 CaseActions::Unarchive { case_id } => {
                     commands::cases::unarchive(&cfg, &case_id).await?;
                 }
+                CaseActions::Assign { case_id, user_id } => {
+                    commands::cases::assign(&cfg, &case_id, &user_id).await?;
+                }
+                CaseActions::UpdatePriority { case_id, priority } => {
+                    commands::cases::update_priority(&cfg, &case_id, &priority).await?;
+                }
+                CaseActions::UpdateStatus { case_id, status } => {
+                    commands::cases::update_status(&cfg, &case_id, &status).await?;
+                }
                 CaseActions::Projects { action } => match action {
                     CaseProjectActions::List => commands::cases::projects_list(&cfg).await?,
                     CaseProjectActions::Get { project_id } => {
                         commands::cases::projects_get(&cfg, &project_id).await?;
+                    }
+                    CaseProjectActions::Create { name, key } => {
+                        commands::cases::projects_create(&cfg, &name, &key).await?;
+                    }
+                    CaseProjectActions::Delete { project_id } => {
+                        commands::cases::projects_delete(&cfg, &project_id).await?;
+                    }
+                    CaseProjectActions::NotificationRules { action } => match action {
+                        CaseNotificationRuleActions::List { project_id } => {
+                            commands::cases::projects_notification_rules_list(&cfg, &project_id)
+                                .await?;
+                        }
+                        CaseNotificationRuleActions::Create { project_id, file } => {
+                            commands::cases::projects_notification_rules_create(
+                                &cfg,
+                                &project_id,
+                                &file,
+                            )
+                            .await?;
+                        }
+                        CaseNotificationRuleActions::Update {
+                            project_id,
+                            rule_id,
+                            file,
+                        } => {
+                            commands::cases::projects_notification_rules_update(
+                                &cfg,
+                                &project_id,
+                                &rule_id,
+                                &file,
+                            )
+                            .await?;
+                        }
+                        CaseNotificationRuleActions::Delete {
+                            project_id,
+                            rule_id,
+                        } => {
+                            commands::cases::projects_notification_rules_delete(
+                                &cfg,
+                                &project_id,
+                                &rule_id,
+                            )
+                            .await?;
+                        }
+                    },
+                },
+                CaseActions::Jira { action } => match action {
+                    CaseJiraActions::CreateIssue { case_id, file } => {
+                        commands::cases::jira_create_issue(&cfg, &case_id, &file).await?;
+                    }
+                    CaseJiraActions::Link { case_id, file } => {
+                        commands::cases::jira_link(&cfg, &case_id, &file).await?;
+                    }
+                    CaseJiraActions::Unlink { case_id } => {
+                        commands::cases::jira_unlink(&cfg, &case_id).await?;
+                    }
+                },
+                CaseActions::Servicenow { action } => match action {
+                    CaseServicenowActions::CreateTicket { case_id, file } => {
+                        commands::cases::servicenow_create_ticket(&cfg, &case_id, &file).await?;
                     }
                 },
             }
@@ -1954,6 +2874,12 @@ async fn main() -> anyhow::Result<()> {
             match action {
                 AppKeyActions::List => commands::app_keys::list(&cfg).await?,
                 AppKeyActions::Get { key_id } => commands::app_keys::get(&cfg, &key_id).await?,
+                AppKeyActions::Register { key_id } => {
+                    commands::app_keys::register(&cfg, &key_id).await?;
+                }
+                AppKeyActions::Unregister { key_id } => {
+                    commands::app_keys::unregister(&cfg, &key_id).await?;
+                }
             }
         }
         // --- Usage ---
@@ -1978,6 +2904,9 @@ async fn main() -> anyhow::Result<()> {
                 }
                 NotebookActions::Create { file } => {
                     commands::notebooks::create(&cfg, &file).await?;
+                }
+                NotebookActions::Update { notebook_id, file } => {
+                    commands::notebooks::update(&cfg, notebook_id, &file).await?;
                 }
                 NotebookActions::Delete { notebook_id } => {
                     commands::notebooks::delete(&cfg, notebook_id).await?;
@@ -2013,6 +2942,57 @@ async fn main() -> anyhow::Result<()> {
                     } => {
                         commands::rum::sessions_search(&cfg, query, from, to, limit).await?;
                     }
+                    RumSessionActions::List { from, to, limit } => {
+                        commands::rum::sessions_list(&cfg, from, to, limit).await?;
+                    }
+                },
+                RumActions::Metrics { action } => match action {
+                    RumMetricActions::List => commands::rum::metrics_list(&cfg).await?,
+                    RumMetricActions::Get { metric_id } => {
+                        commands::rum::metrics_get(&cfg, &metric_id).await?;
+                    }
+                    RumMetricActions::Create { file } => {
+                        commands::rum::metrics_create(&cfg, &file).await?;
+                    }
+                    RumMetricActions::Update { metric_id, file } => {
+                        commands::rum::metrics_update(&cfg, &metric_id, &file).await?;
+                    }
+                    RumMetricActions::Delete { metric_id } => {
+                        commands::rum::metrics_delete(&cfg, &metric_id).await?;
+                    }
+                },
+                RumActions::RetentionFilters { action } => match action {
+                    RumRetentionFilterActions::List { app_id } => {
+                        commands::rum::retention_filters_list(&cfg, &app_id).await?;
+                    }
+                    RumRetentionFilterActions::Get { app_id, filter_id } => {
+                        commands::rum::retention_filters_get(&cfg, &app_id, &filter_id).await?;
+                    }
+                    RumRetentionFilterActions::Create { app_id, file } => {
+                        commands::rum::retention_filters_create(&cfg, &app_id, &file).await?;
+                    }
+                    RumRetentionFilterActions::Update {
+                        app_id,
+                        filter_id,
+                        file,
+                    } => {
+                        commands::rum::retention_filters_update(&cfg, &app_id, &filter_id, &file)
+                            .await?;
+                    }
+                    RumRetentionFilterActions::Delete { app_id, filter_id } => {
+                        commands::rum::retention_filters_delete(&cfg, &app_id, &filter_id).await?;
+                    }
+                },
+                RumActions::Playlists { action } => match action {
+                    RumPlaylistActions::List => commands::rum::playlists_list(&cfg).await?,
+                    RumPlaylistActions::Get { playlist_id } => {
+                        commands::rum::playlists_get(&cfg, playlist_id).await?;
+                    }
+                },
+                RumActions::Heatmaps { action } => match action {
+                    RumHeatmapActions::Query { view_name } => {
+                        commands::rum::heatmaps_query(&cfg, &view_name).await?;
+                    }
                 },
             }
         }
@@ -2020,14 +3000,19 @@ async fn main() -> anyhow::Result<()> {
         Commands::Cicd { action } => {
             cfg.validate_auth()?;
             match action {
-                CicdActions::Pipelines {
-                    query,
-                    from,
-                    to,
-                    limit,
-                } => {
-                    commands::cicd::pipelines_list(&cfg, query, from, to, limit).await?;
-                }
+                CicdActions::Pipelines { action } => match action {
+                    CicdPipelineActions::List {
+                        query,
+                        from,
+                        to,
+                        limit,
+                    } => {
+                        commands::cicd::pipelines_list(&cfg, query, from, to, limit).await?;
+                    }
+                    CicdPipelineActions::Get { pipeline_id } => {
+                        commands::cicd::pipelines_get(&cfg, &pipeline_id).await?;
+                    }
+                },
                 CicdActions::Tests { action } => match action {
                     CicdTestActions::List {
                         query,
@@ -2060,6 +3045,22 @@ async fn main() -> anyhow::Result<()> {
                     }
                     CicdEventActions::Aggregate { query, from, to } => {
                         commands::cicd::events_aggregate(&cfg, query, from, to).await?;
+                    }
+                },
+                CicdActions::Dora { action } => match action {
+                    CicdDoraActions::PatchDeployment {
+                        deployment_id,
+                        file,
+                    } => {
+                        commands::cicd::dora_patch_deployment(&cfg, &deployment_id, &file).await?;
+                    }
+                },
+                CicdActions::FlakyTests { action } => match action {
+                    CicdFlakyTestActions::Search { query } => {
+                        commands::cicd::flaky_tests_search(&cfg, query).await?;
+                    }
+                    CicdFlakyTestActions::Update { file } => {
+                        commands::cicd::flaky_tests_update(&cfg, &file).await?;
                     }
                 },
             }
@@ -2149,11 +3150,14 @@ async fn main() -> anyhow::Result<()> {
                     FleetScheduleActions::Get { schedule_id } => {
                         commands::fleet::schedules_get(&cfg, &schedule_id).await?;
                     }
-                    FleetScheduleActions::Delete { schedule_id } => {
-                        commands::fleet::schedules_delete(&cfg, &schedule_id).await?;
-                    }
                     FleetScheduleActions::Create { file } => {
                         commands::fleet::schedules_create(&cfg, &file).await?;
+                    }
+                    FleetScheduleActions::Update { schedule_id, file } => {
+                        commands::fleet::schedules_update(&cfg, &schedule_id, &file).await?;
+                    }
+                    FleetScheduleActions::Delete { schedule_id } => {
+                        commands::fleet::schedules_delete(&cfg, &schedule_id).await?;
                     }
                     FleetScheduleActions::Trigger { schedule_id } => {
                         commands::fleet::schedules_trigger(&cfg, &schedule_id).await?;
@@ -2204,6 +3208,9 @@ async fn main() -> anyhow::Result<()> {
             match action {
                 HamrActions::Connections { action } => match action {
                     HamrConnectionActions::Get => commands::hamr::connections_get(&cfg).await?,
+                    HamrConnectionActions::Create { file } => {
+                        commands::hamr::connections_create(&cfg, &file).await?;
+                    }
                 },
             }
         }
@@ -2215,6 +3222,12 @@ async fn main() -> anyhow::Result<()> {
                     StatusPagePageActions::List => commands::status_pages::pages_list(&cfg).await?,
                     StatusPagePageActions::Get { page_id } => {
                         commands::status_pages::pages_get(&cfg, &page_id).await?;
+                    }
+                    StatusPagePageActions::Create { file } => {
+                        commands::status_pages::pages_create(&cfg, &file).await?;
+                    }
+                    StatusPagePageActions::Update { page_id, file } => {
+                        commands::status_pages::pages_update(&cfg, &page_id, &file).await?;
                     }
                     StatusPagePageActions::Delete { page_id } => {
                         commands::status_pages::pages_delete(&cfg, &page_id).await?;
@@ -2230,6 +3243,22 @@ async fn main() -> anyhow::Result<()> {
                     } => {
                         commands::status_pages::components_get(&cfg, &page_id, &component_id)
                             .await?;
+                    }
+                    StatusPageComponentActions::Create { page_id, file } => {
+                        commands::status_pages::components_create(&cfg, &page_id, &file).await?;
+                    }
+                    StatusPageComponentActions::Update {
+                        page_id,
+                        component_id,
+                        file,
+                    } => {
+                        commands::status_pages::components_update(
+                            &cfg,
+                            &page_id,
+                            &component_id,
+                            &file,
+                        )
+                        .await?;
                     }
                     StatusPageComponentActions::Delete {
                         page_id,
@@ -2250,6 +3279,22 @@ async fn main() -> anyhow::Result<()> {
                         commands::status_pages::degradations_get(&cfg, &page_id, &degradation_id)
                             .await?;
                     }
+                    StatusPageDegradationActions::Create { page_id, file } => {
+                        commands::status_pages::degradations_create(&cfg, &page_id, &file).await?;
+                    }
+                    StatusPageDegradationActions::Update {
+                        page_id,
+                        degradation_id,
+                        file,
+                    } => {
+                        commands::status_pages::degradations_update(
+                            &cfg,
+                            &page_id,
+                            &degradation_id,
+                            &file,
+                        )
+                        .await?;
+                    }
                     StatusPageDegradationActions::Delete {
                         page_id,
                         degradation_id,
@@ -2262,6 +3307,11 @@ async fn main() -> anyhow::Result<()> {
                         .await?;
                     }
                 },
+                StatusPageActions::ThirdParty { action } => match action {
+                    StatusPageThirdPartyActions::List => {
+                        commands::status_pages::third_party_list(&cfg).await?;
+                    }
+                },
             }
         }
         // --- Integrations ---
@@ -2269,12 +3319,14 @@ async fn main() -> anyhow::Result<()> {
             cfg.validate_auth()?;
             match action {
                 IntegrationActions::Jira { action } => match action {
-                    JiraActions::Accounts => {
-                        commands::integrations::jira_accounts_list(&cfg).await?
-                    }
-                    JiraActions::DeleteAccount { account_id } => {
-                        commands::integrations::jira_accounts_delete(&cfg, &account_id).await?;
-                    }
+                    JiraActions::Accounts { action } => match action {
+                        JiraAccountActions::List => {
+                            commands::integrations::jira_accounts_list(&cfg).await?
+                        }
+                        JiraAccountActions::Delete { account_id } => {
+                            commands::integrations::jira_accounts_delete(&cfg, &account_id).await?;
+                        }
+                    },
                     JiraActions::Templates { action } => match action {
                         JiraTemplateActions::List => {
                             commands::integrations::jira_templates_list(&cfg).await?
@@ -2282,12 +3334,29 @@ async fn main() -> anyhow::Result<()> {
                         JiraTemplateActions::Get { template_id } => {
                             commands::integrations::jira_templates_get(&cfg, &template_id).await?;
                         }
+                        JiraTemplateActions::Create { file } => {
+                            commands::integrations::jira_templates_create(&cfg, &file).await?;
+                        }
+                        JiraTemplateActions::Update { template_id, file } => {
+                            commands::integrations::jira_templates_update(
+                                &cfg,
+                                &template_id,
+                                &file,
+                            )
+                            .await?;
+                        }
+                        JiraTemplateActions::Delete { template_id } => {
+                            commands::integrations::jira_templates_delete(&cfg, &template_id)
+                                .await?;
+                        }
                     },
                 },
                 IntegrationActions::Servicenow { action } => match action {
-                    ServiceNowActions::Instances => {
-                        commands::integrations::servicenow_instances_list(&cfg).await?;
-                    }
+                    ServiceNowActions::Instances { action } => match action {
+                        ServiceNowInstanceActions::List => {
+                            commands::integrations::servicenow_instances_list(&cfg).await?;
+                        }
+                    },
                     ServiceNowActions::Templates { action } => match action {
                         ServiceNowTemplateActions::List => {
                             commands::integrations::servicenow_templates_list(&cfg).await?;
@@ -2295,6 +3364,18 @@ async fn main() -> anyhow::Result<()> {
                         ServiceNowTemplateActions::Get { template_id } => {
                             commands::integrations::servicenow_templates_get(&cfg, &template_id)
                                 .await?;
+                        }
+                        ServiceNowTemplateActions::Create { file } => {
+                            commands::integrations::servicenow_templates_create(&cfg, &file)
+                                .await?;
+                        }
+                        ServiceNowTemplateActions::Update { template_id, file } => {
+                            commands::integrations::servicenow_templates_update(
+                                &cfg,
+                                &template_id,
+                                &file,
+                            )
+                            .await?;
                         }
                         ServiceNowTemplateActions::Delete { template_id } => {
                             commands::integrations::servicenow_templates_delete(
@@ -2304,24 +3385,41 @@ async fn main() -> anyhow::Result<()> {
                             .await?;
                         }
                     },
-                    ServiceNowActions::Users { instance_name } => {
-                        commands::integrations::servicenow_users_list(&cfg, &instance_name)
+                    ServiceNowActions::Users { action } => match action {
+                        ServiceNowUserActions::List { instance_name } => {
+                            commands::integrations::servicenow_users_list(&cfg, &instance_name)
+                                .await?;
+                        }
+                    },
+                    ServiceNowActions::AssignmentGroups { action } => match action {
+                        ServiceNowAssignmentGroupActions::List { instance_name } => {
+                            commands::integrations::servicenow_assignment_groups_list(
+                                &cfg,
+                                &instance_name,
+                            )
                             .await?;
+                        }
+                    },
+                    ServiceNowActions::BusinessServices { action } => match action {
+                        ServiceNowBusinessServiceActions::List { instance_name } => {
+                            commands::integrations::servicenow_business_services_list(
+                                &cfg,
+                                &instance_name,
+                            )
+                            .await?;
+                        }
+                    },
+                },
+                IntegrationActions::Slack { action } => match action {
+                    SlackActions::List => commands::integrations::slack_list(&cfg).await?,
+                },
+                IntegrationActions::Pagerduty { action } => match action {
+                    PagerdutyActions::List => {
+                        commands::integrations::pagerduty_list(&cfg).await?;
                     }
-                    ServiceNowActions::AssignmentGroups { instance_name } => {
-                        commands::integrations::servicenow_assignment_groups_list(
-                            &cfg,
-                            &instance_name,
-                        )
-                        .await?;
-                    }
-                    ServiceNowActions::BusinessServices { instance_name } => {
-                        commands::integrations::servicenow_business_services_list(
-                            &cfg,
-                            &instance_name,
-                        )
-                        .await?;
-                    }
+                },
+                IntegrationActions::Webhooks { action } => match action {
+                    WebhooksActions::List => commands::integrations::webhooks_list(&cfg).await?,
                 },
             }
         }
@@ -2346,6 +3444,7 @@ async fn main() -> anyhow::Result<()> {
             cfg.validate_auth()?;
             match action {
                 MiscActions::IpRanges => commands::misc::ip_ranges(&cfg).await?,
+                MiscActions::Status => commands::misc::status(&cfg).await?,
             }
         }
         // --- APM ---
@@ -2359,7 +3458,43 @@ async fn main() -> anyhow::Result<()> {
                     ApmServiceActions::Stats { env, from, to } => {
                         commands::apm::services_stats(&cfg, env, from, to).await?;
                     }
+                    ApmServiceActions::Operations {
+                        service,
+                        env,
+                        from,
+                        to,
+                    } => {
+                        commands::apm::services_operations(&cfg, service, env, from, to).await?;
+                    }
+                    ApmServiceActions::Resources {
+                        service,
+                        operation,
+                        env,
+                        from,
+                        to,
+                    } => {
+                        commands::apm::services_resources(&cfg, service, operation, env, from, to)
+                            .await?;
+                    }
                 },
+                ApmActions::Entities { action } => match action {
+                    ApmEntityActions::List { from, to } => {
+                        commands::apm::entities_list(&cfg, from, to).await?;
+                    }
+                },
+                ApmActions::Dependencies { action } => match action {
+                    ApmDependencyActions::List { env, from, to } => {
+                        commands::apm::dependencies_list(&cfg, env, from, to).await?;
+                    }
+                },
+                ApmActions::FlowMap {
+                    query,
+                    limit,
+                    from,
+                    to,
+                } => {
+                    commands::apm::flow_map(&cfg, query, limit, from, to).await?;
+                }
             }
         }
         // --- Investigations ---
@@ -2375,19 +3510,42 @@ async fn main() -> anyhow::Result<()> {
                 InvestigationActions::Get { investigation_id } => {
                     commands::investigations::get(&cfg, &investigation_id).await?;
                 }
+                InvestigationActions::Trigger { file } => {
+                    commands::investigations::trigger(&cfg, &file).await?;
+                }
             }
         }
         // --- Network (placeholder) ---
-        Commands::Network { action } => match action {
-            NetworkActions::List => commands::network::list()?,
-        },
+        Commands::Network { action } => {
+            match action {
+                NetworkActions::List => commands::network::list()?,
+                NetworkActions::Flows { action } => match action {
+                    NetworkFlowActions::List => {
+                        cfg.validate_auth()?;
+                        commands::network::flows_list(&cfg).await?;
+                    }
+                },
+                NetworkActions::Devices { action } => match action {
+                    NetworkDeviceActions::List => {
+                        cfg.validate_auth()?;
+                        commands::network::devices_list(&cfg).await?;
+                    }
+                },
+            }
+        }
         // --- Obs Pipelines (placeholder) ---
         Commands::ObsPipelines { action } => match action {
             ObsPipelinesActions::List => commands::obs_pipelines::list()?,
+            ObsPipelinesActions::Get { pipeline_id } => {
+                commands::obs_pipelines::get(&pipeline_id)?;
+            }
         },
         // --- Scorecards (placeholder) ---
         Commands::Scorecards { action } => match action {
             ScorecardsActions::List => commands::scorecards::list()?,
+            ScorecardsActions::Get { scorecard_id } => {
+                commands::scorecards::get(&scorecard_id)?;
+            }
         },
         // --- Traces (placeholder) ---
         Commands::Traces { action } => match action {
@@ -2396,13 +3554,64 @@ async fn main() -> anyhow::Result<()> {
         // --- Agent (placeholder) ---
         Commands::Agent { action } => match action {
             AgentActions::Schema => commands::agent::schema()?,
+            AgentActions::Guide => commands::agent::guide()?,
         },
         // --- Alias ---
         Commands::Alias { action } => match action {
             AliasActions::List => commands::alias::list()?,
             AliasActions::Set { name, command } => commands::alias::set(name, command)?,
             AliasActions::Delete { names } => commands::alias::delete(names)?,
+            AliasActions::Import { file } => commands::alias::import(&file)?,
         },
+        // --- Product Analytics ---
+        Commands::ProductAnalytics { action } => {
+            cfg.validate_auth()?;
+            match action {
+                ProductAnalyticsActions::Events { action } => match action {
+                    ProductAnalyticsEventActions::Send { file } => {
+                        commands::product_analytics::events_send(&cfg, &file).await?;
+                    }
+                },
+            }
+        }
+        // --- Static Analysis ---
+        Commands::StaticAnalysis { action } => {
+            cfg.validate_auth()?;
+            match action {
+                StaticAnalysisActions::Ast { action } => match action {
+                    StaticAnalysisAstActions::List => {
+                        commands::static_analysis::ast_list(&cfg).await?;
+                    }
+                    StaticAnalysisAstActions::Get { id } => {
+                        commands::static_analysis::ast_get(&cfg, &id).await?;
+                    }
+                },
+                StaticAnalysisActions::CustomRulesets { action } => match action {
+                    StaticAnalysisCustomRulesetActions::List => {
+                        commands::static_analysis::custom_rulesets_list(&cfg).await?;
+                    }
+                    StaticAnalysisCustomRulesetActions::Get { id } => {
+                        commands::static_analysis::custom_rulesets_get(&cfg, &id).await?;
+                    }
+                },
+                StaticAnalysisActions::Sca { action } => match action {
+                    StaticAnalysisScaActions::List => {
+                        commands::static_analysis::sca_list(&cfg).await?;
+                    }
+                    StaticAnalysisScaActions::Get { id } => {
+                        commands::static_analysis::sca_get(&cfg, &id).await?;
+                    }
+                },
+                StaticAnalysisActions::Coverage { action } => match action {
+                    StaticAnalysisCoverageActions::List => {
+                        commands::static_analysis::coverage_list(&cfg).await?;
+                    }
+                    StaticAnalysisCoverageActions::Get { id } => {
+                        commands::static_analysis::coverage_get(&cfg, &id).await?;
+                    }
+                },
+            }
+        }
         // --- Auth ---
         Commands::Auth { action } => match action {
             AuthActions::Login => commands::auth::login(&cfg).await?,

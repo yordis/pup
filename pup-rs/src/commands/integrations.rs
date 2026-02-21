@@ -1,6 +1,12 @@
 use anyhow::Result;
+use datadog_api_client::datadogV1::api_slack_integration::SlackIntegrationAPI;
+use datadog_api_client::datadogV1::api_webhooks_integration::WebhooksIntegrationAPI;
 use datadog_api_client::datadogV2::api_jira_integration::JiraIntegrationAPI;
 use datadog_api_client::datadogV2::api_service_now_integration::ServiceNowIntegrationAPI;
+use datadog_api_client::datadogV2::model::{
+    JiraIssueTemplateCreateRequest, JiraIssueTemplateUpdateRequest,
+    ServiceNowTemplateCreateRequest, ServiceNowTemplateUpdateRequest,
+};
 use uuid::Uuid;
 
 use crate::client;
@@ -61,7 +67,52 @@ pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> 
     api.delete_jira_account(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete Jira account: {e:?}"))?;
-    eprintln!("Jira account {account_id} deleted.");
+    println!("Jira account {account_id} deleted.");
+    Ok(())
+}
+
+pub async fn jira_templates_create(cfg: &Config, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => JiraIntegrationAPI::with_config(dd_cfg),
+    };
+    let body: JiraIssueTemplateCreateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .create_jira_issue_template(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create Jira template: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn jira_templates_update(cfg: &Config, template_id: &str, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => JiraIntegrationAPI::with_config(dd_cfg),
+    };
+    let uuid = Uuid::parse_str(template_id)
+        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let body: JiraIssueTemplateUpdateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .update_jira_issue_template(uuid, body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update Jira template: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn jira_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => JiraIntegrationAPI::with_config(dd_cfg),
+    };
+    let uuid = Uuid::parse_str(template_id)
+        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    api.delete_jira_issue_template(uuid)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete Jira template: {e:?}"))?;
+    println!("Jira template {template_id} deleted.");
     Ok(())
 }
 
@@ -108,6 +159,40 @@ pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result
     formatter::output(cfg, &resp)
 }
 
+pub async fn servicenow_templates_create(cfg: &Config, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceNowIntegrationAPI::with_config(dd_cfg),
+    };
+    let body: ServiceNowTemplateCreateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .create_service_now_template(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create ServiceNow template: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn servicenow_templates_update(
+    cfg: &Config,
+    template_id: &str,
+    file: &str,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceNowIntegrationAPI::with_config(dd_cfg),
+    };
+    let uuid = Uuid::parse_str(template_id)
+        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let body: ServiceNowTemplateUpdateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .update_service_now_template(uuid, body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update ServiceNow template: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
 pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -119,7 +204,7 @@ pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Res
     api.delete_service_now_template(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete ServiceNow template: {e:?}"))?;
-    eprintln!("ServiceNow template {template_id} deleted.");
+    println!("ServiceNow template {template_id} deleted.");
     Ok(())
 }
 
@@ -162,5 +247,44 @@ pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str
             .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list ServiceNow business services: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- Slack ----
+
+pub async fn slack_list(cfg: &Config) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => SlackIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => SlackIntegrationAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .get_slack_integration_channels("main".to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list Slack channels: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- PagerDuty ----
+
+pub async fn pagerduty_list(_cfg: &Config) -> Result<()> {
+    anyhow::bail!(
+        "listing PagerDuty services is not supported by the current API version \
+         - use 'get' with a specific service name instead"
+    )
+}
+
+// ---- Webhooks ----
+
+pub async fn webhooks_list(cfg: &Config) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => WebhooksIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => WebhooksIntegrationAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .get_webhooks_integration("main".to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list webhooks: {e:?}"))?;
     formatter::output(cfg, &resp)
 }

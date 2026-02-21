@@ -1,9 +1,14 @@
 use anyhow::Result;
+use datadog_api_client::datadogV2::api_entity_risk_scores::{
+    EntityRiskScoresAPI, ListEntityRiskScoresOptionalParams,
+};
 use datadog_api_client::datadogV2::api_security_monitoring::{
     ListFindingsOptionalParams, ListSecurityMonitoringRulesOptionalParams,
     SearchSecurityMonitoringSignalsOptionalParams, SecurityMonitoringAPI,
 };
 use datadog_api_client::datadogV2::model::{
+    SecurityMonitoringRuleBulkExportAttributes, SecurityMonitoringRuleBulkExportData,
+    SecurityMonitoringRuleBulkExportDataType, SecurityMonitoringRuleBulkExportPayload,
     SecurityMonitoringSignalListRequest, SecurityMonitoringSignalListRequestFilter,
     SecurityMonitoringSignalListRequestPage, SecurityMonitoringSignalsSort,
 };
@@ -93,5 +98,89 @@ pub async fn findings_search(
         .list_findings(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search findings: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- Bulk Export ----
+
+pub async fn rules_bulk_export(cfg: &Config, rule_ids: Vec<String>) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => SecurityMonitoringAPI::with_client_and_config(dd_cfg, c),
+        None => SecurityMonitoringAPI::with_config(dd_cfg),
+    };
+    let attrs = SecurityMonitoringRuleBulkExportAttributes::new(rule_ids);
+    let data = SecurityMonitoringRuleBulkExportData::new(
+        attrs,
+        SecurityMonitoringRuleBulkExportDataType::SECURITY_MONITORING_RULES_BULK_EXPORT,
+    );
+    let body = SecurityMonitoringRuleBulkExportPayload::new(data);
+    let resp = api
+        .bulk_export_security_monitoring_rules(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to bulk export security rules: {e:?}"))?;
+    // resp is Vec<u8> (ZIP data), output as raw bytes to stdout
+    let output = String::from_utf8_lossy(&resp);
+    println!("{output}");
+    Ok(())
+}
+
+// ---- Content Packs ----
+
+pub async fn content_packs_list(cfg: &Config) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => SecurityMonitoringAPI::with_client_and_config(dd_cfg, c),
+        None => SecurityMonitoringAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .get_content_packs_states()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list content packs: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn content_packs_activate(cfg: &Config, pack_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => SecurityMonitoringAPI::with_client_and_config(dd_cfg, c),
+        None => SecurityMonitoringAPI::with_config(dd_cfg),
+    };
+    api.activate_content_pack(pack_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to activate content pack: {e:?}"))?;
+    println!("Content pack '{pack_id}' activated successfully.");
+    Ok(())
+}
+
+pub async fn content_packs_deactivate(cfg: &Config, pack_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => SecurityMonitoringAPI::with_client_and_config(dd_cfg, c),
+        None => SecurityMonitoringAPI::with_config(dd_cfg),
+    };
+    api.deactivate_content_pack(pack_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to deactivate content pack: {e:?}"))?;
+    println!("Content pack '{pack_id}' deactivated successfully.");
+    Ok(())
+}
+
+// ---- Risk Scores ----
+
+pub async fn risk_scores_list(cfg: &Config, query: Option<String>) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => EntityRiskScoresAPI::with_client_and_config(dd_cfg, c),
+        None => EntityRiskScoresAPI::with_config(dd_cfg),
+    };
+    let mut params = ListEntityRiskScoresOptionalParams::default();
+    if let Some(q) = query {
+        params = params.filter_query(q);
+    }
+    let resp = api
+        .list_entity_risk_scores(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list entity risk scores: {e:?}"))?;
     formatter::output(cfg, &resp)
 }

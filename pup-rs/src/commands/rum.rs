@@ -1,9 +1,18 @@
 use anyhow::{bail, Result};
 use datadog_api_client::datadogV2::api_rum::{ListRUMEventsOptionalParams, RUMAPI};
+use datadog_api_client::datadogV2::api_rum_metrics::RumMetricsAPI;
+use datadog_api_client::datadogV2::api_rum_replay_heatmaps::{
+    ListReplayHeatmapSnapshotsOptionalParams, RumReplayHeatmapsAPI,
+};
+use datadog_api_client::datadogV2::api_rum_replay_playlists::{
+    ListRumReplayPlaylistsOptionalParams, RumReplayPlaylistsAPI,
+};
+use datadog_api_client::datadogV2::api_rum_retention_filters::RumRetentionFiltersAPI;
 use datadog_api_client::datadogV2::model::{
     RUMApplicationCreate, RUMApplicationCreateAttributes, RUMApplicationCreateRequest,
     RUMApplicationCreateType, RUMApplicationUpdateRequest, RUMQueryFilter, RUMSearchEventsRequest,
-    RUMSort,
+    RUMSort, RumMetricCreateRequest, RumMetricUpdateRequest, RumRetentionFilterCreateRequest,
+    RumRetentionFilterUpdateRequest,
 };
 
 use crate::client;
@@ -66,7 +75,7 @@ pub async fn apps_delete(cfg: &Config, app_id: &str) -> Result<()> {
     api.delete_rum_application(app_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete RUM app: {e:?}"))?;
-    eprintln!("RUM application {app_id} deleted.");
+    println!("RUM application {app_id} deleted.");
     Ok(())
 }
 
@@ -141,5 +150,232 @@ pub async fn apps_update(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
         .update_rum_application(app_id.to_string(), body)
         .await
         .map_err(|e| anyhow::anyhow!("failed to update RUM app: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- RUM Metrics ----
+
+pub async fn metrics_list(cfg: &Config) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumMetricsAPI::with_config(dd_cfg);
+    let resp = api
+        .list_rum_metrics()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list RUM metrics: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumMetricsAPI::with_config(dd_cfg);
+    let resp = api
+        .get_rum_metric(metric_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get RUM metric: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn metrics_create(cfg: &Config, file: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumMetricsAPI::with_config(dd_cfg);
+    let body: RumMetricCreateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .create_rum_metric(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create RUM metric: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn metrics_update(cfg: &Config, metric_id: &str, file: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumMetricsAPI::with_config(dd_cfg);
+    let body: RumMetricUpdateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .update_rum_metric(metric_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update RUM metric: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumMetricsAPI::with_config(dd_cfg);
+    api.delete_rum_metric(metric_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete RUM metric: {e:?}"))?;
+    println!("RUM metric {metric_id} deleted.");
+    Ok(())
+}
+
+// ---- RUM Retention Filters ----
+
+pub async fn retention_filters_list(cfg: &Config, app_id: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumRetentionFiltersAPI::with_config(dd_cfg);
+    let resp = api
+        .list_retention_filters(app_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list RUM retention filters: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn retention_filters_get(cfg: &Config, app_id: &str, filter_id: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumRetentionFiltersAPI::with_config(dd_cfg);
+    let resp = api
+        .get_retention_filter(app_id.to_string(), filter_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get RUM retention filter: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn retention_filters_create(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumRetentionFiltersAPI::with_config(dd_cfg);
+    let body: RumRetentionFilterCreateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .create_retention_filter(app_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create RUM retention filter: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn retention_filters_update(
+    cfg: &Config,
+    app_id: &str,
+    filter_id: &str,
+    file: &str,
+) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumRetentionFiltersAPI::with_config(dd_cfg);
+    let body: RumRetentionFilterUpdateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .update_retention_filter(app_id.to_string(), filter_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update RUM retention filter: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn retention_filters_delete(cfg: &Config, app_id: &str, filter_id: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumRetentionFiltersAPI::with_config(dd_cfg);
+    api.delete_retention_filter(app_id.to_string(), filter_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete RUM retention filter: {e:?}"))?;
+    println!("RUM retention filter {filter_id} deleted.");
+    Ok(())
+}
+
+// ---- RUM Sessions ----
+
+pub async fn sessions_list(
+    cfg: &Config,
+    from: String,
+    to: String,
+    limit: i32,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => RUMAPI::with_client_and_config(dd_cfg, c),
+        None => RUMAPI::with_config(dd_cfg),
+    };
+
+    let from_str = chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&from)?)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&to)?)
+        .unwrap()
+        .to_rfc3339();
+
+    let filter = RUMQueryFilter::new()
+        .from(from_str)
+        .to(to_str)
+        .query("@type:session".to_string());
+
+    let body = RUMSearchEventsRequest::new()
+        .filter(filter)
+        .sort(RUMSort::TIMESTAMP_DESCENDING)
+        .page(datadog_api_client::datadogV2::model::RUMQueryPageOptions::new().limit(limit));
+
+    let resp = api
+        .search_rum_events(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list RUM sessions: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- RUM Playlists ----
+
+pub async fn playlists_list(cfg: &Config) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM playlists requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumReplayPlaylistsAPI::with_config(dd_cfg);
+    let resp = api
+        .list_rum_replay_playlists(ListRumReplayPlaylistsOptionalParams::default())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list RUM playlists: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn playlists_get(cfg: &Config, playlist_id: i32) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM playlists requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumReplayPlaylistsAPI::with_config(dd_cfg);
+    let resp = api
+        .get_rum_replay_playlist(playlist_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get RUM playlist: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+// ---- RUM Heatmaps ----
+
+pub async fn heatmaps_query(cfg: &Config, view_name: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM heatmaps requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RumReplayHeatmapsAPI::with_config(dd_cfg);
+    let resp = api
+        .list_replay_heatmap_snapshots(
+            view_name.to_string(),
+            ListReplayHeatmapSnapshotsOptionalParams::default(),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to query RUM heatmaps: {e:?}"))?;
     formatter::output(cfg, &resp)
 }

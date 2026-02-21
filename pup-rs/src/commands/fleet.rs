@@ -111,6 +111,20 @@ pub async fn schedules_get(cfg: &Config, schedule_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+pub async fn schedules_update(cfg: &Config, schedule_id: &str, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => FleetAutomationAPI::with_client_and_config(dd_cfg, c),
+        None => FleetAutomationAPI::with_config(dd_cfg),
+    };
+    let body = util::read_json_file(file)?;
+    let resp = api
+        .update_fleet_schedule(schedule_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update schedule: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
 pub async fn schedules_delete(cfg: &Config, schedule_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -120,7 +134,7 @@ pub async fn schedules_delete(cfg: &Config, schedule_id: &str) -> Result<()> {
     api.delete_fleet_schedule(schedule_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete schedule: {e:?}"))?;
-    eprintln!("Fleet schedule {schedule_id} deleted.");
+    println!("Fleet schedule {schedule_id} deleted.");
     Ok(())
 }
 
@@ -133,7 +147,7 @@ pub async fn deployments_cancel(cfg: &Config, deployment_id: &str) -> Result<()>
     api.cancel_fleet_deployment(deployment_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to cancel deployment: {e:?}"))?;
-    eprintln!("Fleet deployment {deployment_id} cancelled.");
+    println!("Fleet deployment {deployment_id} cancelled.");
     Ok(())
 }
 
@@ -188,6 +202,6 @@ pub async fn schedules_trigger(cfg: &Config, schedule_id: &str) -> Result<()> {
     api.trigger_fleet_schedule(schedule_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to trigger schedule: {e:?}"))?;
-    eprintln!("Schedule {schedule_id} triggered.");
+    println!("Schedule {schedule_id} triggered.");
     Ok(())
 }

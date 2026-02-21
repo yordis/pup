@@ -48,7 +48,7 @@ pub async fn teams_delete(cfg: &Config, team_id: &str) -> Result<()> {
     api.delete_team(team_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete team: {e:?}"))?;
-    eprintln!("Team {team_id} deleted.");
+    println!("Team {team_id} deleted.");
     Ok(())
 }
 
@@ -165,6 +165,6 @@ pub async fn memberships_remove(cfg: &Config, team_id: &str, user_id: &str) -> R
     api.delete_team_membership(team_id.to_string(), user_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to remove membership: {e:?}"))?;
-    eprintln!("Membership for user {user_id} removed from team {team_id}.");
+    println!("Membership for user {user_id} removed from team {team_id}.");
     Ok(())
 }
