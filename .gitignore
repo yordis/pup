@@ -41,3 +41,4 @@ Thumbs.db
 .envrc
 config.yaml
 config.yml
+pup-rs/tests/mock_server/__pycache__/
