@@ -32,11 +32,11 @@ pub async fn list(cfg: &Config, page_limit: i64, page_offset: i64) -> Result<()>
         "/api/v2/bits-ai/investigations?page[limit]={page_limit}&page[offset]={page_offset}"
     );
     let data = raw_get(cfg, &path).await?;
-    formatter::print_json(&data)
+    formatter::output(cfg, &data)
 }
 
 pub async fn get(cfg: &Config, investigation_id: &str) -> Result<()> {
     let path = format!("/api/v2/bits-ai/investigations/{investigation_id}");
     let data = raw_get(cfg, &path).await?;
-    formatter::print_json(&data)
+    formatter::output(cfg, &data)
 }

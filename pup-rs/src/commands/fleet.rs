@@ -22,7 +22,7 @@ pub async fn agents_list(cfg: &Config, page_size: Option<i64>) -> Result<()> {
         .list_fleet_agents(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list fleet agents: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn agents_get(cfg: &Config, agent_key: &str) -> Result<()> {
@@ -35,7 +35,7 @@ pub async fn agents_get(cfg: &Config, agent_key: &str) -> Result<()> {
         .get_fleet_agent_info(agent_key.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get fleet agent: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn agents_versions(cfg: &Config) -> Result<()> {
@@ -48,7 +48,7 @@ pub async fn agents_versions(cfg: &Config) -> Result<()> {
         .list_fleet_agent_versions()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list agent versions: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn deployments_list(cfg: &Config, page_size: Option<i64>) -> Result<()> {
@@ -65,7 +65,7 @@ pub async fn deployments_list(cfg: &Config, page_size: Option<i64>) -> Result<()
         .list_fleet_deployments(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list deployments: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn deployments_get(cfg: &Config, deployment_id: &str) -> Result<()> {
@@ -78,7 +78,7 @@ pub async fn deployments_get(cfg: &Config, deployment_id: &str) -> Result<()> {
         .get_fleet_deployment(deployment_id.to_string(), GetFleetDeploymentOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get deployment: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn schedules_list(cfg: &Config) -> Result<()> {
@@ -91,7 +91,7 @@ pub async fn schedules_list(cfg: &Config) -> Result<()> {
         .list_fleet_schedules()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list schedules: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn schedules_get(cfg: &Config, schedule_id: &str) -> Result<()> {
@@ -104,5 +104,5 @@ pub async fn schedules_get(cfg: &Config, schedule_id: &str) -> Result<()> {
         .get_fleet_schedule(schedule_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get schedule: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

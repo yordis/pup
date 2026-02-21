@@ -127,6 +127,10 @@ enum MonitorActions {
         #[arg(long)] tags: Option<String>,
         #[arg(long, default_value_t = 200)] limit: i32,
     },
+    /// Get monitor details
+    Get { monitor_id: i64 },
+    /// Delete a monitor
+    Delete { monitor_id: i64 },
 }
 
 // ---- Logs ----
@@ -146,6 +150,8 @@ enum LogActions {
 enum IncidentActions {
     /// List incidents (unstable)
     List { #[arg(long, default_value_t = 50)] limit: i64 },
+    /// Get incident details
+    Get { incident_id: String },
 }
 
 // ---- Dashboards ----
@@ -796,6 +802,12 @@ async fn main() -> anyhow::Result<()> {
                 MonitorActions::List { name, tags, limit } => {
                     commands::monitors::list(&cfg, name, tags, limit).await?;
                 }
+                MonitorActions::Get { monitor_id } => {
+                    commands::monitors::get(&cfg, monitor_id).await?;
+                }
+                MonitorActions::Delete { monitor_id } => {
+                    commands::monitors::delete(&cfg, monitor_id).await?;
+                }
             }
         }
         // --- Logs ---
@@ -813,6 +825,9 @@ async fn main() -> anyhow::Result<()> {
             match action {
                 IncidentActions::List { limit } => {
                     commands::incidents::list(&cfg, limit).await?;
+                }
+                IncidentActions::Get { incident_id } => {
+                    commands::incidents::get(&cfg, &incident_id).await?;
                 }
             }
         }

@@ -17,7 +17,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_slos(ListSLOsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list SLOs: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, id: &str) -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn get(cfg: &Config, id: &str) -> Result<()> {
         .get_slo(id.to_string(), GetSLOOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get SLO: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
@@ -43,5 +43,5 @@ pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
         .delete_slo(id.to_string(), DeleteSLOOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete SLO: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

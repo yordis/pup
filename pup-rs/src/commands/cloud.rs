@@ -17,7 +17,7 @@ pub async fn aws_list(cfg: &Config) -> Result<()> {
         .list_aws_accounts(ListAWSAccountsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list AWS accounts: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn gcp_list(cfg: &Config) -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn gcp_list(cfg: &Config) -> Result<()> {
         .list_gcp_integration()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list GCP integrations: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn azure_list(cfg: &Config) -> Result<()> {
@@ -43,5 +43,5 @@ pub async fn azure_list(cfg: &Config) -> Result<()> {
         .list_azure_integration()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list Azure integrations: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

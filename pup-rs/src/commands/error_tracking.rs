@@ -32,7 +32,7 @@ pub async fn issues_search(cfg: &Config, query: Option<String>, _limit: i32) -> 
         .search_issues(body, params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search issues: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn issues_get(cfg: &Config, issue_id: &str) -> Result<()> {
@@ -45,5 +45,5 @@ pub async fn issues_get(cfg: &Config, issue_id: &str) -> Result<()> {
         .get_issue(issue_id.to_string(), GetIssueOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get issue: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

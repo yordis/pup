@@ -30,7 +30,7 @@ pub async fn list(cfg: &Config, from: String, to: String, limit: i32) -> Result<
         .list_audit_logs(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list audit logs: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn search(
@@ -71,5 +71,5 @@ pub async fn search(
         .search_audit_logs(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search audit logs: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

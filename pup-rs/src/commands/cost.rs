@@ -19,7 +19,7 @@ pub async fn projected(cfg: &Config) -> Result<()> {
         .get_projected_cost(GetProjectedCostOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get projected cost: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn by_org(cfg: &Config, start_month: String, end_month: Option<String>) -> Result<()> {
@@ -46,5 +46,5 @@ pub async fn by_org(cfg: &Config, start_month: String, end_month: Option<String>
         .get_cost_by_org(start_dt, params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get cost by org: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

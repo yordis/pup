@@ -27,7 +27,7 @@ pub async fn branch_summary(cfg: &Config, repo: String, branch: String) -> Resul
         .get_code_coverage_branch_summary(body)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get branch summary: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn commit_summary(cfg: &Config, repo: String, commit: String) -> Result<()> {
@@ -46,5 +46,5 @@ pub async fn commit_summary(cfg: &Config, repo: String, commit: String) -> Resul
         .get_code_coverage_commit_summary(body)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get commit summary: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

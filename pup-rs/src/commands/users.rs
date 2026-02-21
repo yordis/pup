@@ -16,7 +16,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_users(ListUsersOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list users: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, id: &str) -> Result<()> {
@@ -29,7 +29,7 @@ pub async fn get(cfg: &Config, id: &str) -> Result<()> {
         .get_user(id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get user: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn roles_list(cfg: &Config) -> Result<()> {
@@ -42,5 +42,5 @@ pub async fn roles_list(cfg: &Config) -> Result<()> {
         .list_roles(ListRolesOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list roles: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

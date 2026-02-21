@@ -24,5 +24,5 @@ pub async fn hosts_list(
         .list_hosts(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list hosts: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

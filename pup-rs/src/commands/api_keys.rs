@@ -17,7 +17,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_api_keys(ListAPIKeysOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list API keys: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, key_id: &str) -> Result<()> {
@@ -30,5 +30,5 @@ pub async fn get(cfg: &Config, key_id: &str) -> Result<()> {
         .get_api_key(key_id.to_string(), GetAPIKeyOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get API key: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

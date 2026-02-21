@@ -17,7 +17,7 @@ pub async fn teams_list(cfg: &Config) -> Result<()> {
         .list_teams(ListTeamsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list teams: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn teams_get(cfg: &Config, team_id: &str) -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn teams_get(cfg: &Config, team_id: &str) -> Result<()> {
         .get_team(team_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get team: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn teams_delete(cfg: &Config, team_id: &str) -> Result<()> {
@@ -61,5 +61,5 @@ pub async fn memberships_list(
         .get_team_memberships(team_id.to_string(), params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list memberships: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

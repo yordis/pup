@@ -15,5 +15,5 @@ pub async fn scanner_rules_list(cfg: &Config) -> Result<()> {
         .list_scanning_groups()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list scanner rules: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

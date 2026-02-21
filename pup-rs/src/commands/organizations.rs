@@ -15,7 +15,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_orgs()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list orgs: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config) -> Result<()> {
@@ -28,5 +28,5 @@ pub async fn get(cfg: &Config) -> Result<()> {
         .get_org("current".to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get org: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

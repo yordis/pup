@@ -47,7 +47,7 @@ pub async fn pipelines_list(
         .search_ci_app_pipeline_events(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list pipelines: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn tests_list(
@@ -80,5 +80,5 @@ pub async fn tests_list(
         .list_ci_app_test_events(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list tests: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

@@ -17,7 +17,7 @@ pub async fn tests_list(cfg: &Config) -> Result<()> {
         .list_tests(ListTestsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list tests: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn tests_get(cfg: &Config, public_id: &str) -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn tests_get(cfg: &Config, public_id: &str) -> Result<()> {
         .get_test(public_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get test: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn tests_search(
@@ -60,7 +60,7 @@ pub async fn tests_search(
         .search_tests(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search tests: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn locations_list(cfg: &Config) -> Result<()> {
@@ -73,5 +73,5 @@ pub async fn locations_list(cfg: &Config) -> Result<()> {
         .list_locations()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list locations: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

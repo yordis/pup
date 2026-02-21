@@ -17,7 +17,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_notebooks(ListNotebooksOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list notebooks: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, notebook_id: i64) -> Result<()> {
@@ -30,5 +30,5 @@ pub async fn get(cfg: &Config, notebook_id: i64) -> Result<()> {
         .get_notebook(notebook_id)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get notebook: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

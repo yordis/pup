@@ -31,11 +31,11 @@ pub async fn list(cfg: &Config, filter: Option<String>, from: String) -> Result<
                 .iter()
                 .filter(|m| m.to_lowercase().contains(&pattern))
                 .collect();
-            return formatter::print_json(&filtered);
+            return formatter::output(cfg, &filtered);
         }
     }
 
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn search(cfg: &Config, query: String, from: String, to: String) -> Result<()> {
@@ -52,7 +52,7 @@ pub async fn search(cfg: &Config, query: String, from: String, to: String) -> Re
         .query_metrics(from_ts, to_ts, query)
         .await
         .map_err(|e| anyhow::anyhow!("failed to query metrics: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn metadata_get(cfg: &Config, metric_name: &str) -> Result<()> {
@@ -65,5 +65,5 @@ pub async fn metadata_get(cfg: &Config, metric_name: &str) -> Result<()> {
         .get_metric_metadata(metric_name.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get metric metadata: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

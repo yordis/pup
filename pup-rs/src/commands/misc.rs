@@ -15,5 +15,5 @@ pub async fn ip_ranges(cfg: &Config) -> Result<()> {
         .get_ip_ranges()
         .await
         .map_err(|e| anyhow::anyhow!("failed to get IP ranges: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

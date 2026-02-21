@@ -43,7 +43,7 @@ pub async fn services_list(cfg: &Config, env: String, from: String, to: String) 
         "/api/v2/apm/services?start={from_ts}&end={to_ts}&filter[env]={env}"
     );
     let data = raw_get(cfg, &path).await?;
-    formatter::print_json(&data)
+    formatter::output(cfg, &data)
 }
 
 pub async fn services_stats(
@@ -58,5 +58,5 @@ pub async fn services_stats(
         "/api/v2/apm/services/stats?start={from_ts}&end={to_ts}&filter[env]={env}"
     );
     let data = raw_get(cfg, &path).await?;
-    formatter::print_json(&data)
+    formatter::output(cfg, &data)
 }

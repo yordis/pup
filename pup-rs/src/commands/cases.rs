@@ -18,7 +18,7 @@ pub async fn search(cfg: &Config, _query: Option<String>, page_size: i64) -> Res
         .search_cases(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search cases: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, case_id: &str) -> Result<()> {
@@ -31,7 +31,7 @@ pub async fn get(cfg: &Config, case_id: &str) -> Result<()> {
         .get_case(case_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get case: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn projects_list(cfg: &Config) -> Result<()> {
@@ -44,7 +44,7 @@ pub async fn projects_list(cfg: &Config) -> Result<()> {
         .get_projects()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list projects: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn projects_get(cfg: &Config, project_id: &str) -> Result<()> {
@@ -57,5 +57,5 @@ pub async fn projects_get(cfg: &Config, project_id: &str) -> Result<()> {
         .get_project(project_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get project: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

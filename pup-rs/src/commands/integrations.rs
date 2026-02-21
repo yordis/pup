@@ -19,7 +19,7 @@ pub async fn jira_accounts_list(cfg: &Config) -> Result<()> {
         .list_jira_accounts()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list Jira accounts: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn jira_templates_list(cfg: &Config) -> Result<()> {
@@ -32,7 +32,7 @@ pub async fn jira_templates_list(cfg: &Config) -> Result<()> {
         .list_jira_issue_templates()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list Jira templates: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
@@ -47,7 +47,7 @@ pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
         .get_jira_issue_template(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get Jira template: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 // ---- ServiceNow ----
@@ -62,7 +62,7 @@ pub async fn servicenow_instances_list(cfg: &Config) -> Result<()> {
         .list_service_now_instances()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list ServiceNow instances: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn servicenow_templates_list(cfg: &Config) -> Result<()> {
@@ -75,7 +75,7 @@ pub async fn servicenow_templates_list(cfg: &Config) -> Result<()> {
         .list_service_now_templates()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list ServiceNow templates: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
@@ -90,5 +90,5 @@ pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result
         .get_service_now_template(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get ServiceNow template: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

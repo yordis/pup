@@ -17,7 +17,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_downtimes(ListDowntimesOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list downtimes: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, id: &str) -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn get(cfg: &Config, id: &str) -> Result<()> {
         .get_downtime(id.to_string(), GetDowntimeOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get downtime: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn cancel(cfg: &Config, id: &str) -> Result<()> {

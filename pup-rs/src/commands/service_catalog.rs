@@ -18,7 +18,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_service_definitions(ListServiceDefinitionsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list services: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, service_name: &str) -> Result<()> {
@@ -34,5 +34,5 @@ pub async fn get(cfg: &Config, service_name: &str) -> Result<()> {
         )
         .await
         .map_err(|e| anyhow::anyhow!("failed to get service: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

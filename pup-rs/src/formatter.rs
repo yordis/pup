@@ -49,6 +49,11 @@ pub fn format_and_print<T: Serialize>(
     }
 }
 
+/// Convenience: format and print using config settings (respects -o flag and agent mode).
+pub fn output<T: Serialize>(cfg: &crate::config::Config, data: &T) -> Result<()> {
+    format_and_print(data, &cfg.output_format, cfg.agent_mode, None)
+}
+
 pub fn print_json<T: Serialize>(data: &T) -> Result<()> {
     let json = serde_json::to_string_pretty(data)?;
     println!("{json}");

@@ -15,5 +15,5 @@ pub async fn connections_get(cfg: &Config) -> Result<()> {
         .get_hamr_org_connection()
         .await
         .map_err(|e| anyhow::anyhow!("failed to get HAMR connection: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

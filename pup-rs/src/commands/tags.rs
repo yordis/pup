@@ -19,7 +19,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_host_tags(ListHostTagsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list tags: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, hostname: &str) -> Result<()> {
@@ -32,7 +32,7 @@ pub async fn get(cfg: &Config, hostname: &str) -> Result<()> {
         .get_host_tags(hostname.to_string(), GetHostTagsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get tags: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn add(cfg: &Config, hostname: &str, tags: Vec<String>) -> Result<()> {
@@ -46,7 +46,7 @@ pub async fn add(cfg: &Config, hostname: &str, tags: Vec<String>) -> Result<()> 
         .create_host_tags(hostname.to_string(), body, CreateHostTagsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to add tags: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn update(cfg: &Config, hostname: &str, tags: Vec<String>) -> Result<()> {
@@ -60,7 +60,7 @@ pub async fn update(cfg: &Config, hostname: &str, tags: Vec<String>) -> Result<(
         .update_host_tags(hostname.to_string(), body, UpdateHostTagsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to update tags: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn delete(cfg: &Config, hostname: &str) -> Result<()> {

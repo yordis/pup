@@ -23,7 +23,7 @@ pub async fn rules_list(cfg: &Config) -> Result<()> {
         .list_security_monitoring_rules(ListSecurityMonitoringRulesOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list rules: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn rules_get(cfg: &Config, rule_id: &str) -> Result<()> {
@@ -36,7 +36,7 @@ pub async fn rules_get(cfg: &Config, rule_id: &str) -> Result<()> {
         .get_security_monitoring_rule(rule_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get rule: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn signals_search(
@@ -76,5 +76,5 @@ pub async fn signals_search(
         .search_security_monitoring_signals(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search signals: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

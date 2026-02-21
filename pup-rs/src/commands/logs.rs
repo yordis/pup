@@ -48,6 +48,6 @@ pub async fn search(
         .await
         .map_err(|e| anyhow::anyhow!("failed to search logs: {:?}", e))?;
 
-    formatter::print_json(&resp)?;
+    formatter::output(cfg, &resp)?;
     Ok(())
 }

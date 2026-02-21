@@ -17,7 +17,7 @@ pub async fn apps_list(cfg: &Config) -> Result<()> {
         .get_rum_applications()
         .await
         .map_err(|e| anyhow::anyhow!("failed to list RUM apps: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn apps_get(cfg: &Config, app_id: &str) -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn apps_get(cfg: &Config, app_id: &str) -> Result<()> {
         .get_rum_application(app_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get RUM app: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn events_list(
@@ -59,5 +59,5 @@ pub async fn events_list(
         .list_rum_events(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list RUM events: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

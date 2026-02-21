@@ -33,7 +33,7 @@ pub async fn summary(cfg: &Config, start: String, end: Option<String>) -> Result
         .get_usage_summary(start_dt, params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get usage summary: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn hourly(cfg: &Config, start: String, end: Option<String>) -> Result<()> {
@@ -64,5 +64,5 @@ pub async fn hourly(cfg: &Config, start: String, end: Option<String>) -> Result<
         )
         .await
         .map_err(|e| anyhow::anyhow!("failed to get hourly usage: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

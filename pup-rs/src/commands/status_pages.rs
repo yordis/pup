@@ -20,7 +20,7 @@ pub async fn pages_list(cfg: &Config) -> Result<()> {
         .list_status_pages(ListStatusPagesOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list status pages: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn pages_get(cfg: &Config, page_id: &str) -> Result<()> {
@@ -35,7 +35,7 @@ pub async fn pages_get(cfg: &Config, page_id: &str) -> Result<()> {
         .get_status_page(uuid, GetStatusPageOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get status page: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn pages_delete(cfg: &Config, page_id: &str) -> Result<()> {
@@ -65,7 +65,7 @@ pub async fn components_list(cfg: &Config, page_id: &str) -> Result<()> {
         .list_components(uuid, ListComponentsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list components: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn components_get(cfg: &Config, page_id: &str, component_id: &str) -> Result<()> {
@@ -82,7 +82,7 @@ pub async fn components_get(cfg: &Config, page_id: &str, component_id: &str) -> 
         .get_component(page_uuid, component_uuid, GetComponentOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get component: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn degradations_list(cfg: &Config) -> Result<()> {
@@ -95,7 +95,7 @@ pub async fn degradations_list(cfg: &Config) -> Result<()> {
         .list_degradations(ListDegradationsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list degradations: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str) -> Result<()> {
@@ -112,5 +112,5 @@ pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str)
         .get_degradation(page_uuid, degradation_uuid, GetDegradationOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get degradation: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

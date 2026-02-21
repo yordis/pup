@@ -15,7 +15,7 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .list_dashboards(ListDashboardsOptionalParams::default())
         .await
         .map_err(|e| anyhow::anyhow!("failed to list dashboards: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, id: &str) -> Result<()> {
@@ -28,7 +28,7 @@ pub async fn get(cfg: &Config, id: &str) -> Result<()> {
         .get_dashboard(id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to get dashboard: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
@@ -41,5 +41,5 @@ pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
         .delete_dashboard(id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete dashboard: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }

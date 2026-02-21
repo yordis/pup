@@ -30,7 +30,7 @@ pub async fn list(cfg: &Config, start: i64, end: i64, tags: Option<String>) -> R
         .list_events(start, end, params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list events: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn search(
@@ -76,7 +76,7 @@ pub async fn search(
         .search_events(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to search events: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
 
 pub async fn get(cfg: &Config, id: i64) -> Result<()> {
@@ -89,5 +89,5 @@ pub async fn get(cfg: &Config, id: i64) -> Result<()> {
         .get_event(id)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get event: {e:?}"))?;
-    formatter::print_json(&resp)
+    formatter::output(cfg, &resp)
 }
