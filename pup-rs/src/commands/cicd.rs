@@ -5,8 +5,10 @@ use datadog_api_client::datadogV2::api_ci_visibility_pipelines::{
 use datadog_api_client::datadogV2::api_ci_visibility_tests::{
     CIVisibilityTestsAPI, ListCIAppTestEventsOptionalParams,
 };
+use datadog_api_client::datadogV2::api_ci_visibility_tests::SearchCIAppTestEventsOptionalParams;
 use datadog_api_client::datadogV2::model::{
     CIAppPipelineEventsRequest, CIAppPipelinesQueryFilter, CIAppQueryPageOptions, CIAppSort,
+    CIAppTestEventsRequest, CIAppTestsQueryFilter,
 };
 
 use crate::client;
@@ -84,5 +86,159 @@ pub async fn tests_list(
         .list_ci_app_test_events(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list tests: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn events_search(
+    cfg: &Config,
+    query: String,
+    from: String,
+    to: String,
+    limit: i32,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => CIVisibilityPipelinesAPI::with_client_and_config(dd_cfg, c),
+        None => CIVisibilityPipelinesAPI::with_config(dd_cfg),
+    };
+
+    let from_ms = util::parse_time_to_unix_millis(&from)?;
+    let to_ms = util::parse_time_to_unix_millis(&to)?;
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
+
+    let filter = CIAppPipelinesQueryFilter::new()
+        .from(from_str)
+        .to(to_str)
+        .query(query);
+
+    let body = CIAppPipelineEventsRequest::new()
+        .filter(filter)
+        .page(CIAppQueryPageOptions::new().limit(limit))
+        .sort(CIAppSort::TIMESTAMP_DESCENDING);
+
+    let params = SearchCIAppPipelineEventsOptionalParams::default().body(body);
+    let resp = api
+        .search_ci_app_pipeline_events(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to search pipeline events: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn events_aggregate(
+    cfg: &Config,
+    query: String,
+    from: String,
+    to: String,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => CIVisibilityPipelinesAPI::with_client_and_config(dd_cfg, c),
+        None => CIVisibilityPipelinesAPI::with_config(dd_cfg),
+    };
+
+    let from_ms = util::parse_time_to_unix_millis(&from)?;
+    let to_ms = util::parse_time_to_unix_millis(&to)?;
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
+
+    let filter = CIAppPipelinesQueryFilter::new()
+        .from(from_str)
+        .to(to_str)
+        .query(query);
+
+    let body = CIAppPipelineEventsRequest::new()
+        .filter(filter);
+
+    let params = SearchCIAppPipelineEventsOptionalParams::default().body(body);
+    let resp = api
+        .search_ci_app_pipeline_events(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to aggregate pipeline events: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn tests_search(
+    cfg: &Config,
+    query: String,
+    from: String,
+    to: String,
+    limit: i32,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => CIVisibilityTestsAPI::with_client_and_config(dd_cfg, c),
+        None => CIVisibilityTestsAPI::with_config(dd_cfg),
+    };
+
+    let from_ms = util::parse_time_to_unix_millis(&from)?;
+    let to_ms = util::parse_time_to_unix_millis(&to)?;
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
+
+    let filter = CIAppTestsQueryFilter::new()
+        .from(from_str)
+        .to(to_str)
+        .query(query);
+
+    let body = CIAppTestEventsRequest::new()
+        .filter(filter)
+        .page(CIAppQueryPageOptions::new().limit(limit))
+        .sort(CIAppSort::TIMESTAMP_DESCENDING);
+
+    let params = SearchCIAppTestEventsOptionalParams::default().body(body);
+    let resp = api
+        .search_ci_app_test_events(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to search test events: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn tests_aggregate(
+    cfg: &Config,
+    query: String,
+    from: String,
+    to: String,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => CIVisibilityTestsAPI::with_client_and_config(dd_cfg, c),
+        None => CIVisibilityTestsAPI::with_config(dd_cfg),
+    };
+
+    let from_ms = util::parse_time_to_unix_millis(&from)?;
+    let to_ms = util::parse_time_to_unix_millis(&to)?;
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
+
+    let filter = CIAppTestsQueryFilter::new()
+        .from(from_str)
+        .to(to_str)
+        .query(query);
+
+    let body = CIAppTestEventsRequest::new()
+        .filter(filter);
+
+    let params = SearchCIAppTestEventsOptionalParams::default().body(body);
+    let resp = api
+        .search_ci_app_test_events(params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to aggregate test events: {e:?}"))?;
     formatter::output(cfg, &resp)
 }

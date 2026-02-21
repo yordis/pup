@@ -302,6 +302,79 @@ enum LogActions {
         #[arg(long, default_value_t = 50)]
         limit: i32,
     },
+    /// List logs (alias for search)
+    List {
+        #[arg(long, default_value = "*")]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
+    },
+    /// Query logs (alias for search)
+    Query {
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
+    },
+    /// Aggregate logs
+    Aggregate {
+        #[arg(long, default_value = "*")]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+    },
+    /// Manage log archives
+    Archives {
+        #[command(subcommand)]
+        action: LogArchiveActions,
+    },
+    /// Manage custom destinations
+    #[command(name = "custom-destinations")]
+    CustomDestinations {
+        #[command(subcommand)]
+        action: LogCustomDestinationActions,
+    },
+    /// Manage log-based metrics
+    Metrics {
+        #[command(subcommand)]
+        action: LogMetricActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum LogArchiveActions {
+    /// List log archives
+    List,
+    /// Get archive details
+    Get { archive_id: String },
+    /// Delete an archive
+    Delete { archive_id: String },
+}
+
+#[derive(Subcommand)]
+enum LogCustomDestinationActions {
+    /// List custom destinations
+    List,
+    /// Get custom destination details
+    Get { destination_id: String },
+}
+
+#[derive(Subcommand)]
+enum LogMetricActions {
+    /// List log-based metrics
+    List,
+    /// Get metric details
+    Get { metric_id: String },
 }
 
 // ---- Incidents ----
@@ -314,6 +387,77 @@ enum IncidentActions {
     },
     /// Get incident details
     Get { incident_id: String },
+    /// Manage incident attachments
+    Attachments {
+        #[command(subcommand)]
+        action: IncidentAttachmentActions,
+    },
+    /// Manage global incident settings
+    Settings {
+        #[command(subcommand)]
+        action: IncidentSettingsActions,
+    },
+    /// Manage global incident handles
+    Handles {
+        #[command(subcommand)]
+        action: IncidentHandleActions,
+    },
+    /// Manage postmortem templates
+    #[command(name = "postmortem-templates")]
+    PostmortemTemplates {
+        #[command(subcommand)]
+        action: IncidentPostmortemActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum IncidentAttachmentActions {
+    /// List incident attachments
+    List { incident_id: String },
+    /// Delete an incident attachment
+    Delete {
+        incident_id: String,
+        attachment_id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum IncidentSettingsActions {
+    /// Get global incident settings
+    Get,
+    /// Update global incident settings from JSON file
+    Update {
+        #[arg(long)]
+        file: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum IncidentHandleActions {
+    /// List global incident handles
+    List,
+    /// Create a global incident handle from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a global incident handle
+    Delete { handle_id: String },
+}
+
+#[derive(Subcommand)]
+enum IncidentPostmortemActions {
+    /// List postmortem templates
+    List,
+    /// Get postmortem template details
+    Get { template_id: String },
+    /// Create a postmortem template from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a postmortem template
+    Delete { template_id: String },
 }
 
 // ---- Dashboards ----
@@ -350,7 +494,21 @@ enum MetricActions {
         #[arg(long, default_value = "now")]
         to: String,
     },
-    /// Get metric metadata
+    /// Query metrics (v2 timeseries, alias)
+    Query {
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+    },
+    /// Submit custom metrics from JSON file
+    Submit {
+        #[arg(long)]
+        file: String,
+    },
+    /// Manage metric metadata
     Metadata {
         #[command(subcommand)]
         action: MetricMetadataActions,
@@ -361,6 +519,12 @@ enum MetricActions {
 enum MetricMetadataActions {
     /// Get metric metadata
     Get { metric_name: String },
+    /// Update metric metadata from JSON file
+    Update {
+        metric_name: String,
+        #[arg(long)]
+        file: String,
+    },
 }
 
 // ---- SLOs ----
@@ -645,6 +809,10 @@ enum CaseActions {
         #[arg(long)]
         file: String,
     },
+    /// Archive a case
+    Archive { case_id: String },
+    /// Unarchive a case
+    Unarchive { case_id: String },
     /// Manage projects
     Projects {
         #[command(subcommand)]
@@ -717,6 +885,11 @@ enum NotebookActions {
     List,
     /// Get notebook details
     Get { notebook_id: i64 },
+    /// Create a notebook from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
     /// Delete a notebook
     Delete { notebook_id: i64 },
 }
@@ -738,6 +911,11 @@ enum RumActions {
         #[arg(long, default_value_t = 100)]
         limit: i32,
     },
+    /// Search RUM sessions
+    Sessions {
+        #[command(subcommand)]
+        action: RumSessionActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -753,8 +931,29 @@ enum RumAppActions {
         #[arg(long, name = "type")]
         app_type: Option<String>,
     },
+    /// Update a RUM app (requires API keys)
+    Update {
+        app_id: String,
+        #[arg(long)]
+        file: String,
+    },
     /// Delete a RUM app (requires API keys)
     Delete { app_id: String },
+}
+
+#[derive(Subcommand)]
+enum RumSessionActions {
+    /// Search RUM sessions
+    Search {
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i32,
+    },
 }
 
 // ---- CI/CD ----
@@ -773,6 +972,20 @@ enum CicdActions {
     },
     /// List CI tests
     Tests {
+        #[command(subcommand)]
+        action: CicdTestActions,
+    },
+    /// CI pipeline events
+    Events {
+        #[command(subcommand)]
+        action: CicdEventActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum CicdTestActions {
+    /// List CI test events
+    List {
         #[arg(long)]
         query: Option<String>,
         #[arg(long, default_value = "1h")]
@@ -781,6 +994,50 @@ enum CicdActions {
         to: String,
         #[arg(long, default_value_t = 50)]
         limit: i32,
+    },
+    /// Search CI test events
+    Search {
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
+    },
+    /// Aggregate CI test events
+    Aggregate {
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CicdEventActions {
+    /// Search CI pipeline events
+    Search {
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
+    },
+    /// Aggregate CI pipeline events
+    Aggregate {
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
     },
 }
 
@@ -817,12 +1074,38 @@ enum OnCallTeamActions {
     },
     /// Delete a team
     Delete { team_id: String },
-    /// List team memberships
+    /// Manage team memberships
     Memberships {
+        #[command(subcommand)]
+        action: OnCallMembershipActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum OnCallMembershipActions {
+    /// List team memberships
+    List {
         team_id: String,
         #[arg(long, default_value_t = 100)]
         page_size: i64,
     },
+    /// Add a membership
+    Add {
+        team_id: String,
+        #[arg(long)]
+        user_id: String,
+        #[arg(long)]
+        role: Option<String>,
+    },
+    /// Update a membership
+    Update {
+        team_id: String,
+        user_id: String,
+        #[arg(long)]
+        role: String,
+    },
+    /// Remove a membership
+    Remove { team_id: String, user_id: String },
 }
 
 // ---- Fleet ----
@@ -869,6 +1152,16 @@ enum FleetDeploymentActions {
     Get { deployment_id: String },
     /// Cancel a deployment
     Cancel { deployment_id: String },
+    /// Configure a deployment from JSON file
+    Configure {
+        #[arg(long)]
+        file: String,
+    },
+    /// Upgrade a deployment from JSON file
+    Upgrade {
+        #[arg(long)]
+        file: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -879,6 +1172,13 @@ enum FleetScheduleActions {
     Get { schedule_id: String },
     /// Delete a schedule
     Delete { schedule_id: String },
+    /// Create a schedule from JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Trigger a schedule
+    Trigger { schedule_id: String },
 }
 
 // ---- Data Governance ----
@@ -997,6 +1297,11 @@ enum StatusPageComponentActions {
         page_id: String,
         component_id: String,
     },
+    /// Delete a component
+    Delete {
+        page_id: String,
+        component_id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1005,6 +1310,11 @@ enum StatusPageDegradationActions {
     List,
     /// Get degradation details
     Get {
+        page_id: String,
+        degradation_id: String,
+    },
+    /// Delete a degradation
+    Delete {
         page_id: String,
         degradation_id: String,
     },
@@ -1056,6 +1366,14 @@ enum ServiceNowActions {
         #[command(subcommand)]
         action: ServiceNowTemplateActions,
     },
+    /// List ServiceNow users for an instance
+    Users { instance_name: String },
+    /// List ServiceNow assignment groups for an instance
+    #[command(name = "assignment-groups")]
+    AssignmentGroups { instance_name: String },
+    /// List ServiceNow business services for an instance
+    #[command(name = "business-services")]
+    BusinessServices { instance_name: String },
 }
 
 #[derive(Subcommand)]
@@ -1080,6 +1398,13 @@ enum CostActions {
         start_month: String,
         #[arg(long)]
         end_month: Option<String>,
+    },
+    /// Get monthly cost attribution
+    Attribution {
+        #[arg(long)]
+        start: String,
+        #[arg(long)]
+        fields: Option<String>,
     },
 }
 
@@ -1252,6 +1577,52 @@ async fn main() -> anyhow::Result<()> {
                 } => {
                     commands::logs::search(&cfg, query, from, to, limit).await?;
                 }
+                LogActions::List {
+                    query,
+                    from,
+                    to,
+                    limit,
+                } => {
+                    commands::logs::list(&cfg, query, from, to, limit).await?;
+                }
+                LogActions::Query {
+                    query,
+                    from,
+                    to,
+                    limit,
+                } => {
+                    commands::logs::query(&cfg, query, from, to, limit).await?;
+                }
+                LogActions::Aggregate {
+                    query,
+                    from,
+                    to,
+                } => {
+                    commands::logs::aggregate(&cfg, query, from, to).await?;
+                }
+                LogActions::Archives { action } => match action {
+                    LogArchiveActions::List => commands::logs::archives_list(&cfg).await?,
+                    LogArchiveActions::Get { archive_id } => {
+                        commands::logs::archives_get(&cfg, &archive_id).await?;
+                    }
+                    LogArchiveActions::Delete { archive_id } => {
+                        commands::logs::archives_delete(&cfg, &archive_id).await?;
+                    }
+                },
+                LogActions::CustomDestinations { action } => match action {
+                    LogCustomDestinationActions::List => {
+                        commands::logs::custom_destinations_list(&cfg).await?;
+                    }
+                    LogCustomDestinationActions::Get { destination_id } => {
+                        commands::logs::custom_destinations_get(&cfg, &destination_id).await?;
+                    }
+                },
+                LogActions::Metrics { action } => match action {
+                    LogMetricActions::List => commands::logs::metrics_list(&cfg).await?,
+                    LogMetricActions::Get { metric_id } => {
+                        commands::logs::metrics_get(&cfg, &metric_id).await?;
+                    }
+                },
             }
         }
         // --- Incidents ---
@@ -1264,6 +1635,52 @@ async fn main() -> anyhow::Result<()> {
                 IncidentActions::Get { incident_id } => {
                     commands::incidents::get(&cfg, &incident_id).await?;
                 }
+                IncidentActions::Attachments { action } => match action {
+                    IncidentAttachmentActions::List { incident_id } => {
+                        commands::incidents::attachments_list(&cfg, &incident_id).await?;
+                    }
+                    IncidentAttachmentActions::Delete {
+                        incident_id,
+                        attachment_id,
+                    } => {
+                        commands::incidents::attachments_delete(&cfg, &incident_id, &attachment_id)
+                            .await?;
+                    }
+                },
+                IncidentActions::Settings { action } => match action {
+                    IncidentSettingsActions::Get => {
+                        commands::incidents::settings_get(&cfg).await?;
+                    }
+                    IncidentSettingsActions::Update { file } => {
+                        commands::incidents::settings_update(&cfg, &file).await?;
+                    }
+                },
+                IncidentActions::Handles { action } => match action {
+                    IncidentHandleActions::List => {
+                        commands::incidents::handles_list(&cfg).await?;
+                    }
+                    IncidentHandleActions::Create { file } => {
+                        commands::incidents::handles_create(&cfg, &file).await?;
+                    }
+                    IncidentHandleActions::Delete { handle_id } => {
+                        commands::incidents::handles_delete(&cfg, &handle_id).await?;
+                    }
+                },
+                IncidentActions::PostmortemTemplates { action } => match action {
+                    IncidentPostmortemActions::List => {
+                        commands::incidents::postmortem_templates_list(&cfg).await?;
+                    }
+                    IncidentPostmortemActions::Get { template_id } => {
+                        commands::incidents::postmortem_templates_get(&cfg, &template_id).await?;
+                    }
+                    IncidentPostmortemActions::Create { file } => {
+                        commands::incidents::postmortem_templates_create(&cfg, &file).await?;
+                    }
+                    IncidentPostmortemActions::Delete { template_id } => {
+                        commands::incidents::postmortem_templates_delete(&cfg, &template_id)
+                            .await?;
+                    }
+                },
             }
         }
         // --- Dashboards ---
@@ -1291,9 +1708,18 @@ async fn main() -> anyhow::Result<()> {
                 MetricActions::Search { query, from, to } => {
                     commands::metrics::search(&cfg, query, from, to).await?;
                 }
+                MetricActions::Query { query, from, to } => {
+                    commands::metrics::query(&cfg, query, from, to).await?;
+                }
+                MetricActions::Submit { file } => {
+                    commands::metrics::submit(&cfg, &file).await?;
+                }
                 MetricActions::Metadata { action } => match action {
                     MetricMetadataActions::Get { metric_name } => {
                         commands::metrics::metadata_get(&cfg, &metric_name).await?;
+                    }
+                    MetricMetadataActions::Update { metric_name, file } => {
+                        commands::metrics::metadata_update(&cfg, &metric_name, &file).await?;
                     }
                 },
             }
@@ -1484,6 +1910,12 @@ async fn main() -> anyhow::Result<()> {
                 CaseActions::Create { file } => {
                     commands::cases::create(&cfg, &file).await?;
                 }
+                CaseActions::Archive { case_id } => {
+                    commands::cases::archive(&cfg, &case_id).await?;
+                }
+                CaseActions::Unarchive { case_id } => {
+                    commands::cases::unarchive(&cfg, &case_id).await?;
+                }
                 CaseActions::Projects { action } => match action {
                     CaseProjectActions::List => commands::cases::projects_list(&cfg).await?,
                     CaseProjectActions::Get { project_id } => {
@@ -1544,6 +1976,9 @@ async fn main() -> anyhow::Result<()> {
                 NotebookActions::Get { notebook_id } => {
                     commands::notebooks::get(&cfg, notebook_id).await?;
                 }
+                NotebookActions::Create { file } => {
+                    commands::notebooks::create(&cfg, &file).await?;
+                }
                 NotebookActions::Delete { notebook_id } => {
                     commands::notebooks::delete(&cfg, notebook_id).await?;
                 }
@@ -1559,6 +1994,9 @@ async fn main() -> anyhow::Result<()> {
                     RumAppActions::Create { name, app_type } => {
                         commands::rum::apps_create(&cfg, &name, app_type).await?;
                     }
+                    RumAppActions::Update { app_id, file } => {
+                        commands::rum::apps_update(&cfg, &app_id, &file).await?;
+                    }
                     RumAppActions::Delete { app_id } => {
                         commands::rum::apps_delete(&cfg, &app_id).await?;
                     }
@@ -1566,6 +2004,16 @@ async fn main() -> anyhow::Result<()> {
                 RumActions::Events { from, to, limit } => {
                     commands::rum::events_list(&cfg, from, to, limit).await?;
                 }
+                RumActions::Sessions { action } => match action {
+                    RumSessionActions::Search {
+                        query,
+                        from,
+                        to,
+                        limit,
+                    } => {
+                        commands::rum::sessions_search(&cfg, query, from, to, limit).await?;
+                    }
+                },
             }
         }
         // --- CI/CD ---
@@ -1580,14 +2028,40 @@ async fn main() -> anyhow::Result<()> {
                 } => {
                     commands::cicd::pipelines_list(&cfg, query, from, to, limit).await?;
                 }
-                CicdActions::Tests {
-                    query,
-                    from,
-                    to,
-                    limit,
-                } => {
-                    commands::cicd::tests_list(&cfg, query, from, to, limit).await?;
-                }
+                CicdActions::Tests { action } => match action {
+                    CicdTestActions::List {
+                        query,
+                        from,
+                        to,
+                        limit,
+                    } => {
+                        commands::cicd::tests_list(&cfg, query, from, to, limit).await?;
+                    }
+                    CicdTestActions::Search {
+                        query,
+                        from,
+                        to,
+                        limit,
+                    } => {
+                        commands::cicd::tests_search(&cfg, query, from, to, limit).await?;
+                    }
+                    CicdTestActions::Aggregate { query, from, to } => {
+                        commands::cicd::tests_aggregate(&cfg, query, from, to).await?;
+                    }
+                },
+                CicdActions::Events { action } => match action {
+                    CicdEventActions::Search {
+                        query,
+                        from,
+                        to,
+                        limit,
+                    } => {
+                        commands::cicd::events_search(&cfg, query, from, to, limit).await?;
+                    }
+                    CicdEventActions::Aggregate { query, from, to } => {
+                        commands::cicd::events_aggregate(&cfg, query, from, to).await?;
+                    }
+                },
             }
         }
         // --- On-Call ---
@@ -1612,9 +2086,31 @@ async fn main() -> anyhow::Result<()> {
                     OnCallTeamActions::Delete { team_id } => {
                         commands::on_call::teams_delete(&cfg, &team_id).await?;
                     }
-                    OnCallTeamActions::Memberships { team_id, page_size } => {
-                        commands::on_call::memberships_list(&cfg, &team_id, page_size).await?;
-                    }
+                    OnCallTeamActions::Memberships { action } => match action {
+                        OnCallMembershipActions::List { team_id, page_size } => {
+                            commands::on_call::memberships_list(&cfg, &team_id, page_size).await?;
+                        }
+                        OnCallMembershipActions::Add {
+                            team_id,
+                            user_id,
+                            role,
+                        } => {
+                            commands::on_call::memberships_add(&cfg, &team_id, &user_id, role)
+                                .await?;
+                        }
+                        OnCallMembershipActions::Update {
+                            team_id,
+                            user_id,
+                            role,
+                        } => {
+                            commands::on_call::memberships_update(&cfg, &team_id, &user_id, &role)
+                                .await?;
+                        }
+                        OnCallMembershipActions::Remove { team_id, user_id } => {
+                            commands::on_call::memberships_remove(&cfg, &team_id, &user_id)
+                                .await?;
+                        }
+                    },
                 },
             }
         }
@@ -1641,6 +2137,12 @@ async fn main() -> anyhow::Result<()> {
                     FleetDeploymentActions::Cancel { deployment_id } => {
                         commands::fleet::deployments_cancel(&cfg, &deployment_id).await?;
                     }
+                    FleetDeploymentActions::Configure { file } => {
+                        commands::fleet::deployments_configure(&cfg, &file).await?;
+                    }
+                    FleetDeploymentActions::Upgrade { file } => {
+                        commands::fleet::deployments_upgrade(&cfg, &file).await?;
+                    }
                 },
                 FleetActions::Schedules { action } => match action {
                     FleetScheduleActions::List => commands::fleet::schedules_list(&cfg).await?,
@@ -1649,6 +2151,12 @@ async fn main() -> anyhow::Result<()> {
                     }
                     FleetScheduleActions::Delete { schedule_id } => {
                         commands::fleet::schedules_delete(&cfg, &schedule_id).await?;
+                    }
+                    FleetScheduleActions::Create { file } => {
+                        commands::fleet::schedules_create(&cfg, &file).await?;
+                    }
+                    FleetScheduleActions::Trigger { schedule_id } => {
+                        commands::fleet::schedules_trigger(&cfg, &schedule_id).await?;
                     }
                 },
             }
@@ -1723,6 +2231,13 @@ async fn main() -> anyhow::Result<()> {
                         commands::status_pages::components_get(&cfg, &page_id, &component_id)
                             .await?;
                     }
+                    StatusPageComponentActions::Delete {
+                        page_id,
+                        component_id,
+                    } => {
+                        commands::status_pages::components_delete(&cfg, &page_id, &component_id)
+                            .await?;
+                    }
                 },
                 StatusPageActions::Degradations { action } => match action {
                     StatusPageDegradationActions::List => {
@@ -1734,6 +2249,17 @@ async fn main() -> anyhow::Result<()> {
                     } => {
                         commands::status_pages::degradations_get(&cfg, &page_id, &degradation_id)
                             .await?;
+                    }
+                    StatusPageDegradationActions::Delete {
+                        page_id,
+                        degradation_id,
+                    } => {
+                        commands::status_pages::degradations_delete(
+                            &cfg,
+                            &page_id,
+                            &degradation_id,
+                        )
+                        .await?;
                     }
                 },
             }
@@ -1778,6 +2304,24 @@ async fn main() -> anyhow::Result<()> {
                             .await?;
                         }
                     },
+                    ServiceNowActions::Users { instance_name } => {
+                        commands::integrations::servicenow_users_list(&cfg, &instance_name)
+                            .await?;
+                    }
+                    ServiceNowActions::AssignmentGroups { instance_name } => {
+                        commands::integrations::servicenow_assignment_groups_list(
+                            &cfg,
+                            &instance_name,
+                        )
+                        .await?;
+                    }
+                    ServiceNowActions::BusinessServices { instance_name } => {
+                        commands::integrations::servicenow_business_services_list(
+                            &cfg,
+                            &instance_name,
+                        )
+                        .await?;
+                    }
                 },
             }
         }
@@ -1791,6 +2335,9 @@ async fn main() -> anyhow::Result<()> {
                     end_month,
                 } => {
                     commands::cost::by_org(&cfg, start_month, end_month).await?;
+                }
+                CostActions::Attribution { start, fields } => {
+                    commands::cost::attribution(&cfg, start, fields).await?;
                 }
             }
         }

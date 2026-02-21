@@ -7,6 +7,7 @@ use datadog_api_client::datadogV2::api_fleet_automation::{
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
+use crate::util;
 
 pub async fn agents_list(cfg: &Config, page_size: Option<i64>) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
@@ -133,5 +134,60 @@ pub async fn deployments_cancel(cfg: &Config, deployment_id: &str) -> Result<()>
         .await
         .map_err(|e| anyhow::anyhow!("failed to cancel deployment: {e:?}"))?;
     eprintln!("Fleet deployment {deployment_id} cancelled.");
+    Ok(())
+}
+
+pub async fn deployments_configure(cfg: &Config, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => FleetAutomationAPI::with_client_and_config(dd_cfg, c),
+        None => FleetAutomationAPI::with_config(dd_cfg),
+    };
+    let body = util::read_json_file(file)?;
+    let resp = api
+        .create_fleet_deployment_configure(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to configure deployment: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn deployments_upgrade(cfg: &Config, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => FleetAutomationAPI::with_client_and_config(dd_cfg, c),
+        None => FleetAutomationAPI::with_config(dd_cfg),
+    };
+    let body = util::read_json_file(file)?;
+    let resp = api
+        .create_fleet_deployment_upgrade(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to upgrade deployment: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn schedules_create(cfg: &Config, file: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => FleetAutomationAPI::with_client_and_config(dd_cfg, c),
+        None => FleetAutomationAPI::with_config(dd_cfg),
+    };
+    let body = util::read_json_file(file)?;
+    let resp = api
+        .create_fleet_schedule(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create schedule: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn schedules_trigger(cfg: &Config, schedule_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => FleetAutomationAPI::with_client_and_config(dd_cfg, c),
+        None => FleetAutomationAPI::with_config(dd_cfg),
+    };
+    api.trigger_fleet_schedule(schedule_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to trigger schedule: {e:?}"))?;
+    eprintln!("Schedule {schedule_id} triggered.");
     Ok(())
 }

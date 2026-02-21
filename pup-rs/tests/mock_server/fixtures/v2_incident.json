@@ -1,0 +1,68 @@
+{
+  "data": {
+    "id": "incident-uuid-0001-aaaa-bbbb",
+    "type": "incidents",
+    "attributes": {
+      "title": "Elevated error rates on payment service",
+      "severity": "SEV-2",
+      "state": "active",
+      "created": "2025-02-20T14:00:00.000Z",
+      "modified": "2025-02-20T15:30:00.000Z",
+      "customer_impact_scope": "Partial payment failures for EU region",
+      "customer_impacted": true,
+      "detected": "2025-02-20T13:55:00.000Z",
+      "fields": {
+        "root_cause": {
+          "value": "Database connection pool exhaustion"
+        },
+        "detection_method": {
+          "value": "monitor"
+        },
+        "services": {
+          "value": ["payment-service", "payment-gateway"]
+        },
+        "teams": {
+          "value": ["payments", "platform"]
+        }
+      },
+      "notification_handles": [
+        {
+          "handle": "@slack-incidents",
+          "display_name": "#incidents"
+        }
+      ],
+      "time_to_detect": 300,
+      "time_to_repair": null
+    },
+    "relationships": {
+      "commander_user": {
+        "data": {
+          "id": "user-uuid-001",
+          "type": "users"
+        }
+      },
+      "created_by_user": {
+        "data": {
+          "id": "user-uuid-001",
+          "type": "users"
+        }
+      },
+      "last_modified_by_user": {
+        "data": {
+          "id": "user-uuid-003",
+          "type": "users"
+        }
+      }
+    }
+  },
+  "included": [
+    {
+      "id": "user-uuid-001",
+      "type": "users",
+      "attributes": {
+        "name": "Jane Doe",
+        "email": "jane.doe@example.com"
+      }
+    }
+  ]
+}

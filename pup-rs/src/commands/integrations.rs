@@ -122,3 +122,45 @@ pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Res
     eprintln!("ServiceNow template {template_id} deleted.");
     Ok(())
 }
+
+pub async fn servicenow_users_list(cfg: &Config, instance_name: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceNowIntegrationAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .list_service_now_users(uuid::Uuid::parse_str(instance_name)
+            .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list ServiceNow users: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn servicenow_assignment_groups_list(cfg: &Config, instance_name: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceNowIntegrationAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .list_service_now_assignment_groups(uuid::Uuid::parse_str(instance_name)
+            .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list ServiceNow assignment groups: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
+        None => ServiceNowIntegrationAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .list_service_now_business_services(uuid::Uuid::parse_str(instance_name)
+            .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list ServiceNow business services: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}

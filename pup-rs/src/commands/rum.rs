@@ -2,7 +2,8 @@ use anyhow::{bail, Result};
 use datadog_api_client::datadogV2::api_rum::{ListRUMEventsOptionalParams, RUMAPI};
 use datadog_api_client::datadogV2::model::{
     RUMApplicationCreate, RUMApplicationCreateAttributes, RUMApplicationCreateRequest,
-    RUMApplicationCreateType,
+    RUMApplicationCreateType, RUMApplicationUpdateRequest, RUMQueryFilter, RUMSearchEventsRequest,
+    RUMSort,
 };
 
 use crate::client;
@@ -90,5 +91,55 @@ pub async fn events_list(cfg: &Config, from: String, to: String, limit: i32) -> 
         .list_rum_events(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list RUM events: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn sessions_search(
+    cfg: &Config,
+    query: Option<String>,
+    from: String,
+    to: String,
+    _limit: i32,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => RUMAPI::with_client_and_config(dd_cfg, c),
+        None => RUMAPI::with_config(dd_cfg),
+    };
+
+    let from_str = chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&from)?)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&to)?)
+        .unwrap()
+        .to_rfc3339();
+
+    let mut filter = RUMQueryFilter::new().from(from_str).to(to_str);
+    if let Some(q) = query {
+        filter = filter.query(q);
+    }
+
+    let body = RUMSearchEventsRequest::new()
+        .filter(filter)
+        .sort(RUMSort::TIMESTAMP_DESCENDING);
+
+    let resp = api
+        .search_rum_events(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to search RUM sessions: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn apps_update(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
+    if !cfg.has_api_keys() {
+        bail!("RUM apps requires API key authentication (DD_API_KEY + DD_APP_KEY)");
+    }
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = RUMAPI::with_config(dd_cfg);
+    let body: RUMApplicationUpdateRequest = crate::util::read_json_file(file)?;
+    let resp = api
+        .update_rum_application(app_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update RUM app: {e:?}"))?;
     formatter::output(cfg, &resp)
 }

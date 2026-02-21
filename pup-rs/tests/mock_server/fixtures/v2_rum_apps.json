@@ -1,0 +1,49 @@
+{
+  "data": [
+    {
+      "id": "rum-app-uuid-0001",
+      "type": "rum_application",
+      "attributes": {
+        "application_id": "rum-app-uuid-0001",
+        "name": "Web Frontend - Production",
+        "type": "browser",
+        "org_id": 11,
+        "client_token": "pub_xxxxxxxxxxxxxxxxxxxx",
+        "created_at": "2024-01-15T10:00:00.000Z",
+        "updated_at": "2025-01-20T16:00:00.000Z",
+        "is_active": true,
+        "hash": "abc123def456"
+      }
+    },
+    {
+      "id": "rum-app-uuid-0002",
+      "type": "rum_application",
+      "attributes": {
+        "application_id": "rum-app-uuid-0002",
+        "name": "Mobile App - iOS",
+        "type": "ios",
+        "org_id": 11,
+        "client_token": "pub_yyyyyyyyyyyyyyyyyyyy",
+        "created_at": "2024-05-01T08:00:00.000Z",
+        "updated_at": "2025-02-01T12:00:00.000Z",
+        "is_active": true,
+        "hash": "ghi789jkl012"
+      }
+    },
+    {
+      "id": "rum-app-uuid-0003",
+      "type": "rum_application",
+      "attributes": {
+        "application_id": "rum-app-uuid-0003",
+        "name": "Mobile App - Android",
+        "type": "android",
+        "org_id": 11,
+        "client_token": "pub_zzzzzzzzzzzzzzzzzzzz",
+        "created_at": "2024-05-01T08:30:00.000Z",
+        "updated_at": "2025-01-15T09:00:00.000Z",
+        "is_active": false,
+        "hash": "mno345pqr678"
+      }
+    }
+  ]
+}

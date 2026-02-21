@@ -122,3 +122,41 @@ pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str)
         .map_err(|e| anyhow::anyhow!("failed to get degradation: {e:?}"))?;
     formatter::output(cfg, &resp)
 }
+
+pub async fn components_delete(cfg: &Config, page_id: &str, component_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
+        None => StatusPagesAPI::with_config(dd_cfg),
+    };
+    let page_uuid = Uuid::parse_str(page_id)
+        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let component_uuid = Uuid::parse_str(component_id)
+        .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
+    api.delete_component(page_uuid, component_uuid)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete component: {e:?}"))?;
+    eprintln!("Component {component_id} deleted from page {page_id}.");
+    Ok(())
+}
+
+pub async fn degradations_delete(
+    cfg: &Config,
+    page_id: &str,
+    degradation_id: &str,
+) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
+        None => StatusPagesAPI::with_config(dd_cfg),
+    };
+    let page_uuid = Uuid::parse_str(page_id)
+        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let degradation_uuid = Uuid::parse_str(degradation_id)
+        .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
+    api.delete_degradation(page_uuid, degradation_uuid)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete degradation: {e:?}"))?;
+    eprintln!("Degradation {degradation_id} deleted from page {page_id}.");
+    Ok(())
+}

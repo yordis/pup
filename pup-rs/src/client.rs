@@ -34,12 +34,34 @@ impl Middleware for BearerAuthMiddleware {
 
 /// Creates a DD API Configuration with all unstable ops enabled.
 /// `Configuration::new()` reads DD_API_KEY, DD_APP_KEY, DD_SITE from env.
+///
+/// If PUP_MOCK_SERVER is set, redirects all API calls to the mock server.
 pub fn make_dd_config(_cfg: &Config) -> datadog_api_client::datadog::Configuration {
     let mut dd_cfg = datadog_api_client::datadog::Configuration::new();
 
     // Enable all 63 unstable operations (snake_case in Rust client)
     for op in UNSTABLE_OPS {
         dd_cfg.set_unstable_operation_enabled(op, true);
+    }
+
+    // If PUP_MOCK_SERVER is set, redirect all requests to the mock server.
+    // The DD client uses server templates like "{protocol}://{name}" at index 1.
+    if let Ok(mock_url) = std::env::var("PUP_MOCK_SERVER") {
+        dd_cfg.server_index = 1;
+        let url = mock_url
+            .trim_start_matches("http://")
+            .trim_start_matches("https://");
+        let protocol = if mock_url.starts_with("https") {
+            "https"
+        } else {
+            "http"
+        };
+        dd_cfg
+            .server_variables
+            .insert("protocol".into(), protocol.into());
+        dd_cfg
+            .server_variables
+            .insert("name".into(), url.into());
     }
 
     dd_cfg

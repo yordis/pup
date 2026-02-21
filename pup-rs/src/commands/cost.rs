@@ -1,7 +1,7 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_usage_metering::{
-    GetCostByOrgOptionalParams, GetProjectedCostOptionalParams,
-    UsageMeteringAPI as UsageMeteringV2API,
+    GetCostByOrgOptionalParams, GetMonthlyCostAttributionOptionalParams,
+    GetProjectedCostOptionalParams, UsageMeteringAPI as UsageMeteringV2API,
 };
 
 use crate::client;
@@ -44,5 +44,26 @@ pub async fn by_org(cfg: &Config, start_month: String, end_month: Option<String>
         .get_cost_by_org(start_dt, params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to get cost by org: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn attribution(cfg: &Config, start: String, fields: Option<String>) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => UsageMeteringV2API::with_client_and_config(dd_cfg, c),
+        None => UsageMeteringV2API::with_config(dd_cfg),
+    };
+
+    let start_dt =
+        chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&start)?)
+            .unwrap();
+
+    let fields_str = fields.unwrap_or_else(|| "*".to_string());
+    let params = GetMonthlyCostAttributionOptionalParams::default();
+
+    let resp = api
+        .get_monthly_cost_attribution(start_dt, fields_str, params)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get cost attribution: {e:?}"))?;
     formatter::output(cfg, &resp)
 }
