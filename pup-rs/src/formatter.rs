@@ -218,3 +218,101 @@ pub fn format_api_error(operation: &str, status: Option<u16>, body: Option<&str>
 
     msg
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_cell_string() {
+        assert_eq!(format_cell(Some(&serde_json::json!("hello"))), "hello");
+    }
+
+    #[test]
+    fn test_format_cell_long_string() {
+        let long = "a".repeat(60);
+        let result = format_cell(Some(&serde_json::json!(long)));
+        assert_eq!(result.len(), 50);
+        assert!(result.ends_with("..."));
+    }
+
+    #[test]
+    fn test_format_cell_number() {
+        assert_eq!(format_cell(Some(&serde_json::json!(42))), "42");
+        assert_eq!(format_cell(Some(&serde_json::json!(3.14))), "3.14");
+    }
+
+    #[test]
+    fn test_format_cell_null() {
+        assert_eq!(format_cell(Some(&serde_json::Value::Null)), "");
+        assert_eq!(format_cell(None), "");
+    }
+
+    #[test]
+    fn test_format_cell_array() {
+        assert_eq!(format_cell(Some(&serde_json::json!([]))), "[]");
+        assert_eq!(format_cell(Some(&serde_json::json!([1, 2]))), "[1, 2]");
+        assert_eq!(
+            format_cell(Some(&serde_json::json!([1, 2, 3, 4, 5]))),
+            "[5 items]"
+        );
+    }
+
+    #[test]
+    fn test_format_cell_object() {
+        assert_eq!(
+            format_cell(Some(&serde_json::json!({"a": 1, "b": 2}))),
+            "{2 fields}"
+        );
+    }
+
+    #[test]
+    fn test_extract_rows_array() {
+        let val = serde_json::json!([{"id": 1}, {"id": 2}]);
+        assert_eq!(extract_rows(&val).len(), 2);
+    }
+
+    #[test]
+    fn test_extract_rows_data_wrapper() {
+        let val = serde_json::json!({"data": [{"id": 1}], "meta": {}});
+        assert_eq!(extract_rows(&val).len(), 1);
+    }
+
+    #[test]
+    fn test_extract_rows_single_object() {
+        let val = serde_json::json!({"id": 1, "name": "test"});
+        assert_eq!(extract_rows(&val).len(), 1);
+    }
+
+    #[test]
+    fn test_format_api_error_basic() {
+        let msg = format_api_error("list monitors", None, None);
+        assert_eq!(msg, "failed to list monitors");
+    }
+
+    #[test]
+    fn test_format_api_error_with_status() {
+        let msg = format_api_error("list monitors", Some(403), None);
+        assert!(msg.contains("HTTP 403"));
+        assert!(msg.contains("access denied"));
+    }
+
+    #[test]
+    fn test_format_api_error_with_body() {
+        let msg = format_api_error("get user", Some(404), Some("not found"));
+        assert!(msg.contains("not found"));
+        assert!(msg.contains("resource not found"));
+    }
+
+    #[test]
+    fn test_format_api_error_server_error() {
+        let msg = format_api_error("query", Some(500), None);
+        assert!(msg.contains("API server error"));
+    }
+
+    #[test]
+    fn test_format_api_error_rate_limit() {
+        let msg = format_api_error("query", Some(429), None);
+        assert!(msg.contains("rate limited"));
+    }
+}

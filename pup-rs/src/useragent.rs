@@ -102,3 +102,43 @@ pub fn get() -> String {
         format!("{})", base)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_env_truthy() {
+        // These tests use env vars that shouldn't be set in normal environments
+        std::env::set_var("__PUP_TEST_TRUE__", "true");
+        assert!(is_env_truthy("__PUP_TEST_TRUE__"));
+
+        std::env::set_var("__PUP_TEST_ONE__", "1");
+        assert!(is_env_truthy("__PUP_TEST_ONE__"));
+
+        std::env::set_var("__PUP_TEST_FALSE__", "false");
+        assert!(!is_env_truthy("__PUP_TEST_FALSE__"));
+
+        assert!(!is_env_truthy("__PUP_TEST_NONEXISTENT__"));
+
+        // Clean up
+        std::env::remove_var("__PUP_TEST_TRUE__");
+        std::env::remove_var("__PUP_TEST_ONE__");
+        std::env::remove_var("__PUP_TEST_FALSE__");
+    }
+
+    #[test]
+    fn test_user_agent_format() {
+        let ua = get();
+        assert!(ua.starts_with("pup/"));
+        assert!(ua.contains("rust"));
+        assert!(ua.contains("os "));
+        assert!(ua.contains("arch "));
+    }
+
+    #[test]
+    fn test_agent_detectors_not_empty() {
+        assert!(!AGENT_DETECTORS.is_empty());
+        assert_eq!(AGENT_DETECTORS[0].name, "claude-code");
+    }
+}

@@ -133,3 +133,106 @@ fn env_bool(key: &str) -> bool {
         "true" | "1"
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_cfg(api_key: Option<&str>, app_key: Option<&str>, token: Option<&str>) -> Config {
+        Config {
+            api_key: api_key.map(String::from),
+            app_key: app_key.map(String::from),
+            access_token: token.map(String::from),
+            site: "datadoghq.com".into(),
+            output_format: OutputFormat::Json,
+            auto_approve: false,
+            agent_mode: false,
+        }
+    }
+
+    #[test]
+    fn test_output_format_parse() {
+        assert_eq!("json".parse::<OutputFormat>().unwrap(), OutputFormat::Json);
+        assert_eq!("JSON".parse::<OutputFormat>().unwrap(), OutputFormat::Json);
+        assert_eq!("table".parse::<OutputFormat>().unwrap(), OutputFormat::Table);
+        assert_eq!("yaml".parse::<OutputFormat>().unwrap(), OutputFormat::Yaml);
+        assert!("xml".parse::<OutputFormat>().is_err());
+    }
+
+    #[test]
+    fn test_output_format_display() {
+        assert_eq!(OutputFormat::Json.to_string(), "json");
+        assert_eq!(OutputFormat::Table.to_string(), "table");
+        assert_eq!(OutputFormat::Yaml.to_string(), "yaml");
+    }
+
+    #[test]
+    fn test_validate_auth_api_keys() {
+        let cfg = make_cfg(Some("key"), Some("app"), None);
+        assert!(cfg.validate_auth().is_ok());
+    }
+
+    #[test]
+    fn test_validate_auth_bearer() {
+        let cfg = make_cfg(None, None, Some("token"));
+        assert!(cfg.validate_auth().is_ok());
+    }
+
+    #[test]
+    fn test_validate_auth_none() {
+        let cfg = make_cfg(None, None, None);
+        assert!(cfg.validate_auth().is_err());
+    }
+
+    #[test]
+    fn test_validate_auth_partial_keys() {
+        let cfg = make_cfg(Some("key"), None, None);
+        assert!(cfg.validate_auth().is_err());
+    }
+
+    #[test]
+    fn test_has_api_keys() {
+        assert!(make_cfg(Some("k"), Some("a"), None).has_api_keys());
+        assert!(!make_cfg(Some("k"), None, None).has_api_keys());
+        assert!(!make_cfg(None, None, None).has_api_keys());
+    }
+
+    #[test]
+    fn test_has_bearer_token() {
+        assert!(make_cfg(None, None, Some("t")).has_bearer_token());
+        assert!(!make_cfg(None, None, None).has_bearer_token());
+    }
+
+    #[test]
+    fn test_api_host_standard() {
+        let cfg = make_cfg(None, None, Some("t"));
+        assert_eq!(cfg.api_host(), "api.datadoghq.com");
+    }
+
+    #[test]
+    fn test_api_host_eu() {
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = "datadoghq.eu".into();
+        assert_eq!(cfg.api_host(), "api.datadoghq.eu");
+    }
+
+    #[test]
+    fn test_api_host_oncall() {
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = "navy.oncall.datadoghq.com".into();
+        assert_eq!(cfg.api_host(), "navy.oncall.datadoghq.com");
+    }
+
+    #[test]
+    fn test_env_or_with_fallback() {
+        assert_eq!(
+            env_or("__PUP_TEST_NONEXISTENT__", Some("fallback".into())),
+            Some("fallback".into())
+        );
+    }
+
+    #[test]
+    fn test_env_or_no_fallback() {
+        assert_eq!(env_or("__PUP_TEST_NONEXISTENT__", None), None);
+    }
+}

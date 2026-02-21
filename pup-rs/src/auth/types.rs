@@ -81,3 +81,62 @@ pub fn default_scopes() -> Vec<&'static str> {
         "usage_read",
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_token(issued_ago_secs: i64, expires_in: i64) -> TokenSet {
+        TokenSet {
+            access_token: "test".into(),
+            refresh_token: "refresh".into(),
+            token_type: "Bearer".into(),
+            expires_in,
+            issued_at: chrono::Utc::now().timestamp() - issued_ago_secs,
+            scope: String::new(),
+            client_id: String::new(),
+        }
+    }
+
+    #[test]
+    fn test_token_not_expired() {
+        let token = make_token(0, 3600); // issued now, expires in 1h
+        assert!(!token.is_expired());
+    }
+
+    #[test]
+    fn test_token_expired() {
+        let token = make_token(7200, 3600); // issued 2h ago, expires in 1h = expired 1h ago
+        assert!(token.is_expired());
+    }
+
+    #[test]
+    fn test_token_expires_within_buffer() {
+        let token = make_token(3400, 3600); // issued 3400s ago, expires at 3600s = 200s left < 300s buffer
+        assert!(token.is_expired());
+    }
+
+    #[test]
+    fn test_token_just_outside_buffer() {
+        let token = make_token(3000, 3600); // issued 3000s ago, expires at 3600s = 600s left > 300s buffer
+        assert!(!token.is_expired());
+    }
+
+    #[test]
+    fn test_default_scopes() {
+        let scopes = default_scopes();
+        assert!(scopes.len() > 20);
+        assert!(scopes.contains(&"dashboards_read"));
+        assert!(scopes.contains(&"monitors_read"));
+        assert!(scopes.contains(&"logs_read_data"));
+    }
+
+    #[test]
+    fn test_token_serialization_roundtrip() {
+        let token = make_token(0, 3600);
+        let json = serde_json::to_string(&token).unwrap();
+        let parsed: TokenSet = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.access_token, "test");
+        assert_eq!(parsed.token_type, "Bearer");
+    }
+}

@@ -424,3 +424,114 @@ static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
         method: "DELETE",
     },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    fn test_cfg() -> Config {
+        Config {
+            api_key: Some("test".into()),
+            app_key: Some("test".into()),
+            access_token: None,
+            site: "datadoghq.com".into(),
+            output_format: crate::config::OutputFormat::Json,
+            auto_approve: false,
+            agent_mode: false,
+        }
+    }
+
+    #[test]
+    fn test_auth_type_api_keys() {
+        let cfg = test_cfg();
+        assert_eq!(get_auth_type(&cfg), AuthType::ApiKeys);
+    }
+
+    #[test]
+    fn test_auth_type_bearer() {
+        let mut cfg = test_cfg();
+        cfg.access_token = Some("token".into());
+        assert_eq!(get_auth_type(&cfg), AuthType::OAuth);
+    }
+
+    #[test]
+    fn test_auth_type_none() {
+        let mut cfg = test_cfg();
+        cfg.api_key = None;
+        cfg.app_key = None;
+        assert_eq!(get_auth_type(&cfg), AuthType::None);
+    }
+
+    #[test]
+    fn test_auth_type_display() {
+        assert_eq!(AuthType::OAuth.to_string(), "OAuth2 Bearer Token");
+        assert_eq!(
+            AuthType::ApiKeys.to_string(),
+            "API Keys (DD_API_KEY + DD_APP_KEY)"
+        );
+        assert_eq!(AuthType::None.to_string(), "None");
+    }
+
+    #[test]
+    fn test_requires_api_key_fallback_logs() {
+        assert!(requires_api_key_fallback("POST", "/api/v2/logs/events"));
+        assert!(requires_api_key_fallback(
+            "POST",
+            "/api/v2/logs/events/search"
+        ));
+    }
+
+    #[test]
+    fn test_requires_api_key_fallback_rum() {
+        assert!(requires_api_key_fallback("GET", "/api/v2/rum/applications"));
+        assert!(requires_api_key_fallback(
+            "GET",
+            "/api/v2/rum/applications/abc-123"
+        ));
+    }
+
+    #[test]
+    fn test_requires_api_key_fallback_events() {
+        assert!(requires_api_key_fallback("POST", "/api/v2/events/search"));
+    }
+
+    #[test]
+    fn test_no_fallback_for_standard_endpoints() {
+        assert!(!requires_api_key_fallback("GET", "/api/v1/monitor"));
+        assert!(!requires_api_key_fallback("GET", "/api/v1/dashboard"));
+        assert!(!requires_api_key_fallback(
+            "GET",
+            "/api/v2/incidents"
+        ));
+    }
+
+    #[test]
+    fn test_prefix_matching_with_id() {
+        // Trailing "/" in the pattern should match paths with IDs
+        assert!(requires_api_key_fallback(
+            "GET",
+            "/api/v2/rum/applications/some-uuid-here"
+        ));
+        assert!(requires_api_key_fallback(
+            "DELETE",
+            "/api/v2/logs/config/archives/archive-123"
+        ));
+    }
+
+    #[test]
+    fn test_method_must_match() {
+        // Logs events is POST-excluded, but GET should not match
+        assert!(!requires_api_key_fallback("GET", "/api/v2/logs/events"));
+    }
+
+    #[test]
+    fn test_unstable_ops_count() {
+        assert_eq!(UNSTABLE_OPS.len(), 63);
+    }
+
+    #[test]
+    fn test_oauth_excluded_count() {
+        assert_eq!(OAUTH_EXCLUDED_ENDPOINTS.len(), 52);
+    }
+}
