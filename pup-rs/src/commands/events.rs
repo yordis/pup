@@ -1,6 +1,10 @@
 use anyhow::{bail, Result};
-use datadog_api_client::datadogV1::api_events::{EventsAPI as EventsV1API, ListEventsOptionalParams};
-use datadog_api_client::datadogV2::api_events::{EventsAPI as EventsV2API, SearchEventsOptionalParams};
+use datadog_api_client::datadogV1::api_events::{
+    EventsAPI as EventsV1API, ListEventsOptionalParams,
+};
+use datadog_api_client::datadogV2::api_events::{
+    EventsAPI as EventsV2API, SearchEventsOptionalParams,
+};
 use datadog_api_client::datadogV2::model::{
     EventsListRequest, EventsQueryFilter, EventsRequestPage, EventsSort,
 };

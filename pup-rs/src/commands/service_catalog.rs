@@ -1,7 +1,6 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_service_definition::{
-    ServiceDefinitionAPI, ListServiceDefinitionsOptionalParams,
-    GetServiceDefinitionOptionalParams,
+    GetServiceDefinitionOptionalParams, ListServiceDefinitionsOptionalParams, ServiceDefinitionAPI,
 };
 
 use crate::client;

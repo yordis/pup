@@ -1,7 +1,7 @@
 use anyhow::Result;
 use datadog_api_client::datadogV1::api_tags::{
-    TagsAPI, ListHostTagsOptionalParams, GetHostTagsOptionalParams,
-    CreateHostTagsOptionalParams, UpdateHostTagsOptionalParams, DeleteHostTagsOptionalParams,
+    CreateHostTagsOptionalParams, DeleteHostTagsOptionalParams, GetHostTagsOptionalParams,
+    ListHostTagsOptionalParams, TagsAPI, UpdateHostTagsOptionalParams,
 };
 use datadog_api_client::datadogV1::model::HostTags;
 
@@ -43,7 +43,11 @@ pub async fn add(cfg: &Config, hostname: &str, tags: Vec<String>) -> Result<()> 
     };
     let body = HostTags::new().tags(tags);
     let resp = api
-        .create_host_tags(hostname.to_string(), body, CreateHostTagsOptionalParams::default())
+        .create_host_tags(
+            hostname.to_string(),
+            body,
+            CreateHostTagsOptionalParams::default(),
+        )
         .await
         .map_err(|e| anyhow::anyhow!("failed to add tags: {e:?}"))?;
     formatter::output(cfg, &resp)
@@ -57,7 +61,11 @@ pub async fn update(cfg: &Config, hostname: &str, tags: Vec<String>) -> Result<(
     };
     let body = HostTags::new().tags(tags);
     let resp = api
-        .update_host_tags(hostname.to_string(), body, UpdateHostTagsOptionalParams::default())
+        .update_host_tags(
+            hostname.to_string(),
+            body,
+            UpdateHostTagsOptionalParams::default(),
+        )
         .await
         .map_err(|e| anyhow::anyhow!("failed to update tags: {e:?}"))?;
     formatter::output(cfg, &resp)
@@ -69,9 +77,12 @@ pub async fn delete(cfg: &Config, hostname: &str) -> Result<()> {
         Some(c) => TagsAPI::with_client_and_config(dd_cfg, c),
         None => TagsAPI::with_config(dd_cfg),
     };
-    api.delete_host_tags(hostname.to_string(), DeleteHostTagsOptionalParams::default())
-        .await
-        .map_err(|e| anyhow::anyhow!("failed to delete tags: {e:?}"))?;
+    api.delete_host_tags(
+        hostname.to_string(),
+        DeleteHostTagsOptionalParams::default(),
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("failed to delete tags: {e:?}"))?;
     eprintln!("Tags deleted for host {hostname}.");
     Ok(())
 }

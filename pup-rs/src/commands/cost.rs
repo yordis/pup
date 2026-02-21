@@ -1,7 +1,7 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_usage_metering::{
-    UsageMeteringAPI as UsageMeteringV2API, GetProjectedCostOptionalParams,
-    GetCostByOrgOptionalParams,
+    GetCostByOrgOptionalParams, GetProjectedCostOptionalParams,
+    UsageMeteringAPI as UsageMeteringV2API,
 };
 
 use crate::client;
@@ -29,16 +29,14 @@ pub async fn by_org(cfg: &Config, start_month: String, end_month: Option<String>
         None => UsageMeteringV2API::with_config(dd_cfg),
     };
 
-    let start_dt = chrono::DateTime::from_timestamp_millis(
-        util::parse_time_to_unix_millis(&start_month)?,
-    )
-    .unwrap();
+    let start_dt =
+        chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&start_month)?)
+            .unwrap();
 
     let mut params = GetCostByOrgOptionalParams::default();
     if let Some(e) = end_month {
         let end_dt =
-            chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&e)?)
-                .unwrap();
+            chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&e)?).unwrap();
         params = params.end_month(end_dt);
     }
 

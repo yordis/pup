@@ -1,6 +1,6 @@
 use anyhow::Result;
 use datadog_api_client::datadogV1::api_synthetics::{
-    SyntheticsAPI, ListTestsOptionalParams, SearchTestsOptionalParams,
+    ListTestsOptionalParams, SearchTestsOptionalParams, SyntheticsAPI,
 };
 
 use crate::client;

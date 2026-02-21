@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use datadog_api_client::datadogV2::api_rum::{RUMAPI, ListRUMEventsOptionalParams};
+use datadog_api_client::datadogV2::api_rum::{ListRUMEventsOptionalParams, RUMAPI};
 
 use crate::client;
 use crate::config::Config;
@@ -33,12 +33,7 @@ pub async fn apps_get(cfg: &Config, app_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-pub async fn events_list(
-    cfg: &Config,
-    from: String,
-    to: String,
-    limit: i32,
-) -> Result<()> {
+pub async fn events_list(cfg: &Config, from: String, to: String, limit: i32) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
         Some(c) => RUMAPI::with_client_and_config(dd_cfg, c),

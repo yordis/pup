@@ -1,7 +1,5 @@
 use anyhow::Result;
-use datadog_api_client::datadogV1::api_notebooks::{
-    NotebooksAPI, ListNotebooksOptionalParams,
-};
+use datadog_api_client::datadogV1::api_notebooks::{ListNotebooksOptionalParams, NotebooksAPI};
 
 use crate::client;
 use crate::config::Config;

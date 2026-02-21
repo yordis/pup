@@ -1,7 +1,7 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_security_monitoring::{
-    SecurityMonitoringAPI, ListSecurityMonitoringRulesOptionalParams,
-    SearchSecurityMonitoringSignalsOptionalParams,
+    ListSecurityMonitoringRulesOptionalParams, SearchSecurityMonitoringSignalsOptionalParams,
+    SecurityMonitoringAPI,
 };
 use datadog_api_client::datadogV2::model::{
     SecurityMonitoringSignalListRequest, SecurityMonitoringSignalListRequestFilter,
@@ -52,14 +52,10 @@ pub async fn signals_search(
         None => SecurityMonitoringAPI::with_config(dd_cfg),
     };
 
-    let from_dt = chrono::DateTime::from_timestamp_millis(
-        util::parse_time_to_unix_millis(&from)?,
-    )
-    .unwrap();
-    let to_dt = chrono::DateTime::from_timestamp_millis(
-        util::parse_time_to_unix_millis(&to)?,
-    )
-    .unwrap();
+    let from_dt =
+        chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&from)?).unwrap();
+    let to_dt =
+        chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&to)?).unwrap();
 
     let body = SecurityMonitoringSignalListRequest::new()
         .filter(

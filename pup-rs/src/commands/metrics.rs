@@ -1,6 +1,6 @@
 use anyhow::Result;
 use datadog_api_client::datadogV1::api_metrics::{
-    MetricsAPI as MetricsV1API, ListActiveMetricsOptionalParams,
+    ListActiveMetricsOptionalParams, MetricsAPI as MetricsV1API,
 };
 
 use crate::client;

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_fleet_automation::{
-    FleetAutomationAPI, ListFleetAgentsOptionalParams, ListFleetDeploymentsOptionalParams,
-    GetFleetDeploymentOptionalParams,
+    FleetAutomationAPI, GetFleetDeploymentOptionalParams, ListFleetAgentsOptionalParams,
+    ListFleetDeploymentsOptionalParams,
 };
 
 use crate::client;
@@ -75,7 +75,10 @@ pub async fn deployments_get(cfg: &Config, deployment_id: &str) -> Result<()> {
         None => FleetAutomationAPI::with_config(dd_cfg),
     };
     let resp = api
-        .get_fleet_deployment(deployment_id.to_string(), GetFleetDeploymentOptionalParams::default())
+        .get_fleet_deployment(
+            deployment_id.to_string(),
+            GetFleetDeploymentOptionalParams::default(),
+        )
         .await
         .map_err(|e| anyhow::anyhow!("failed to get deployment: {e:?}"))?;
     formatter::output(cfg, &resp)

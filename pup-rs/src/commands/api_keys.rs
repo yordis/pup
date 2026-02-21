@@ -1,6 +1,6 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_key_management::{
-    KeyManagementAPI, ListAPIKeysOptionalParams, GetAPIKeyOptionalParams,
+    GetAPIKeyOptionalParams, KeyManagementAPI, ListAPIKeysOptionalParams,
 };
 
 use crate::client;

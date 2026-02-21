@@ -29,8 +29,12 @@ pub async fn pipelines_list(
 
     let from_ms = util::parse_time_to_unix_millis(&from)?;
     let to_ms = util::parse_time_to_unix_millis(&to)?;
-    let from_str = chrono::DateTime::from_timestamp_millis(from_ms).unwrap().to_rfc3339();
-    let to_str = chrono::DateTime::from_timestamp_millis(to_ms).unwrap().to_rfc3339();
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
 
     let mut filter = CIAppPipelinesQueryFilter::new().from(from_str).to(to_str);
     if let Some(q) = query {

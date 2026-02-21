@@ -91,8 +91,17 @@ fn print_table<T: Serialize>(data: &T) -> Result<()> {
 
     // Prioritize common fields
     let priority = [
-        "id", "title", "name", "type", "status", "state", "severity",
-        "created_at", "updated_at", "created", "modified",
+        "id",
+        "title",
+        "name",
+        "type",
+        "status",
+        "state",
+        "severity",
+        "created_at",
+        "updated_at",
+        "created",
+        "modified",
     ];
     let mut final_headers: Vec<String> = Vec::new();
     for &p in &priority {
@@ -178,6 +187,7 @@ fn format_cell(value: Option<&serde_json::Value>) -> String {
 }
 
 /// Format an API error with contextual guidance.
+#[allow(dead_code)]
 pub fn format_api_error(operation: &str, status: Option<u16>, body: Option<&str>) -> String {
     let mut msg = format!("failed to {operation}");
 

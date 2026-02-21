@@ -45,8 +45,8 @@ pub struct FileStorage {
 
 impl FileStorage {
     pub fn new() -> Result<Self> {
-        let base_dir = crate::config::config_dir()
-            .context("could not determine config directory")?;
+        let base_dir =
+            crate::config::config_dir().context("could not determine config directory")?;
         std::fs::create_dir_all(&base_dir)
             .with_context(|| format!("failed to create config dir: {}", base_dir.display()))?;
         Ok(Self { base_dir })
@@ -63,7 +63,9 @@ impl Storage for FileStorage {
     }
 
     fn save_tokens(&self, site: &str, tokens: &TokenSet) -> Result<()> {
-        let path = self.base_dir.join(format!("tokens_{}.json", sanitize(site)));
+        let path = self
+            .base_dir
+            .join(format!("tokens_{}.json", sanitize(site)));
         let json = serde_json::to_string_pretty(tokens)?;
         std::fs::write(&path, json)
             .with_context(|| format!("failed to write tokens: {}", path.display()))?;
@@ -77,7 +79,9 @@ impl Storage for FileStorage {
     }
 
     fn load_tokens(&self, site: &str) -> Result<Option<TokenSet>> {
-        let path = self.base_dir.join(format!("tokens_{}.json", sanitize(site)));
+        let path = self
+            .base_dir
+            .join(format!("tokens_{}.json", sanitize(site)));
         match std::fs::read_to_string(&path) {
             Ok(json) => Ok(Some(serde_json::from_str(&json)?)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -86,7 +90,9 @@ impl Storage for FileStorage {
     }
 
     fn delete_tokens(&self, site: &str) -> Result<()> {
-        let path = self.base_dir.join(format!("tokens_{}.json", sanitize(site)));
+        let path = self
+            .base_dir
+            .join(format!("tokens_{}.json", sanitize(site)));
         match std::fs::remove_file(&path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -95,7 +101,9 @@ impl Storage for FileStorage {
     }
 
     fn save_client_credentials(&self, site: &str, creds: &ClientCredentials) -> Result<()> {
-        let path = self.base_dir.join(format!("client_{}.json", sanitize(site)));
+        let path = self
+            .base_dir
+            .join(format!("client_{}.json", sanitize(site)));
         let json = serde_json::to_string_pretty(creds)?;
         std::fs::write(&path, json)
             .with_context(|| format!("failed to write credentials: {}", path.display()))?;
@@ -108,7 +116,9 @@ impl Storage for FileStorage {
     }
 
     fn load_client_credentials(&self, site: &str) -> Result<Option<ClientCredentials>> {
-        let path = self.base_dir.join(format!("client_{}.json", sanitize(site)));
+        let path = self
+            .base_dir
+            .join(format!("client_{}.json", sanitize(site)));
         match std::fs::read_to_string(&path) {
             Ok(json) => Ok(Some(serde_json::from_str(&json)?)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -117,7 +127,9 @@ impl Storage for FileStorage {
     }
 
     fn delete_client_credentials(&self, site: &str) -> Result<()> {
-        let path = self.base_dir.join(format!("client_{}.json", sanitize(site)));
+        let path = self
+            .base_dir
+            .join(format!("client_{}.json", sanitize(site)));
         match std::fs::remove_file(&path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -233,9 +245,7 @@ fn detect_backend() -> Box<dyn Storage> {
     if let Ok(val) = std::env::var("DD_TOKEN_STORAGE") {
         match val.as_str() {
             "file" => return Box::new(FileStorage::new().expect("failed to create file storage")),
-            "keychain" => {
-                return Box::new(KeychainStorage::new().expect("keychain not available"))
-            }
+            "keychain" => return Box::new(KeychainStorage::new().expect("keychain not available")),
             _ => eprintln!("Warning: unknown DD_TOKEN_STORAGE={val:?}, auto-detecting"),
         }
     }

@@ -16,7 +16,9 @@ pub async fn hosts_list(
         Some(c) => HostsAPI::with_client_and_config(dd_cfg, c),
         None => HostsAPI::with_config(dd_cfg),
     };
-    let mut params = ListHostsOptionalParams::default().count(count).sort_field(sort);
+    let mut params = ListHostsOptionalParams::default()
+        .count(count)
+        .sort_field(sort);
     if let Some(f) = filter {
         params = params.filter(f);
     }

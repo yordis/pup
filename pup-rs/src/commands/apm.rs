@@ -22,10 +22,7 @@ async fn raw_get(cfg: &Config, path: &str) -> Result<serde_json::Value> {
         bail!("no authentication configured");
     }
 
-    let resp = req
-        .header("Accept", "application/json")
-        .send()
-        .await?;
+    let resp = req.header("Accept", "application/json").send().await?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -39,24 +36,15 @@ async fn raw_get(cfg: &Config, path: &str) -> Result<serde_json::Value> {
 pub async fn services_list(cfg: &Config, env: String, from: String, to: String) -> Result<()> {
     let from_ts = util::parse_time_to_unix(&from)?;
     let to_ts = util::parse_time_to_unix(&to)?;
-    let path = format!(
-        "/api/v2/apm/services?start={from_ts}&end={to_ts}&filter[env]={env}"
-    );
+    let path = format!("/api/v2/apm/services?start={from_ts}&end={to_ts}&filter[env]={env}");
     let data = raw_get(cfg, &path).await?;
     formatter::output(cfg, &data)
 }
 
-pub async fn services_stats(
-    cfg: &Config,
-    env: String,
-    from: String,
-    to: String,
-) -> Result<()> {
+pub async fn services_stats(cfg: &Config, env: String, from: String, to: String) -> Result<()> {
     let from_ts = util::parse_time_to_unix(&from)?;
     let to_ts = util::parse_time_to_unix(&to)?;
-    let path = format!(
-        "/api/v2/apm/services/stats?start={from_ts}&end={to_ts}&filter[env]={env}"
-    );
+    let path = format!("/api/v2/apm/services/stats?start={from_ts}&end={to_ts}&filter[env]={env}");
     let data = raw_get(cfg, &path).await?;
     formatter::output(cfg, &data)
 }

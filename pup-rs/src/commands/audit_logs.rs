@@ -1,5 +1,7 @@
 use anyhow::Result;
-use datadog_api_client::datadogV2::api_audit::{AuditAPI, ListAuditLogsOptionalParams, SearchAuditLogsOptionalParams};
+use datadog_api_client::datadogV2::api_audit::{
+    AuditAPI, ListAuditLogsOptionalParams, SearchAuditLogsOptionalParams,
+};
 use datadog_api_client::datadogV2::model::{
     AuditLogsQueryFilter, AuditLogsQueryPageOptions, AuditLogsSearchEventsRequest, AuditLogsSort,
 };
@@ -16,8 +18,8 @@ pub async fn list(cfg: &Config, from: String, to: String, limit: i32) -> Result<
         None => AuditAPI::with_config(dd_cfg),
     };
 
-    let from_dt = chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&from)?)
-        .unwrap();
+    let from_dt =
+        chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&from)?).unwrap();
     let to_dt =
         chrono::DateTime::from_timestamp_millis(util::parse_time_to_unix_millis(&to)?).unwrap();
 

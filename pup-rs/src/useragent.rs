@@ -1,5 +1,6 @@
 use crate::version;
 
+#[allow(dead_code)]
 pub struct AgentInfo {
     pub name: String,
     pub detected: bool,
@@ -86,6 +87,7 @@ pub fn is_agent_mode() -> bool {
     is_env_truthy("FORCE_AGENT_MODE") || detect_agent_info().detected
 }
 
+#[allow(dead_code)]
 pub fn get() -> String {
     let agent = detect_agent_info();
     let base = format!(

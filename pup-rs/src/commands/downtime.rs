@@ -1,6 +1,6 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_downtimes::{
-    DowntimesAPI, ListDowntimesOptionalParams, GetDowntimeOptionalParams,
+    DowntimesAPI, GetDowntimeOptionalParams, ListDowntimesOptionalParams,
 };
 
 use crate::client;

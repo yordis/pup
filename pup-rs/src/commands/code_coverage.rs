@@ -17,12 +17,10 @@ pub async fn branch_summary(cfg: &Config, repo: String, branch: String) -> Resul
         Some(c) => CodeCoverageAPI::with_client_and_config(dd_cfg, c),
         None => CodeCoverageAPI::with_config(dd_cfg),
     };
-    let body = BranchCoverageSummaryRequest::new(
-        BranchCoverageSummaryRequestData::new(
-            BranchCoverageSummaryRequestAttributes::new(branch, repo),
-            BranchCoverageSummaryRequestType::CI_APP_COVERAGE_BRANCH_SUMMARY_REQUEST,
-        ),
-    );
+    let body = BranchCoverageSummaryRequest::new(BranchCoverageSummaryRequestData::new(
+        BranchCoverageSummaryRequestAttributes::new(branch, repo),
+        BranchCoverageSummaryRequestType::CI_APP_COVERAGE_BRANCH_SUMMARY_REQUEST,
+    ));
     let resp = api
         .get_code_coverage_branch_summary(body)
         .await
@@ -36,12 +34,10 @@ pub async fn commit_summary(cfg: &Config, repo: String, commit: String) -> Resul
         Some(c) => CodeCoverageAPI::with_client_and_config(dd_cfg, c),
         None => CodeCoverageAPI::with_config(dd_cfg),
     };
-    let body = CommitCoverageSummaryRequest::new(
-        CommitCoverageSummaryRequestData::new(
-            CommitCoverageSummaryRequestAttributes::new(commit, repo),
-            CommitCoverageSummaryRequestType::CI_APP_COVERAGE_COMMIT_SUMMARY_REQUEST,
-        ),
-    );
+    let body = CommitCoverageSummaryRequest::new(CommitCoverageSummaryRequestData::new(
+        CommitCoverageSummaryRequestAttributes::new(commit, repo),
+        CommitCoverageSummaryRequestType::CI_APP_COVERAGE_COMMIT_SUMMARY_REQUEST,
+    ));
     let resp = api
         .get_code_coverage_commit_summary(body)
         .await

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_key_management::{
-    KeyManagementAPI, ListApplicationKeysOptionalParams, GetApplicationKeyOptionalParams,
+    GetApplicationKeyOptionalParams, KeyManagementAPI, ListApplicationKeysOptionalParams,
 };
 
 use crate::client;
@@ -27,7 +27,10 @@ pub async fn get(cfg: &Config, key_id: &str) -> Result<()> {
         None => KeyManagementAPI::with_config(dd_cfg),
     };
     let resp = api
-        .get_application_key(key_id.to_string(), GetApplicationKeyOptionalParams::default())
+        .get_application_key(
+            key_id.to_string(),
+            GetApplicationKeyOptionalParams::default(),
+        )
         .await
         .map_err(|e| anyhow::anyhow!("failed to get app key: {e:?}"))?;
     formatter::output(cfg, &resp)

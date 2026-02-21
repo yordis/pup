@@ -28,90 +28,204 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Manage monitors
-    Monitors { #[command(subcommand)] action: MonitorActions },
+    Monitors {
+        #[command(subcommand)]
+        action: MonitorActions,
+    },
     /// Search and analyze logs
-    Logs { #[command(subcommand)] action: LogActions },
+    Logs {
+        #[command(subcommand)]
+        action: LogActions,
+    },
     /// Manage incidents
-    Incidents { #[command(subcommand)] action: IncidentActions },
+    Incidents {
+        #[command(subcommand)]
+        action: IncidentActions,
+    },
     /// Manage dashboards
-    Dashboards { #[command(subcommand)] action: DashboardActions },
+    Dashboards {
+        #[command(subcommand)]
+        action: DashboardActions,
+    },
     /// Query and manage metrics
-    Metrics { #[command(subcommand)] action: MetricActions },
+    Metrics {
+        #[command(subcommand)]
+        action: MetricActions,
+    },
     /// Manage SLOs
-    Slos { #[command(subcommand)] action: SloActions },
+    Slos {
+        #[command(subcommand)]
+        action: SloActions,
+    },
     /// Manage synthetics tests
-    Synthetics { #[command(subcommand)] action: SyntheticsActions },
+    Synthetics {
+        #[command(subcommand)]
+        action: SyntheticsActions,
+    },
     /// Manage events
-    Events { #[command(subcommand)] action: EventActions },
+    Events {
+        #[command(subcommand)]
+        action: EventActions,
+    },
     /// Manage downtimes
-    Downtime { #[command(subcommand)] action: DowntimeActions },
+    Downtime {
+        #[command(subcommand)]
+        action: DowntimeActions,
+    },
     /// Manage host tags
-    Tags { #[command(subcommand)] action: TagActions },
+    Tags {
+        #[command(subcommand)]
+        action: TagActions,
+    },
     /// Manage users and roles
-    Users { #[command(subcommand)] action: UserActions },
+    Users {
+        #[command(subcommand)]
+        action: UserActions,
+    },
     /// Manage infrastructure hosts
-    Infrastructure { #[command(subcommand)] action: InfraActions },
+    Infrastructure {
+        #[command(subcommand)]
+        action: InfraActions,
+    },
     /// Search audit logs
     #[command(name = "audit-logs")]
-    AuditLogs { #[command(subcommand)] action: AuditLogActions },
+    AuditLogs {
+        #[command(subcommand)]
+        action: AuditLogActions,
+    },
     /// Manage security monitoring
-    Security { #[command(subcommand)] action: SecurityActions },
+    Security {
+        #[command(subcommand)]
+        action: SecurityActions,
+    },
     /// Manage organizations
-    Organizations { #[command(subcommand)] action: OrgActions },
+    Organizations {
+        #[command(subcommand)]
+        action: OrgActions,
+    },
     /// Manage cloud integrations
-    Cloud { #[command(subcommand)] action: CloudActions },
+    Cloud {
+        #[command(subcommand)]
+        action: CloudActions,
+    },
     /// Manage cases
-    Cases { #[command(subcommand)] action: CaseActions },
+    Cases {
+        #[command(subcommand)]
+        action: CaseActions,
+    },
     /// Manage service catalog
     #[command(name = "service-catalog")]
-    ServiceCatalog { #[command(subcommand)] action: ServiceCatalogActions },
+    ServiceCatalog {
+        #[command(subcommand)]
+        action: ServiceCatalogActions,
+    },
     /// Manage API keys
     #[command(name = "api-keys")]
-    ApiKeys { #[command(subcommand)] action: ApiKeyActions },
+    ApiKeys {
+        #[command(subcommand)]
+        action: ApiKeyActions,
+    },
     /// Manage application keys
     #[command(name = "app-keys")]
-    AppKeys { #[command(subcommand)] action: AppKeyActions },
+    AppKeys {
+        #[command(subcommand)]
+        action: AppKeyActions,
+    },
     /// Query usage data
-    Usage { #[command(subcommand)] action: UsageActions },
+    Usage {
+        #[command(subcommand)]
+        action: UsageActions,
+    },
     /// Manage notebooks
-    Notebooks { #[command(subcommand)] action: NotebookActions },
+    Notebooks {
+        #[command(subcommand)]
+        action: NotebookActions,
+    },
     /// RUM (Real User Monitoring)
-    Rum { #[command(subcommand)] action: RumActions },
+    Rum {
+        #[command(subcommand)]
+        action: RumActions,
+    },
     /// CI/CD visibility
-    Cicd { #[command(subcommand)] action: CicdActions },
+    Cicd {
+        #[command(subcommand)]
+        action: CicdActions,
+    },
     /// Manage on-call teams
     #[command(name = "on-call")]
-    OnCall { #[command(subcommand)] action: OnCallActions },
+    OnCall {
+        #[command(subcommand)]
+        action: OnCallActions,
+    },
     /// Fleet automation
-    Fleet { #[command(subcommand)] action: FleetActions },
+    Fleet {
+        #[command(subcommand)]
+        action: FleetActions,
+    },
     /// Data governance
     #[command(name = "data-governance")]
-    DataGovernance { #[command(subcommand)] action: DataGovActions },
+    DataGovernance {
+        #[command(subcommand)]
+        action: DataGovActions,
+    },
     /// Error tracking
     #[command(name = "error-tracking")]
-    ErrorTracking { #[command(subcommand)] action: ErrorTrackingActions },
+    ErrorTracking {
+        #[command(subcommand)]
+        action: ErrorTrackingActions,
+    },
     /// Code coverage
     #[command(name = "code-coverage")]
-    CodeCoverage { #[command(subcommand)] action: CodeCoverageActions },
+    CodeCoverage {
+        #[command(subcommand)]
+        action: CodeCoverageActions,
+    },
     /// HAMR (High Availability Multi-Region)
-    Hamr { #[command(subcommand)] action: HamrActions },
+    Hamr {
+        #[command(subcommand)]
+        action: HamrActions,
+    },
     /// Status pages
     #[command(name = "status-pages")]
-    StatusPages { #[command(subcommand)] action: StatusPageActions },
+    StatusPages {
+        #[command(subcommand)]
+        action: StatusPageActions,
+    },
     /// Manage integrations (Jira, ServiceNow)
-    Integrations { #[command(subcommand)] action: IntegrationActions },
+    Integrations {
+        #[command(subcommand)]
+        action: IntegrationActions,
+    },
     /// Cloud cost management
-    Cost { #[command(subcommand)] action: CostActions },
+    Cost {
+        #[command(subcommand)]
+        action: CostActions,
+    },
     /// Miscellaneous (IP ranges)
-    Misc { #[command(subcommand)] action: MiscActions },
+    Misc {
+        #[command(subcommand)]
+        action: MiscActions,
+    },
     /// APM (Application Performance Monitoring)
-    Apm { #[command(subcommand)] action: ApmActions },
+    Apm {
+        #[command(subcommand)]
+        action: ApmActions,
+    },
     /// Manage investigations
-    Investigations { #[command(subcommand)] action: InvestigationActions },
+    Investigations {
+        #[command(subcommand)]
+        action: InvestigationActions,
+    },
     /// Manage command aliases
-    Alias { #[command(subcommand)] action: AliasActions },
+    Alias {
+        #[command(subcommand)]
+        action: AliasActions,
+    },
     /// Authentication (OAuth2)
-    Auth { #[command(subcommand)] action: AuthActions },
+    Auth {
+        #[command(subcommand)]
+        action: AuthActions,
+    },
     /// Show version information
     Version,
     /// Validate configuration
@@ -123,9 +237,12 @@ enum Commands {
 enum MonitorActions {
     /// List monitors
     List {
-        #[arg(long)] name: Option<String>,
-        #[arg(long)] tags: Option<String>,
-        #[arg(long, default_value_t = 200)] limit: i32,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        tags: Option<String>,
+        #[arg(long, default_value_t = 200)]
+        limit: i32,
     },
     /// Get monitor details
     Get { monitor_id: i64 },
@@ -138,10 +255,14 @@ enum MonitorActions {
 enum LogActions {
     /// Search logs (forces API key auth)
     Search {
-        #[arg(long)] query: String,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 50)] limit: i32,
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
     },
 }
 
@@ -149,7 +270,10 @@ enum LogActions {
 #[derive(Subcommand)]
 enum IncidentActions {
     /// List incidents (unstable)
-    List { #[arg(long, default_value_t = 50)] limit: i64 },
+    List {
+        #[arg(long, default_value_t = 50)]
+        limit: i64,
+    },
     /// Get incident details
     Get { incident_id: String },
 }
@@ -170,18 +294,24 @@ enum DashboardActions {
 enum MetricActions {
     /// List active metrics
     List {
-        #[arg(long)] filter: Option<String>,
-        #[arg(long, default_value = "1h")] from: String,
+        #[arg(long)]
+        filter: Option<String>,
+        #[arg(long, default_value = "1h")]
+        from: String,
     },
     /// Query metrics (v1 API)
     Search {
-        #[arg(long)] query: String,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
     },
     /// Get metric metadata
     Metadata {
-        #[command(subcommand)] action: MetricMetadataActions,
+        #[command(subcommand)]
+        action: MetricMetadataActions,
     },
 }
 
@@ -206,9 +336,15 @@ enum SloActions {
 #[derive(Subcommand)]
 enum SyntheticsActions {
     /// Manage synthetic tests
-    Tests { #[command(subcommand)] action: SyntheticsTestActions },
+    Tests {
+        #[command(subcommand)]
+        action: SyntheticsTestActions,
+    },
     /// Manage synthetic locations
-    Locations { #[command(subcommand)] action: SyntheticsLocationActions },
+    Locations {
+        #[command(subcommand)]
+        action: SyntheticsLocationActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -219,9 +355,12 @@ enum SyntheticsTestActions {
     Get { public_id: String },
     /// Search tests
     Search {
-        #[arg(long)] text: Option<String>,
-        #[arg(long, default_value_t = 50)] count: i64,
-        #[arg(long, default_value_t = 0)] start: i64,
+        #[arg(long)]
+        text: Option<String>,
+        #[arg(long, default_value_t = 50)]
+        count: i64,
+        #[arg(long, default_value_t = 0)]
+        start: i64,
     },
 }
 
@@ -236,16 +375,23 @@ enum SyntheticsLocationActions {
 enum EventActions {
     /// List events (v1 API)
     List {
-        #[arg(long, default_value_t = 0)] start: i64,
-        #[arg(long, default_value_t = 0)] end: i64,
-        #[arg(long)] tags: Option<String>,
+        #[arg(long, default_value_t = 0)]
+        start: i64,
+        #[arg(long, default_value_t = 0)]
+        end: i64,
+        #[arg(long)]
+        tags: Option<String>,
     },
     /// Search events (v2 API, requires API keys)
     Search {
-        #[arg(long)] query: String,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 100)] limit: i32,
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i32,
     },
     /// Get event details
     Get { event_id: i64 },
@@ -285,7 +431,10 @@ enum UserActions {
     /// Get user details
     Get { user_id: String },
     /// Manage roles
-    Roles { #[command(subcommand)] action: UserRoleActions },
+    Roles {
+        #[command(subcommand)]
+        action: UserRoleActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -298,16 +447,22 @@ enum UserRoleActions {
 #[derive(Subcommand)]
 enum InfraActions {
     /// Manage hosts
-    Hosts { #[command(subcommand)] action: InfraHostActions },
+    Hosts {
+        #[command(subcommand)]
+        action: InfraHostActions,
+    },
 }
 
 #[derive(Subcommand)]
 enum InfraHostActions {
     /// List hosts
     List {
-        #[arg(long)] filter: Option<String>,
-        #[arg(long, default_value = "status")] sort: String,
-        #[arg(long, default_value_t = 100)] count: i64,
+        #[arg(long)]
+        filter: Option<String>,
+        #[arg(long, default_value = "status")]
+        sort: String,
+        #[arg(long, default_value_t = 100)]
+        count: i64,
     },
 }
 
@@ -316,16 +471,23 @@ enum InfraHostActions {
 enum AuditLogActions {
     /// List audit logs
     List {
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 100)] limit: i32,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i32,
     },
     /// Search audit logs
     Search {
-        #[arg(long)] query: String,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 100)] limit: i32,
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i32,
     },
 }
 
@@ -333,9 +495,15 @@ enum AuditLogActions {
 #[derive(Subcommand)]
 enum SecurityActions {
     /// Manage security rules
-    Rules { #[command(subcommand)] action: SecurityRuleActions },
+    Rules {
+        #[command(subcommand)]
+        action: SecurityRuleActions,
+    },
     /// Search security signals
-    Signals { #[command(subcommand)] action: SecuritySignalActions },
+    Signals {
+        #[command(subcommand)]
+        action: SecuritySignalActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -350,10 +518,14 @@ enum SecurityRuleActions {
 enum SecuritySignalActions {
     /// Search signals
     Search {
-        #[arg(long)] query: String,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 100)] limit: i32,
+        #[arg(long)]
+        query: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i32,
     },
 }
 
@@ -370,11 +542,20 @@ enum OrgActions {
 #[derive(Subcommand)]
 enum CloudActions {
     /// List AWS integrations
-    Aws { #[command(subcommand)] action: CloudSubActions },
+    Aws {
+        #[command(subcommand)]
+        action: CloudSubActions,
+    },
     /// List GCP integrations
-    Gcp { #[command(subcommand)] action: CloudSubActions },
+    Gcp {
+        #[command(subcommand)]
+        action: CloudSubActions,
+    },
     /// List Azure integrations
-    Azure { #[command(subcommand)] action: CloudSubActions },
+    Azure {
+        #[command(subcommand)]
+        action: CloudSubActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -388,13 +569,18 @@ enum CloudSubActions {
 enum CaseActions {
     /// Search cases
     Search {
-        #[arg(long)] query: Option<String>,
-        #[arg(long, default_value_t = 50)] page_size: i64,
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value_t = 50)]
+        page_size: i64,
     },
     /// Get case details
     Get { case_id: String },
     /// Manage projects
-    Projects { #[command(subcommand)] action: CaseProjectActions },
+    Projects {
+        #[command(subcommand)]
+        action: CaseProjectActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -437,13 +623,17 @@ enum AppKeyActions {
 enum UsageActions {
     /// Get usage summary
     Summary {
-        #[arg(long, default_value = "30d")] start: String,
-        #[arg(long)] end: Option<String>,
+        #[arg(long, default_value = "30d")]
+        start: String,
+        #[arg(long)]
+        end: Option<String>,
     },
     /// Get hourly usage
     Hourly {
-        #[arg(long, default_value = "1d")] start: String,
-        #[arg(long)] end: Option<String>,
+        #[arg(long, default_value = "1d")]
+        start: String,
+        #[arg(long)]
+        end: Option<String>,
     },
 }
 
@@ -460,12 +650,18 @@ enum NotebookActions {
 #[derive(Subcommand)]
 enum RumActions {
     /// Manage RUM applications
-    Apps { #[command(subcommand)] action: RumAppActions },
+    Apps {
+        #[command(subcommand)]
+        action: RumAppActions,
+    },
     /// List RUM events
     Events {
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 100)] limit: i32,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 100)]
+        limit: i32,
     },
 }
 
@@ -482,17 +678,25 @@ enum RumAppActions {
 enum CicdActions {
     /// List CI pipelines
     Pipelines {
-        #[arg(long)] query: Option<String>,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 50)] limit: i32,
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
     },
     /// List CI tests
     Tests {
-        #[arg(long)] query: Option<String>,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
-        #[arg(long, default_value_t = 50)] limit: i32,
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
     },
 }
 
@@ -500,7 +704,10 @@ enum CicdActions {
 #[derive(Subcommand)]
 enum OnCallActions {
     /// Manage on-call teams
-    Teams { #[command(subcommand)] action: OnCallTeamActions },
+    Teams {
+        #[command(subcommand)]
+        action: OnCallTeamActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -514,7 +721,8 @@ enum OnCallTeamActions {
     /// List team memberships
     Memberships {
         team_id: String,
-        #[arg(long, default_value_t = 100)] page_size: i64,
+        #[arg(long, default_value_t = 100)]
+        page_size: i64,
     },
 }
 
@@ -522,17 +730,29 @@ enum OnCallTeamActions {
 #[derive(Subcommand)]
 enum FleetActions {
     /// Manage fleet agents
-    Agents { #[command(subcommand)] action: FleetAgentActions },
+    Agents {
+        #[command(subcommand)]
+        action: FleetAgentActions,
+    },
     /// Manage fleet deployments
-    Deployments { #[command(subcommand)] action: FleetDeploymentActions },
+    Deployments {
+        #[command(subcommand)]
+        action: FleetDeploymentActions,
+    },
     /// Manage fleet schedules
-    Schedules { #[command(subcommand)] action: FleetScheduleActions },
+    Schedules {
+        #[command(subcommand)]
+        action: FleetScheduleActions,
+    },
 }
 
 #[derive(Subcommand)]
 enum FleetAgentActions {
     /// List agents
-    List { #[arg(long)] page_size: Option<i64> },
+    List {
+        #[arg(long)]
+        page_size: Option<i64>,
+    },
     /// Get agent details
     Get { agent_key: String },
     /// List agent versions
@@ -542,7 +762,10 @@ enum FleetAgentActions {
 #[derive(Subcommand)]
 enum FleetDeploymentActions {
     /// List deployments
-    List { #[arg(long)] page_size: Option<i64> },
+    List {
+        #[arg(long)]
+        page_size: Option<i64>,
+    },
     /// Get deployment details
     Get { deployment_id: String },
 }
@@ -560,7 +783,10 @@ enum FleetScheduleActions {
 enum DataGovActions {
     /// List scanner rules
     #[command(name = "scanner-rules")]
-    ScannerRules { #[command(subcommand)] action: DataGovScannerActions },
+    ScannerRules {
+        #[command(subcommand)]
+        action: DataGovScannerActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -573,15 +799,20 @@ enum DataGovScannerActions {
 #[derive(Subcommand)]
 enum ErrorTrackingActions {
     /// Manage error tracking issues
-    Issues { #[command(subcommand)] action: ErrorTrackingIssueActions },
+    Issues {
+        #[command(subcommand)]
+        action: ErrorTrackingIssueActions,
+    },
 }
 
 #[derive(Subcommand)]
 enum ErrorTrackingIssueActions {
     /// Search issues
     Search {
-        #[arg(long)] query: Option<String>,
-        #[arg(long, default_value_t = 50)] limit: i32,
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
     },
     /// Get issue details
     Get { issue_id: String },
@@ -593,14 +824,18 @@ enum CodeCoverageActions {
     /// Get branch coverage summary
     #[command(name = "branch-summary")]
     BranchSummary {
-        #[arg(long)] repo: String,
-        #[arg(long)] branch: String,
+        #[arg(long)]
+        repo: String,
+        #[arg(long)]
+        branch: String,
     },
     /// Get commit coverage summary
     #[command(name = "commit-summary")]
     CommitSummary {
-        #[arg(long)] repo: String,
-        #[arg(long)] commit: String,
+        #[arg(long)]
+        repo: String,
+        #[arg(long)]
+        commit: String,
     },
 }
 
@@ -608,7 +843,10 @@ enum CodeCoverageActions {
 #[derive(Subcommand)]
 enum HamrActions {
     /// Manage HAMR connections
-    Connections { #[command(subcommand)] action: HamrConnectionActions },
+    Connections {
+        #[command(subcommand)]
+        action: HamrConnectionActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -621,11 +859,20 @@ enum HamrConnectionActions {
 #[derive(Subcommand)]
 enum StatusPageActions {
     /// Manage status pages
-    Pages { #[command(subcommand)] action: StatusPagePageActions },
+    Pages {
+        #[command(subcommand)]
+        action: StatusPagePageActions,
+    },
     /// Manage page components
-    Components { #[command(subcommand)] action: StatusPageComponentActions },
+    Components {
+        #[command(subcommand)]
+        action: StatusPageComponentActions,
+    },
     /// Manage degradations
-    Degradations { #[command(subcommand)] action: StatusPageDegradationActions },
+    Degradations {
+        #[command(subcommand)]
+        action: StatusPageDegradationActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -643,7 +890,10 @@ enum StatusPageComponentActions {
     /// List components
     List { page_id: String },
     /// Get component details
-    Get { page_id: String, component_id: String },
+    Get {
+        page_id: String,
+        component_id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -651,16 +901,25 @@ enum StatusPageDegradationActions {
     /// List degradations
     List,
     /// Get degradation details
-    Get { page_id: String, degradation_id: String },
+    Get {
+        page_id: String,
+        degradation_id: String,
+    },
 }
 
 // ---- Integrations ----
 #[derive(Subcommand)]
 enum IntegrationActions {
     /// Jira integration
-    Jira { #[command(subcommand)] action: JiraActions },
+    Jira {
+        #[command(subcommand)]
+        action: JiraActions,
+    },
     /// ServiceNow integration
-    Servicenow { #[command(subcommand)] action: ServiceNowActions },
+    Servicenow {
+        #[command(subcommand)]
+        action: ServiceNowActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -668,7 +927,10 @@ enum JiraActions {
     /// List Jira accounts
     Accounts,
     /// Manage Jira templates
-    Templates { #[command(subcommand)] action: JiraTemplateActions },
+    Templates {
+        #[command(subcommand)]
+        action: JiraTemplateActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -684,7 +946,10 @@ enum ServiceNowActions {
     /// List ServiceNow instances
     Instances,
     /// Manage ServiceNow templates
-    Templates { #[command(subcommand)] action: ServiceNowTemplateActions },
+    Templates {
+        #[command(subcommand)]
+        action: ServiceNowTemplateActions,
+    },
 }
 
 #[derive(Subcommand)]
@@ -703,8 +968,10 @@ enum CostActions {
     /// Get cost by org
     #[command(name = "by-org")]
     ByOrg {
-        #[arg(long)] start_month: String,
-        #[arg(long)] end_month: Option<String>,
+        #[arg(long)]
+        start_month: String,
+        #[arg(long)]
+        end_month: Option<String>,
     },
 }
 
@@ -720,22 +987,31 @@ enum MiscActions {
 #[derive(Subcommand)]
 enum ApmActions {
     /// Manage APM services
-    Services { #[command(subcommand)] action: ApmServiceActions },
+    Services {
+        #[command(subcommand)]
+        action: ApmServiceActions,
+    },
 }
 
 #[derive(Subcommand)]
 enum ApmServiceActions {
     /// List APM services
     List {
-        #[arg(long)] env: String,
-        #[arg(long, default_value = "1h")] from: String,
-        #[arg(long, default_value = "now")] to: String,
+        #[arg(long)]
+        env: String,
+        #[arg(long, default_value = "1h")]
+        from: String,
+        #[arg(long, default_value = "now")]
+        to: String,
     },
     /// Get service stats
     Stats {
-        #[arg(long)] env: String,
-        #[arg(long)] from: String,
-        #[arg(long)] to: String,
+        #[arg(long)]
+        env: String,
+        #[arg(long)]
+        from: String,
+        #[arg(long)]
+        to: String,
     },
 }
 
@@ -744,8 +1020,10 @@ enum ApmServiceActions {
 enum InvestigationActions {
     /// List investigations
     List {
-        #[arg(long, default_value_t = 50)] page_limit: i64,
-        #[arg(long, default_value_t = 0)] page_offset: i64,
+        #[arg(long, default_value_t = 50)]
+        page_limit: i64,
+        #[arg(long, default_value_t = 0)]
+        page_offset: i64,
     },
     /// Get investigation details
     Get { investigation_id: String },
@@ -814,7 +1092,12 @@ async fn main() -> anyhow::Result<()> {
         Commands::Logs { action } => {
             cfg.validate_auth()?;
             match action {
-                LogActions::Search { query, from, to, limit } => {
+                LogActions::Search {
+                    query,
+                    from,
+                    to,
+                    limit,
+                } => {
                     commands::logs::search(&cfg, query, from, to, limit).await?;
                 }
             }
@@ -893,7 +1176,12 @@ async fn main() -> anyhow::Result<()> {
                 EventActions::List { start, end, tags } => {
                     commands::events::list(&cfg, start, end, tags).await?;
                 }
-                EventActions::Search { query, from, to, limit } => {
+                EventActions::Search {
+                    query,
+                    from,
+                    to,
+                    limit,
+                } => {
                     commands::events::search(&cfg, query, from, to, limit).await?;
                 }
                 EventActions::Get { event_id } => {
@@ -943,7 +1231,11 @@ async fn main() -> anyhow::Result<()> {
             cfg.validate_auth()?;
             match action {
                 InfraActions::Hosts { action } => match action {
-                    InfraHostActions::List { filter, sort, count } => {
+                    InfraHostActions::List {
+                        filter,
+                        sort,
+                        count,
+                    } => {
                         commands::infrastructure::hosts_list(&cfg, filter, sort, count).await?;
                     }
                 },
@@ -956,7 +1248,12 @@ async fn main() -> anyhow::Result<()> {
                 AuditLogActions::List { from, to, limit } => {
                     commands::audit_logs::list(&cfg, from, to, limit).await?;
                 }
-                AuditLogActions::Search { query, from, to, limit } => {
+                AuditLogActions::Search {
+                    query,
+                    from,
+                    to,
+                    limit,
+                } => {
                     commands::audit_logs::search(&cfg, query, from, to, limit).await?;
                 }
             }
@@ -972,7 +1269,12 @@ async fn main() -> anyhow::Result<()> {
                     }
                 },
                 SecurityActions::Signals { action } => match action {
-                    SecuritySignalActions::Search { query, from, to, limit } => {
+                    SecuritySignalActions::Search {
+                        query,
+                        from,
+                        to,
+                        limit,
+                    } => {
                         commands::security::signals_search(&cfg, query, from, to, limit).await?;
                     }
                 },
@@ -1082,10 +1384,20 @@ async fn main() -> anyhow::Result<()> {
         Commands::Cicd { action } => {
             cfg.validate_auth()?;
             match action {
-                CicdActions::Pipelines { query, from, to, limit } => {
+                CicdActions::Pipelines {
+                    query,
+                    from,
+                    to,
+                    limit,
+                } => {
                     commands::cicd::pipelines_list(&cfg, query, from, to, limit).await?;
                 }
-                CicdActions::Tests { query, from, to, limit } => {
+                CicdActions::Tests {
+                    query,
+                    from,
+                    to,
+                    limit,
+                } => {
                     commands::cicd::tests_list(&cfg, query, from, to, limit).await?;
                 }
             }
@@ -1200,16 +1512,24 @@ async fn main() -> anyhow::Result<()> {
                     StatusPageComponentActions::List { page_id } => {
                         commands::status_pages::components_list(&cfg, &page_id).await?;
                     }
-                    StatusPageComponentActions::Get { page_id, component_id } => {
-                        commands::status_pages::components_get(&cfg, &page_id, &component_id).await?;
+                    StatusPageComponentActions::Get {
+                        page_id,
+                        component_id,
+                    } => {
+                        commands::status_pages::components_get(&cfg, &page_id, &component_id)
+                            .await?;
                     }
                 },
                 StatusPageActions::Degradations { action } => match action {
                     StatusPageDegradationActions::List => {
                         commands::status_pages::degradations_list(&cfg).await?;
                     }
-                    StatusPageDegradationActions::Get { page_id, degradation_id } => {
-                        commands::status_pages::degradations_get(&cfg, &page_id, &degradation_id).await?;
+                    StatusPageDegradationActions::Get {
+                        page_id,
+                        degradation_id,
+                    } => {
+                        commands::status_pages::degradations_get(&cfg, &page_id, &degradation_id)
+                            .await?;
                     }
                 },
             }
@@ -1219,9 +1539,13 @@ async fn main() -> anyhow::Result<()> {
             cfg.validate_auth()?;
             match action {
                 IntegrationActions::Jira { action } => match action {
-                    JiraActions::Accounts => commands::integrations::jira_accounts_list(&cfg).await?,
+                    JiraActions::Accounts => {
+                        commands::integrations::jira_accounts_list(&cfg).await?
+                    }
                     JiraActions::Templates { action } => match action {
-                        JiraTemplateActions::List => commands::integrations::jira_templates_list(&cfg).await?,
+                        JiraTemplateActions::List => {
+                            commands::integrations::jira_templates_list(&cfg).await?
+                        }
                         JiraTemplateActions::Get { template_id } => {
                             commands::integrations::jira_templates_get(&cfg, &template_id).await?;
                         }
@@ -1236,7 +1560,8 @@ async fn main() -> anyhow::Result<()> {
                             commands::integrations::servicenow_templates_list(&cfg).await?;
                         }
                         ServiceNowTemplateActions::Get { template_id } => {
-                            commands::integrations::servicenow_templates_get(&cfg, &template_id).await?;
+                            commands::integrations::servicenow_templates_get(&cfg, &template_id)
+                                .await?;
                         }
                     },
                 },
@@ -1247,7 +1572,10 @@ async fn main() -> anyhow::Result<()> {
             cfg.validate_auth()?;
             match action {
                 CostActions::Projected => commands::cost::projected(&cfg).await?,
-                CostActions::ByOrg { start_month, end_month } => {
+                CostActions::ByOrg {
+                    start_month,
+                    end_month,
+                } => {
                     commands::cost::by_org(&cfg, start_month, end_month).await?;
                 }
             }
@@ -1277,7 +1605,10 @@ async fn main() -> anyhow::Result<()> {
         Commands::Investigations { action } => {
             cfg.validate_auth()?;
             match action {
-                InvestigationActions::List { page_limit, page_offset } => {
+                InvestigationActions::List {
+                    page_limit,
+                    page_offset,
+                } => {
                     commands::investigations::list(&cfg, page_limit, page_offset).await?;
                 }
                 InvestigationActions::Get { investigation_id } => {

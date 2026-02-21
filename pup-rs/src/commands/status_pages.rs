@@ -79,7 +79,11 @@ pub async fn components_get(cfg: &Config, page_id: &str, component_id: &str) -> 
     let component_uuid = Uuid::parse_str(component_id)
         .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
     let resp = api
-        .get_component(page_uuid, component_uuid, GetComponentOptionalParams::default())
+        .get_component(
+            page_uuid,
+            component_uuid,
+            GetComponentOptionalParams::default(),
+        )
         .await
         .map_err(|e| anyhow::anyhow!("failed to get component: {e:?}"))?;
     formatter::output(cfg, &resp)
@@ -109,7 +113,11 @@ pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str)
     let degradation_uuid = Uuid::parse_str(degradation_id)
         .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
     let resp = api
-        .get_degradation(page_uuid, degradation_uuid, GetDegradationOptionalParams::default())
+        .get_degradation(
+            page_uuid,
+            degradation_uuid,
+            GetDegradationOptionalParams::default(),
+        )
         .await
         .map_err(|e| anyhow::anyhow!("failed to get degradation: {e:?}"))?;
     formatter::output(cfg, &resp)

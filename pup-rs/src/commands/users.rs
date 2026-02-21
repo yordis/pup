@@ -1,6 +1,6 @@
 use anyhow::Result;
-use datadog_api_client::datadogV2::api_users::{UsersAPI, ListUsersOptionalParams};
-use datadog_api_client::datadogV2::api_roles::{RolesAPI, ListRolesOptionalParams};
+use datadog_api_client::datadogV2::api_roles::{ListRolesOptionalParams, RolesAPI};
+use datadog_api_client::datadogV2::api_users::{ListUsersOptionalParams, UsersAPI};
 
 use crate::client;
 use crate::config::Config;

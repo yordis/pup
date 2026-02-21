@@ -1,6 +1,6 @@
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_teams::{
-    TeamsAPI, ListTeamsOptionalParams, GetTeamMembershipsOptionalParams,
+    GetTeamMembershipsOptionalParams, ListTeamsOptionalParams, TeamsAPI,
 };
 
 use crate::client;
@@ -46,11 +46,7 @@ pub async fn teams_delete(cfg: &Config, team_id: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn memberships_list(
-    cfg: &Config,
-    team_id: &str,
-    page_size: i64,
-) -> Result<()> {
+pub async fn memberships_list(cfg: &Config, team_id: &str, page_size: i64) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
         Some(c) => TeamsAPI::with_client_and_config(dd_cfg, c),

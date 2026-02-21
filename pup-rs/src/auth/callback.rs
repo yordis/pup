@@ -36,6 +36,7 @@ impl CallbackServer {
         );
     }
 
+    #[allow(dead_code)]
     pub fn port(&self) -> u16 {
         self.port
     }

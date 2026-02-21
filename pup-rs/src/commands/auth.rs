@@ -81,11 +81,10 @@ pub async fn login(cfg: &Config) -> Result<()> {
         .exchange_code(&result.code, &redirect_uri, &challenge.verifier, &creds)
         .await?;
 
-    let location =
-        with_storage(|store| {
-            store.save_tokens(site, &tokens)?;
-            Ok(store.storage_location())
-        })?;
+    let location = with_storage(|store| {
+        store.save_tokens(site, &tokens)?;
+        Ok(store.storage_location())
+    })?;
 
     eprintln!("Login successful! Tokens stored in {location}.");
     eprintln!("Token expires in {} hours.", tokens.expires_in / 3600);
@@ -123,10 +122,7 @@ pub fn status(cfg: &Config) -> Result<()> {
                 } else {
                     let remaining =
                         (tokens.issued_at + tokens.expires_in) - chrono::Utc::now().timestamp();
-                    println!(
-                        "Token status: valid ({} minutes remaining)",
-                        remaining / 60
-                    );
+                    println!("Token status: valid ({} minutes remaining)", remaining / 60);
                 }
                 if !tokens.client_id.is_empty() {
                     println!("Client ID: {}", tokens.client_id);

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use datadog_api_client::datadogV1::api_service_level_objectives::{
-    ServiceLevelObjectivesAPI, ListSLOsOptionalParams, GetSLOOptionalParams, DeleteSLOOptionalParams,
+    DeleteSLOOptionalParams, GetSLOOptionalParams, ListSLOsOptionalParams,
+    ServiceLevelObjectivesAPI,
 };
 
 use crate::client;

@@ -7,6 +7,7 @@ use super::types::{ClientCredentials, TokenSet};
 pub const DCR_CLIENT_NAME: &str = "datadog-api-claude-plugin";
 pub const DCR_REDIRECT_PORTS: &[u16] = &[8000, 8080, 8888, 9000];
 
+#[allow(dead_code)]
 pub fn get_redirect_uris() -> Vec<String> {
     DCR_REDIRECT_PORTS
         .iter()
@@ -67,7 +68,10 @@ impl DcrClient {
         let body = RegistrationRequest {
             client_name: DCR_CLIENT_NAME.to_string(),
             redirect_uris: vec![redirect_uri.to_string()],
-            grant_types: vec!["authorization_code".to_string(), "refresh_token".to_string()],
+            grant_types: vec![
+                "authorization_code".to_string(),
+                "refresh_token".to_string(),
+            ],
         };
 
         let resp = self
@@ -84,7 +88,8 @@ impl DcrClient {
             bail!("DCR registration failed (HTTP {status}): {body}");
         }
 
-        let reg: RegistrationResponse = resp.json().await.context("failed to parse DCR response")?;
+        let reg: RegistrationResponse =
+            resp.json().await.context("failed to parse DCR response")?;
 
         Ok(ClientCredentials {
             client_id: reg.client_id,
@@ -114,6 +119,7 @@ impl DcrClient {
     }
 
     /// Refresh an access token.
+    #[allow(dead_code)]
     pub async fn refresh_token(
         &self,
         refresh_token: &str,
@@ -153,7 +159,10 @@ impl DcrClient {
             bail!("token exchange failed (HTTP {status}): {body}");
         }
 
-        let token_resp: TokenResponse = resp.json().await.context("failed to parse token response")?;
+        let token_resp: TokenResponse = resp
+            .json()
+            .await
+            .context("failed to parse token response")?;
 
         Ok(TokenSet {
             access_token: token_resp.access_token,

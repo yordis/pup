@@ -1,7 +1,9 @@
 use anyhow::Result;
-use datadog_api_client::datadogV1::api_aws_integration::{AWSIntegrationAPI, ListAWSAccountsOptionalParams};
-use datadog_api_client::datadogV1::api_gcp_integration::GCPIntegrationAPI;
+use datadog_api_client::datadogV1::api_aws_integration::{
+    AWSIntegrationAPI, ListAWSAccountsOptionalParams,
+};
 use datadog_api_client::datadogV1::api_azure_integration::AzureIntegrationAPI;
+use datadog_api_client::datadogV1::api_gcp_integration::GCPIntegrationAPI;
 
 use crate::client;
 use crate::config::Config;

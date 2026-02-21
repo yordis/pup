@@ -64,6 +64,7 @@ pub fn make_bearer_client(cfg: &Config) -> Option<ClientWithMiddleware> {
 // Auth type detection
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthType {
     None,
@@ -81,6 +82,7 @@ impl std::fmt::Display for AuthType {
     }
 }
 
+#[allow(dead_code)]
 pub fn get_auth_type(cfg: &Config) -> AuthType {
     if cfg.has_bearer_token() {
         AuthType::OAuth
@@ -101,6 +103,7 @@ struct EndpointRequirement {
 }
 
 /// Returns true if the endpoint doesn't support OAuth and requires API key fallback.
+#[allow(dead_code)]
 pub fn requires_api_key_fallback(method: &str, path: &str) -> bool {
     find_endpoint_requirement(method, path).is_some()
 }
@@ -206,62 +209,218 @@ static UNSTABLE_OPS: &[&str] = &[
 /// Trailing "/" means prefix match for ID-parameterized paths.
 static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
     // Logs API (11)
-    EndpointRequirement { path: "/api/v2/logs/events", method: "POST" },
-    EndpointRequirement { path: "/api/v2/logs/events/search", method: "POST" },
-    EndpointRequirement { path: "/api/v2/logs/analytics/aggregate", method: "POST" },
-    EndpointRequirement { path: "/api/v2/logs/config/archives", method: "GET" },
-    EndpointRequirement { path: "/api/v2/logs/config/archives/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/logs/config/archives/", method: "DELETE" },
-    EndpointRequirement { path: "/api/v2/logs/config/custom_destinations", method: "GET" },
-    EndpointRequirement { path: "/api/v2/logs/config/custom_destinations/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/logs/config/metrics", method: "GET" },
-    EndpointRequirement { path: "/api/v2/logs/config/metrics/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/logs/config/metrics/", method: "DELETE" },
+    EndpointRequirement {
+        path: "/api/v2/logs/events",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/events/search",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/analytics/aggregate",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/archives",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/archives/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/archives/",
+        method: "DELETE",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/custom_destinations",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/custom_destinations/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/metrics",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/metrics/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/logs/config/metrics/",
+        method: "DELETE",
+    },
     // RUM API (10)
-    EndpointRequirement { path: "/api/v2/rum/applications", method: "GET" },
-    EndpointRequirement { path: "/api/v2/rum/applications/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/rum/applications", method: "POST" },
-    EndpointRequirement { path: "/api/v2/rum/applications/", method: "PATCH" },
-    EndpointRequirement { path: "/api/v2/rum/applications/", method: "DELETE" },
-    EndpointRequirement { path: "/api/v2/rum/metrics", method: "GET" },
-    EndpointRequirement { path: "/api/v2/rum/metrics/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/rum/retention_filters", method: "GET" },
-    EndpointRequirement { path: "/api/v2/rum/retention_filters/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/rum/events/search", method: "POST" },
+    EndpointRequirement {
+        path: "/api/v2/rum/applications",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/applications/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/applications",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/applications/",
+        method: "PATCH",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/applications/",
+        method: "DELETE",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/metrics",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/metrics/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/retention_filters",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/retention_filters/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/rum/events/search",
+        method: "POST",
+    },
     // API/App Keys (8)
-    EndpointRequirement { path: "/api/v2/api_keys", method: "GET" },
-    EndpointRequirement { path: "/api/v2/api_keys/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/api_keys", method: "POST" },
-    EndpointRequirement { path: "/api/v2/api_keys/", method: "DELETE" },
-    EndpointRequirement { path: "/api/v2/app_keys", method: "GET" },
-    EndpointRequirement { path: "/api/v2/app_keys/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/app_keys/", method: "POST" },
-    EndpointRequirement { path: "/api/v2/app_keys/", method: "DELETE" },
+    EndpointRequirement {
+        path: "/api/v2/api_keys",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/api_keys/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/api_keys",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/api_keys/",
+        method: "DELETE",
+    },
+    EndpointRequirement {
+        path: "/api/v2/app_keys",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/app_keys/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/app_keys/",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/app_keys/",
+        method: "DELETE",
+    },
     // Events (1)
-    EndpointRequirement { path: "/api/v2/events/search", method: "POST" },
+    EndpointRequirement {
+        path: "/api/v2/events/search",
+        method: "POST",
+    },
     // Error Tracking (2)
-    EndpointRequirement { path: "/api/v2/error_tracking/issues/search", method: "POST" },
-    EndpointRequirement { path: "/api/v2/error_tracking/issues/", method: "GET" },
+    EndpointRequirement {
+        path: "/api/v2/error_tracking/issues/search",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/error_tracking/issues/",
+        method: "GET",
+    },
     // Fleet Automation (15)
-    EndpointRequirement { path: "/api/v2/fleet/agents", method: "GET" },
-    EndpointRequirement { path: "/api/v2/fleet/agents/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/fleet/agents/versions", method: "GET" },
-    EndpointRequirement { path: "/api/v2/fleet/deployments", method: "GET" },
-    EndpointRequirement { path: "/api/v2/fleet/deployments/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/fleet/deployments/configure", method: "POST" },
-    EndpointRequirement { path: "/api/v2/fleet/deployments/upgrade", method: "POST" },
-    EndpointRequirement { path: "/api/v2/fleet/deployments/", method: "POST" },
-    EndpointRequirement { path: "/api/v2/fleet/deployments/", method: "DELETE" },
-    EndpointRequirement { path: "/api/v2/fleet/schedules", method: "GET" },
-    EndpointRequirement { path: "/api/v2/fleet/schedules/", method: "GET" },
-    EndpointRequirement { path: "/api/v2/fleet/schedules", method: "POST" },
-    EndpointRequirement { path: "/api/v2/fleet/schedules/", method: "PATCH" },
-    EndpointRequirement { path: "/api/v2/fleet/schedules/", method: "DELETE" },
-    EndpointRequirement { path: "/api/v2/fleet/schedules/", method: "POST" },
+    EndpointRequirement {
+        path: "/api/v2/fleet/agents",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/agents/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/agents/versions",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/deployments",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/deployments/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/deployments/configure",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/deployments/upgrade",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/deployments/",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/deployments/",
+        method: "DELETE",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/schedules",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/schedules/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/schedules",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/schedules/",
+        method: "PATCH",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/schedules/",
+        method: "DELETE",
+    },
+    EndpointRequirement {
+        path: "/api/v2/fleet/schedules/",
+        method: "POST",
+    },
     // Notebooks (5)
-    EndpointRequirement { path: "/api/v1/notebooks", method: "GET" },
-    EndpointRequirement { path: "/api/v1/notebooks", method: "POST" },
-    EndpointRequirement { path: "/api/v1/notebooks/", method: "GET" },
-    EndpointRequirement { path: "/api/v1/notebooks/", method: "PUT" },
-    EndpointRequirement { path: "/api/v1/notebooks/", method: "DELETE" },
+    EndpointRequirement {
+        path: "/api/v1/notebooks",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v1/notebooks",
+        method: "POST",
+    },
+    EndpointRequirement {
+        path: "/api/v1/notebooks/",
+        method: "GET",
+    },
+    EndpointRequirement {
+        path: "/api/v1/notebooks/",
+        method: "PUT",
+    },
+    EndpointRequirement {
+        path: "/api/v1/notebooks/",
+        method: "DELETE",
+    },
 ];
