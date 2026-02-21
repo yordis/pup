@@ -10,10 +10,16 @@ RUST_BIN="$SCRIPT_DIR/../target/release/pup-rs"
 MOCK_PORT="${MOCK_PORT:-19880}"
 REPORT="$PROJECT_ROOT/pup-rs/tests/parity_report.html"
 
-export PUP_MOCK_SERVER="http://localhost:$MOCK_PORT"
-export DD_API_KEY="test-key"
-export DD_APP_KEY="test-app-key"
-export DD_SITE="datadoghq.com"
+# Base env vars for mock server auth (NOT exported to avoid contaminating agent detection)
+MOCK_URL="http://localhost:$MOCK_PORT"
+
+# All env vars that can trigger agent mode — must be cleared for human mode tests
+AGENT_ENV_VARS=(
+    FORCE_AGENT_MODE CLAUDECODE CLAUDE_CODE CURSOR_AGENT
+    CODEX OPENAI_CODEX OPENCODE AIDER CLINE
+    WINDSURF_AGENT GITHUB_COPILOT AMAZON_Q AWS_Q_DEVELOPER
+    GEMINI_CODE_ASSIST SRC_CODY
+)
 
 # Start mock server
 lsof -ti:$MOCK_PORT 2>/dev/null | xargs kill 2>/dev/null
@@ -23,7 +29,7 @@ MOCK_PID=$!
 trap "kill $MOCK_PID 2>/dev/null; wait $MOCK_PID 2>/dev/null" EXIT
 sleep 1
 
-if ! curl -s "http://localhost:$MOCK_PORT/api/v1/validate" > /dev/null 2>&1; then
+if ! curl -s "$MOCK_URL/api/v1/validate" > /dev/null 2>&1; then
     echo "FATAL: Mock server failed to start"
     exit 1
 fi
@@ -45,18 +51,18 @@ add() {
 add "monitors list" "monitors list"
 add "monitors get" "monitors get 12345"
 add "monitors search" "monitors search"
-add "monitors delete" "monitors delete 12345"
+add "monitors delete" "monitors delete -y 12345"
 # Dashboards
 add "dashboards list" "dashboards list"
 add "dashboards get" "dashboards get test-id-123"
-add "dashboards delete" "dashboards delete test-id-123"
+add "dashboards delete" "dashboards delete -y test-id-123"
 # Metrics
 add "metrics list" "metrics list"
 add "metrics search" "metrics search --query avg:system.cpu.user"
 # SLOs
 add "slos list" "slos list"
 add "slos get" "slos get test-id-123"
-add "slos delete" "slos delete test-id-123"
+add "slos delete" "slos delete -y test-id-123"
 # Synthetics
 add "synthetics tests list" "synthetics tests list"
 add "synthetics locations list" "synthetics locations list"
@@ -69,7 +75,7 @@ add "downtime get" "downtime get test-id-123"
 # Tags
 add "tags list" "tags list"
 add "tags get" "tags get test-host"
-add "tags delete" "tags delete test-host"
+add "tags delete" "tags delete -y test-host"
 # Users
 add "users list" "users list"
 add "users get" "users get test-id-123"
@@ -97,28 +103,28 @@ add "service-catalog get" "service-catalog get test-service"
 # API keys
 add "api-keys list" "api-keys list"
 add "api-keys get" "api-keys get test-id-123"
-add "api-keys delete" "api-keys delete test-id-123"
+add "api-keys delete" "api-keys delete -y test-id-123"
 # App keys
 add "app-keys list" "app-keys list"
 add "app-keys get" "app-keys get test-id-123"
 # Notebooks
 add "notebooks list" "notebooks list"
 add "notebooks get" "notebooks get 12345"
-add "notebooks delete" "notebooks delete 12345"
+add "notebooks delete" "notebooks delete -y 12345"
 # RUM
 add "rum apps list" "rum apps list"
 add "rum apps get" "rum apps get --app-id test-id-123" "rum apps get test-id-123"
-add "rum apps delete" "rum apps delete --app-id test-id-123" "rum apps delete test-id-123"
+add "rum apps delete" "rum apps delete -y --app-id test-id-123" "rum apps delete -y test-id-123"
 add "rum metrics list" "rum metrics list"
 add "rum metrics get" "rum metrics get --metric-id test-id-123" "rum metrics get test-id-123"
-add "rum metrics delete" "rum metrics delete --metric-id test-id-123" "rum metrics delete test-id-123"
+add "rum metrics delete" "rum metrics delete -y --metric-id test-id-123" "rum metrics delete -y test-id-123"
 add "rum playlists list" "rum playlists list"
 # CI/CD
 add "cicd pipelines get" "cicd pipelines get --pipeline-id test-id-123" "cicd pipelines get test-id-123"
 # On-call
 add "on-call teams list" "on-call teams list"
 add "on-call teams get" "on-call teams get test-id-123"
-add "on-call teams delete" "on-call teams delete test-id-123"
+add "on-call teams delete" "on-call teams delete -y test-id-123"
 # Fleet
 add "fleet agents list" "fleet agents list"
 add "fleet agents get" "fleet agents get test-id-123"
@@ -127,7 +133,7 @@ add "fleet deployments list" "fleet deployments list"
 add "fleet deployments get" "fleet deployments get test-id-123"
 add "fleet schedules list" "fleet schedules list"
 add "fleet schedules get" "fleet schedules get test-id-123"
-add "fleet schedules delete" "fleet schedules delete test-id-123"
+add "fleet schedules delete" "fleet schedules delete -y test-id-123"
 # Data governance
 add "data-governance scanner-rules list" "data-governance scanner-rules list"
 # Error tracking
@@ -154,9 +160,33 @@ add "investigations get" "investigations get test-id-123"
 declare -a MODES=("human" "agent")
 
 # ============================================================================
+# Helper: build clean env for running a CLI command
+# Clears ALL agent-detection env vars, then sets only what's needed.
+# ============================================================================
+run_clean() {
+    local bin="$1" mode="$2"
+    shift 2
+    # Build env: start with base vars, clear all agent env vars
+    local -a env_args=(
+        "PATH=$PATH"
+        "HOME=$HOME"
+        "PUP_MOCK_SERVER=$MOCK_URL"
+        "DD_API_KEY=test-key"
+        "DD_APP_KEY=test-app-key"
+        "DD_SITE=datadoghq.com"
+    )
+    if [ "$mode" = "agent" ]; then
+        env_args+=("FORCE_AGENT_MODE=1")
+    fi
+    # env -i gives a clean slate, then we add only what's needed
+    env -i "${env_args[@]}" "$bin" "$@" 2>&1
+}
+
+# ============================================================================
 # Collect results
 # ============================================================================
-declare -a RESULTS=()  # "label|mode|go_rc|rust_rc|status|safe|go_full_cmd|rust_full_cmd"
+# Fields: label|mode|go_rc|rust_rc|status|safe|go_full_cmd|rust_full_cmd|env_display
+declare -a RESULTS=()
 
 total=0
 exact=0
@@ -171,20 +201,20 @@ mkdir -p "$OUTDIR"
 
 echo "Running comparison tests..."
 
+num_tests=$(( ${#TEST_CASES[@]} * ${#MODES[@]} ))
+
 for entry in "${TEST_CASES[@]}"; do
     IFS='|' read -r label go_cmd rust_cmd <<< "$entry"
     for mode in "${MODES[@]}"; do
         total=$((total + 1))
         safe="$(echo "${label}_${mode}" | tr ' /' '__')"
 
-        agent_flag=""
-        if [ "$mode" = "agent" ]; then
-            agent_flag="--agent"
-        fi
-
-        go_out=$("$GO_BIN" $agent_flag -o json $go_cmd 2>&1)
+        # Build the actual commands (no --agent flag; mode via env var)
+        # shellcheck disable=SC2086
+        go_out=$(run_clean "$GO_BIN" "$mode" -o json $go_cmd)
         go_rc=$?
-        rust_out=$("$RUST_BIN" $agent_flag -o json $rust_cmd 2>&1)
+        # shellcheck disable=SC2086
+        rust_out=$(run_clean "$RUST_BIN" "$mode" -o json $rust_cmd)
         rust_rc=$?
 
         echo "$go_out" > "$OUTDIR/go_${safe}.txt"
@@ -207,10 +237,17 @@ for entry in "${TEST_CASES[@]}"; do
             status="diff"
         fi
 
-        go_full="pup ${agent_flag} -o json ${go_cmd}"
-        rust_full="pup-rs ${agent_flag} -o json ${rust_cmd}"
-        RESULTS+=("${label}|${mode}|${go_rc}|${rust_rc}|${status}|${safe}|${go_full}|${rust_full}")
-        printf "\r  %d/%d tests completed" "$total" "${#TEST_CASES[@]}"
+        go_full="pup -o json ${go_cmd}"
+        rust_full="pup-rs -o json ${rust_cmd}"
+
+        # Build env display string for this test
+        env_display="PUP_MOCK_SERVER=${MOCK_URL}|DD_API_KEY=test-key|DD_APP_KEY=test-app-key|DD_SITE=datadoghq.com"
+        if [ "$mode" = "agent" ]; then
+            env_display="${env_display}|FORCE_AGENT_MODE=1"
+        fi
+
+        RESULTS+=("${label}|${mode}|${go_rc}|${rust_rc}|${status}|${safe}|${go_full}|${rust_full}|${env_display}")
+        printf "\r  %d/%d tests completed" "$total" "$num_tests"
     done
 done
 
@@ -266,9 +303,11 @@ tr.go-fail-row { background: #d2992210; }
 tr.rust-fail-row { background: #b6232410; }
 .cmd { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; white-space: nowrap; }
 .cmd-box { background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 6px 10px; margin: 4px 0 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #79c0ff; overflow-x: auto; white-space: nowrap; }
-.env-vars { background: #1c1c2e; border: 1px solid #30363d; border-radius: 4px; padding: 6px 10px; margin-bottom: 12px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: #8b949e; overflow-x: auto; white-space: nowrap; }
-.env-vars code { color: #d2a8ff; }
-.env-label { background: #30363d; color: #8b949e; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; margin-right: 6px; }
+.env-table { border-collapse: collapse; margin-bottom: 12px; width: auto; }
+.env-table td { padding: 3px 10px 3px 0; border: none; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+.env-table .env-key { color: #d2a8ff; white-space: nowrap; }
+.env-table .env-val { color: #79c0ff; }
+.env-table .env-eq { color: #484f58; padding: 0 2px; }
 .output-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin: 4px 0; max-height: 300px; overflow: auto; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
 .output-box.go { border-left: 3px solid #3fb950; }
 .output-box.rust { border-left: 3px solid #1f6feb; }
@@ -311,7 +350,7 @@ EOF
 # Issues section at the top
 has_issues=false
 for r in "${RESULTS[@]}"; do
-    IFS='|' read -r label mode go_rc rust_rc status safe <<< "$r"
+    IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
     if [ "$status" != "match" ]; then
         has_issues=true
         break
@@ -324,7 +363,7 @@ if [ "$has_issues" = true ]; then
         echo '<div class="alert">' >> "$REPORT"
         echo '<h3>Output Differences (inspect these)</h3><ul>' >> "$REPORT"
         for r in "${RESULTS[@]}"; do
-            IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full <<< "$r"
+            IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
             if [ "$status" = "diff" ]; then
                 echo "<li><strong>${label}</strong> (${mode} mode)</li>" >> "$REPORT"
             fi
@@ -337,7 +376,7 @@ if [ "$has_issues" = true ]; then
         echo '<div class="alert warning">' >> "$REPORT"
         echo '<h3>Go-Only Failures (Rust works, Go crashes)</h3><ul>' >> "$REPORT"
         for r in "${RESULTS[@]}"; do
-            IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full <<< "$r"
+            IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
             if [ "$status" = "go_fail" ]; then
                 go_err=$(head -1 "$OUTDIR/go_${safe}.txt" 2>/dev/null)
                 echo "<li><strong>${label}</strong> (${mode}) — <code>${go_err}</code></li>" >> "$REPORT"
@@ -362,10 +401,8 @@ FILTERBAR
 # Detail rows
 echo '<h2>Detailed Results</h2>' >> "$REPORT"
 
-ENV_DISPLAY="PUP_MOCK_SERVER=http://localhost:${MOCK_PORT} DD_API_KEY=test-key DD_APP_KEY=test-app-key DD_SITE=datadoghq.com"
-
 for r in "${RESULTS[@]}"; do
-    IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full <<< "$r"
+    IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
 
     go_out=$(cat "$OUTDIR/go_${safe}.txt" 2>/dev/null)
     rust_out=$(cat "$OUTDIR/rs_${safe}.txt" 2>/dev/null)
@@ -398,6 +435,19 @@ for r in "${RESULTS[@]}"; do
     [ "$go_rc" -ne 0 ] && go_box_class="error"
     [ "$rust_rc" -ne 0 ] && rust_box_class="error"
 
+    # Build env table HTML from pipe-delimited env_display
+    env_table_rows=""
+    # env_display uses | as delimiter between KEY=VAL pairs
+    # We already used | as the top-level delimiter so env_display captures everything after field 8
+    # Re-split on the known env var names
+    env_table_rows="<tr><td class=\"env-key\">PUP_MOCK_SERVER</td><td class=\"env-eq\">=</td><td class=\"env-val\">${MOCK_URL}</td></tr>"
+    env_table_rows="${env_table_rows}<tr><td class=\"env-key\">DD_API_KEY</td><td class=\"env-eq\">=</td><td class=\"env-val\">test-key</td></tr>"
+    env_table_rows="${env_table_rows}<tr><td class=\"env-key\">DD_APP_KEY</td><td class=\"env-eq\">=</td><td class=\"env-val\">test-app-key</td></tr>"
+    env_table_rows="${env_table_rows}<tr><td class=\"env-key\">DD_SITE</td><td class=\"env-eq\">=</td><td class=\"env-val\">datadoghq.com</td></tr>"
+    if [ "$mode" = "agent" ]; then
+        env_table_rows="${env_table_rows}<tr><td class=\"env-key\">FORCE_AGENT_MODE</td><td class=\"env-eq\">=</td><td class=\"env-val\">1</td></tr>"
+    fi
+
     cat >> "$REPORT" << EOF
 <details data-status="${status}" class="${row_class}">
   <summary>
@@ -406,7 +456,7 @@ for r in "${RESULTS[@]}"; do
     <strong>${label}</strong>
   </summary>
   <div class="detail-content">
-    <div class="env-vars"><span class="env-label">ENV</span> <code>${ENV_DISPLAY}</code></div>
+    <table class="env-table">${env_table_rows}</table>
     <div class="side-by-side">
       <div>
         <div class="col-header">Go (exit ${go_rc})</div>

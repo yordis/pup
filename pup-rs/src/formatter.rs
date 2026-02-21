@@ -92,34 +92,21 @@ pub fn output<T: Serialize>(cfg: &crate::config::Config, data: &T) -> Result<()>
 
 pub fn print_json<T: Serialize>(data: &T) -> Result<()> {
     let sorted_data = sort_json_value(serde_json::to_value(data)?);
-    let envelope = SuccessEnvelope {
-        status: "success",
-        data: &sorted_data,
-    };
-    let json = go_html_escape(&serde_json::to_string_pretty(&envelope)?);
+    let json = go_html_escape(&serde_json::to_string_pretty(&sorted_data)?);
     println!("{json}");
     Ok(())
 }
 
 fn print_yaml<T: Serialize>(data: &T) -> Result<()> {
     let sorted_data = sort_json_value(serde_json::to_value(data)?);
-    let envelope = SuccessEnvelope {
-        status: "success",
-        data: &sorted_data,
-    };
-    let yaml = serde_yaml::to_string(&envelope)?;
+    let yaml = serde_yaml::to_string(&sorted_data)?;
     print!("{yaml}");
     Ok(())
 }
 
 fn print_table<T: Serialize>(data: &T) -> Result<()> {
-    // Wrap in success envelope first (matches Go behavior)
-    let sorted_data = sort_json_value(serde_json::to_value(data)?);
-    let envelope = SuccessEnvelope {
-        status: "success",
-        data: &sorted_data,
-    };
-    let value = serde_json::to_value(&envelope)?;
+    // Convert to serde_json::Value to inspect structure
+    let value = serde_json::to_value(data)?;
     let rows = extract_rows(&value);
 
     if rows.is_empty() {
