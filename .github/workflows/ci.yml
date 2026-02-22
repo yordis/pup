@@ -91,7 +91,7 @@ jobs:
         run: |
           for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
             echo "::group::Building ${target}"
-            cargo zigbuild --release --target "${target}"
+            cargo zigbuild --release --target "${target}" --features vendored-openssl
             echo "::endgroup::"
           done
       - name: Report sizes

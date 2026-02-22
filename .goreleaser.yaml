@@ -26,6 +26,9 @@ builds:
       - aarch64-unknown-linux-gnu
       - x86_64-apple-darwin
       - aarch64-apple-darwin
+    flags:
+      - --release
+      - --features=vendored-openssl
 
 archives:
   - format: tar.gz
