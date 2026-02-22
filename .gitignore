@@ -26,6 +26,7 @@ zig-*/
 
 # wasm-pack output
 pkg/
+wasm-out/
 
 # Test artifacts
 tests/mockdd/mockdd
