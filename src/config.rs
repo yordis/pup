@@ -122,8 +122,15 @@ impl Config {
 }
 
 /// Config file path: ~/.config/pup/config.yaml
+#[cfg(not(target_arch = "wasm32"))]
 pub fn config_dir() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("pup"))
+}
+
+/// WASM: use PUP_CONFIG_DIR env var or return None
+#[cfg(target_arch = "wasm32")]
+pub fn config_dir() -> Option<PathBuf> {
+    std::env::var("PUP_CONFIG_DIR").ok().map(PathBuf::from)
 }
 
 fn load_config_file() -> Option<FileConfig> {
@@ -169,7 +176,10 @@ mod tests {
     fn test_output_format_parse() {
         assert_eq!("json".parse::<OutputFormat>().unwrap(), OutputFormat::Json);
         assert_eq!("JSON".parse::<OutputFormat>().unwrap(), OutputFormat::Json);
-        assert_eq!("table".parse::<OutputFormat>().unwrap(), OutputFormat::Table);
+        assert_eq!(
+            "table".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Table
+        );
         assert_eq!("yaml".parse::<OutputFormat>().unwrap(), OutputFormat::Yaml);
         assert!("xml".parse::<OutputFormat>().is_err());
     }

@@ -1,8 +1,13 @@
+#[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
+#[cfg(not(target_arch = "wasm32"))]
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+#[cfg(not(target_arch = "wasm32"))]
 use rand::RngCore;
+#[cfg(not(target_arch = "wasm32"))]
 use sha2::{Digest, Sha256};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct PkceChallenge {
     pub verifier: String,
     pub challenge: String,
@@ -10,6 +15,7 @@ pub struct PkceChallenge {
 }
 
 /// Generate a PKCE S256 challenge (RFC 7636).
+#[cfg(not(target_arch = "wasm32"))]
 pub fn generate_pkce_challenge() -> Result<PkceChallenge> {
     let verifier = generate_random_string(128)?;
     let challenge = {
@@ -24,14 +30,16 @@ pub fn generate_pkce_challenge() -> Result<PkceChallenge> {
 }
 
 /// Generate a random state parameter for CSRF protection.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn generate_state() -> Result<String> {
     generate_random_string(32)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn generate_random_string(length: usize) -> Result<String> {
     let byte_len = (length * 3) / 4 + 1;
     let mut bytes = vec![0u8; byte_len];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     let encoded = URL_SAFE_NO_PAD.encode(&bytes);
     Ok(encoded[..length].to_string())
 }

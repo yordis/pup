@@ -1,9 +1,15 @@
-use anyhow::{bail, Result};
+#[cfg(not(target_arch = "wasm32"))]
+use anyhow::bail;
+use anyhow::Result;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::oneshot;
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::dcr::DCR_REDIRECT_PORTS;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct CallbackResult {
     pub code: String,
     pub state: String,
@@ -11,11 +17,13 @@ pub struct CallbackResult {
     pub error_description: Option<String>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct CallbackServer {
     port: u16,
     shutdown_tx: Option<oneshot::Sender<()>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CallbackServer {
     /// Find an available port from DCR_REDIRECT_PORTS and prepare the server.
     pub async fn new() -> Result<Self> {
@@ -79,12 +87,14 @@ impl CallbackServer {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Drop for CallbackServer {
     fn drop(&mut self) {
         self.stop();
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 async fn accept_loop(
     listener: tokio::net::TcpListener,
     result_tx: std::sync::Mutex<Option<oneshot::Sender<CallbackResult>>>,
@@ -145,6 +155,7 @@ async fn accept_loop(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn success_page() -> String {
     r#"<!DOCTYPE html>
 <html><head><title>Pup - Authentication Successful</title>
@@ -155,6 +166,7 @@ h1{color:#632ca6}p{color:#555}</style></head>
 <p>You can close this window and return to pup.</p></div></body></html>"#.to_string()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn error_page(error: &Option<String>, desc: &Option<String>) -> String {
     let err = error.as_deref().unwrap_or("unknown_error");
     let desc = desc.as_deref().unwrap_or("An unknown error occurred.");

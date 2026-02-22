@@ -1,13 +1,19 @@
 use anyhow::{bail, Result};
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_rum::{ListRUMEventsOptionalParams, RUMAPI};
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_rum_metrics::RumMetricsAPI;
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_rum_replay_heatmaps::{
     ListReplayHeatmapSnapshotsOptionalParams, RumReplayHeatmapsAPI,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_rum_replay_playlists::{
     ListRumReplayPlaylistsOptionalParams, RumReplayPlaylistsAPI,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_rum_retention_filters::RumRetentionFiltersAPI;
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     RUMApplicationCreate, RUMApplicationCreateAttributes, RUMApplicationCreateRequest,
     RUMApplicationCreateType, RUMApplicationUpdateRequest, RUMQueryFilter, RUMSearchEventsRequest,
@@ -15,11 +21,14 @@ use datadog_api_client::datadogV2::model::{
     RumRetentionFilterUpdateRequest,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::util;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn apps_list(cfg: &Config) -> Result<()> {
     // RUM apps is OAuth-excluded — require API keys
     if !cfg.has_api_keys() {
@@ -34,6 +43,13 @@ pub async fn apps_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn apps_list(cfg: &Config) -> Result<()> {
+    let data = crate::api::get(cfg, "/api/v2/rum/applications", &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn apps_get(cfg: &Config, app_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM apps requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -47,6 +63,14 @@ pub async fn apps_get(cfg: &Config, app_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn apps_get(cfg: &Config, app_id: &str) -> Result<()> {
+    let path = format!("/api/v2/rum/applications/{app_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn apps_create(cfg: &Config, name: &str, app_type: Option<String>) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM apps requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -66,6 +90,23 @@ pub async fn apps_create(cfg: &Config, name: &str, app_type: Option<String>) -> 
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn apps_create(cfg: &Config, name: &str, app_type: Option<String>) -> Result<()> {
+    let mut attrs = serde_json::json!({ "name": name });
+    if let Some(t) = app_type {
+        attrs["type"] = serde_json::Value::String(t);
+    }
+    let body = serde_json::json!({
+        "data": {
+            "attributes": attrs,
+            "type": "rum_application_create"
+        }
+    });
+    let data = crate::api::post(cfg, "/api/v2/rum/applications", &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn apps_delete(cfg: &Config, app_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM apps requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -79,6 +120,15 @@ pub async fn apps_delete(cfg: &Config, app_id: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn apps_delete(cfg: &Config, app_id: &str) -> Result<()> {
+    let path = format!("/api/v2/rum/applications/{app_id}");
+    crate::api::delete(cfg, &path).await?;
+    println!("Successfully deleted RUM application {app_id}");
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn events_list(cfg: &Config, from: String, to: String, limit: i32) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -103,6 +153,26 @@ pub async fn events_list(cfg: &Config, from: String, to: String, limit: i32) -> 
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn events_list(cfg: &Config, from: String, to: String, limit: i32) -> Result<()> {
+    let from_ms = crate::util::parse_time_to_unix_millis(&from)?;
+    let to_ms = crate::util::parse_time_to_unix_millis(&to)?;
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
+    let query = vec![
+        ("filter[from]", from_str),
+        ("filter[to]", to_str),
+        ("page[limit]", limit.to_string()),
+    ];
+    let data = crate::api::get(cfg, "/api/v2/rum/events", &query).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn sessions_search(
     cfg: &Config,
     query: Option<String>,
@@ -139,6 +209,35 @@ pub async fn sessions_search(
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn sessions_search(
+    cfg: &Config,
+    query: Option<String>,
+    from: String,
+    to: String,
+    _limit: i32,
+) -> Result<()> {
+    let from_ms = crate::util::parse_time_to_unix_millis(&from)?;
+    let to_ms = crate::util::parse_time_to_unix_millis(&to)?;
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
+    let mut filter = serde_json::json!({ "from": from_str, "to": to_str });
+    if let Some(q) = query {
+        filter["query"] = serde_json::Value::String(q);
+    }
+    let body = serde_json::json!({
+        "filter": filter,
+        "sort": "-timestamp"
+    });
+    let data = crate::api::post(cfg, "/api/v2/rum/events/search", &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn apps_update(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM apps requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -153,8 +252,17 @@ pub async fn apps_update(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn apps_update(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
+    let body: serde_json::Value = crate::util::read_json_file(file)?;
+    let path = format!("/api/v2/rum/applications/{app_id}");
+    let data = crate::api::patch(cfg, &path, &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
 // ---- RUM Metrics ----
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_list(cfg: &Config) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -168,6 +276,13 @@ pub async fn metrics_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_list(cfg: &Config) -> Result<()> {
+    let data = crate::api::get(cfg, "/api/v2/rum/metrics", &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -181,6 +296,14 @@ pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
+    let path = format!("/api/v2/rum/metrics/{metric_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_create(cfg: &Config, file: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -195,6 +318,14 @@ pub async fn metrics_create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_create(cfg: &Config, file: &str) -> Result<()> {
+    let body: serde_json::Value = crate::util::read_json_file(file)?;
+    let data = crate::api::post(cfg, "/api/v2/rum/metrics", &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_update(cfg: &Config, metric_id: &str, file: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -209,6 +340,15 @@ pub async fn metrics_update(cfg: &Config, metric_id: &str, file: &str) -> Result
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_update(cfg: &Config, metric_id: &str, file: &str) -> Result<()> {
+    let body: serde_json::Value = crate::util::read_json_file(file)?;
+    let path = format!("/api/v2/rum/metrics/{metric_id}");
+    let data = crate::api::patch(cfg, &path, &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM metrics requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -222,8 +362,17 @@ pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
+    let path = format!("/api/v2/rum/metrics/{metric_id}");
+    crate::api::delete(cfg, &path).await?;
+    println!("RUM metric {metric_id} deleted.");
+    Ok(())
+}
+
 // ---- RUM Retention Filters ----
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn retention_filters_list(cfg: &Config, app_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -237,6 +386,14 @@ pub async fn retention_filters_list(cfg: &Config, app_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn retention_filters_list(cfg: &Config, app_id: &str) -> Result<()> {
+    let path = format!("/api/v2/rum/applications/{app_id}/retention_filters");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn retention_filters_get(cfg: &Config, app_id: &str, filter_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -250,6 +407,14 @@ pub async fn retention_filters_get(cfg: &Config, app_id: &str, filter_id: &str) 
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn retention_filters_get(cfg: &Config, app_id: &str, filter_id: &str) -> Result<()> {
+    let path = format!("/api/v2/rum/applications/{app_id}/retention_filters/{filter_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn retention_filters_create(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -264,6 +429,15 @@ pub async fn retention_filters_create(cfg: &Config, app_id: &str, file: &str) ->
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn retention_filters_create(cfg: &Config, app_id: &str, file: &str) -> Result<()> {
+    let body: serde_json::Value = crate::util::read_json_file(file)?;
+    let path = format!("/api/v2/rum/applications/{app_id}/retention_filters");
+    let data = crate::api::post(cfg, &path, &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn retention_filters_update(
     cfg: &Config,
     app_id: &str,
@@ -283,6 +457,20 @@ pub async fn retention_filters_update(
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn retention_filters_update(
+    cfg: &Config,
+    app_id: &str,
+    filter_id: &str,
+    file: &str,
+) -> Result<()> {
+    let body: serde_json::Value = crate::util::read_json_file(file)?;
+    let path = format!("/api/v2/rum/applications/{app_id}/retention_filters/{filter_id}");
+    let data = crate::api::patch(cfg, &path, &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn retention_filters_delete(cfg: &Config, app_id: &str, filter_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM retention filters requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -296,14 +484,18 @@ pub async fn retention_filters_delete(cfg: &Config, app_id: &str, filter_id: &st
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn retention_filters_delete(cfg: &Config, app_id: &str, filter_id: &str) -> Result<()> {
+    let path = format!("/api/v2/rum/applications/{app_id}/retention_filters/{filter_id}");
+    crate::api::delete(cfg, &path).await?;
+    println!("RUM retention filter {filter_id} deleted.");
+    Ok(())
+}
+
 // ---- RUM Sessions ----
 
-pub async fn sessions_list(
-    cfg: &Config,
-    from: String,
-    to: String,
-    limit: i32,
-) -> Result<()> {
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sessions_list(cfg: &Config, from: String, to: String, limit: i32) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
         Some(c) => RUMAPI::with_client_and_config(dd_cfg, c),
@@ -334,8 +526,34 @@ pub async fn sessions_list(
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn sessions_list(cfg: &Config, from: String, to: String, limit: i32) -> Result<()> {
+    let from_ms = crate::util::parse_time_to_unix_millis(&from)?;
+    let to_ms = crate::util::parse_time_to_unix_millis(&to)?;
+    let from_str = chrono::DateTime::from_timestamp_millis(from_ms)
+        .unwrap()
+        .to_rfc3339();
+    let to_str = chrono::DateTime::from_timestamp_millis(to_ms)
+        .unwrap()
+        .to_rfc3339();
+    let body = serde_json::json!({
+        "filter": {
+            "from": from_str,
+            "to": to_str,
+            "query": "@type:session"
+        },
+        "sort": "-timestamp",
+        "page": {
+            "limit": limit
+        }
+    });
+    let data = crate::api::post(cfg, "/api/v2/rum/events/search", &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
 // ---- RUM Playlists ----
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn playlists_list(cfg: &Config) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM playlists requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -349,6 +567,13 @@ pub async fn playlists_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn playlists_list(cfg: &Config) -> Result<()> {
+    let data = crate::api::get(cfg, "/api/v2/rum/replay/playlists", &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn playlists_get(cfg: &Config, playlist_id: i32) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM playlists requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -362,8 +587,16 @@ pub async fn playlists_get(cfg: &Config, playlist_id: i32) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn playlists_get(cfg: &Config, playlist_id: i32) -> Result<()> {
+    let path = format!("/api/v2/rum/replay/playlists/{playlist_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
 // ---- RUM Heatmaps ----
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn heatmaps_query(cfg: &Config, view_name: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!("RUM heatmaps requires API key authentication (DD_API_KEY + DD_APP_KEY)");
@@ -378,4 +611,11 @@ pub async fn heatmaps_query(cfg: &Config, view_name: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to query RUM heatmaps: {e:?}"))?;
     formatter::output(cfg, &resp)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn heatmaps_query(cfg: &Config, view_name: &str) -> Result<()> {
+    let query = vec![("view_name", view_name.to_string())];
+    let data = crate::api::get(cfg, "/api/v2/rum/replay/heatmap/snapshots", &query).await?;
+    crate::formatter::output(cfg, &data)
 }

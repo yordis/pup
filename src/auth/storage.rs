@@ -139,13 +139,16 @@ impl Storage for FileStorage {
 }
 
 // ---------------------------------------------------------------------------
-// Keychain storage (via keyring crate)
+// Keychain storage (via keyring crate) — native only
 // ---------------------------------------------------------------------------
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct KeychainStorage;
 
+#[cfg(not(target_arch = "wasm32"))]
 const SERVICE_NAME: &str = "pup";
 
+#[cfg(not(target_arch = "wasm32"))]
 impl KeychainStorage {
     pub fn new() -> Result<Self> {
         // Test keychain availability by attempting an operation
@@ -158,6 +161,7 @@ impl KeychainStorage {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Storage for KeychainStorage {
     fn backend_type(&self) -> BackendType {
         BackendType::Keychain
@@ -223,6 +227,48 @@ impl Storage for KeychainStorage {
 }
 
 // ---------------------------------------------------------------------------
+// In-memory storage (WASM) — no persistent storage available
+// ---------------------------------------------------------------------------
+
+#[cfg(target_arch = "wasm32")]
+pub struct InMemoryStorage;
+
+#[cfg(target_arch = "wasm32")]
+impl Storage for InMemoryStorage {
+    fn backend_type(&self) -> BackendType {
+        BackendType::File
+    }
+
+    fn storage_location(&self) -> String {
+        "in-memory (WASM)".to_string()
+    }
+
+    fn save_tokens(&self, _site: &str, _tokens: &TokenSet) -> Result<()> {
+        anyhow::bail!("token storage not available in WASM — use DD_ACCESS_TOKEN env var")
+    }
+
+    fn load_tokens(&self, _site: &str) -> Result<Option<TokenSet>> {
+        Ok(None)
+    }
+
+    fn delete_tokens(&self, _site: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn save_client_credentials(&self, _site: &str, _creds: &ClientCredentials) -> Result<()> {
+        anyhow::bail!("client credential storage not available in WASM")
+    }
+
+    fn load_client_credentials(&self, _site: &str) -> Result<Option<ClientCredentials>> {
+        Ok(None)
+    }
+
+    fn delete_client_credentials(&self, _site: &str) -> Result<()> {
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Factory — auto-detect backend, with fallback
 // ---------------------------------------------------------------------------
 
@@ -240,6 +286,7 @@ pub fn get_storage() -> Result<&'static Mutex<Option<Box<dyn Storage>>>> {
     Ok(&STORAGE)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn detect_backend() -> Box<dyn Storage> {
     // Check DD_TOKEN_STORAGE env var
     if let Ok(val) = std::env::var("DD_TOKEN_STORAGE") {
@@ -258,6 +305,11 @@ fn detect_backend() -> Box<dyn Storage> {
             Box::new(FileStorage::new().expect("failed to create file storage"))
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn detect_backend() -> Box<dyn Storage> {
+    Box::new(InMemoryStorage)
 }
 
 // ---------------------------------------------------------------------------

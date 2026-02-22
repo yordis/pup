@@ -1,18 +1,25 @@
 use anyhow::{bail, Result};
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_logs::{ListLogsOptionalParams, LogsAPI};
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_logs_archives::LogsArchivesAPI;
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_logs_custom_destinations::LogsCustomDestinationsAPI;
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_logs_metrics::LogsMetricsAPI;
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     LogsAggregateRequest, LogsAggregationFunction, LogsCompute, LogsListRequest,
     LogsListRequestPage, LogsQueryFilter, LogsSort,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 use crate::util;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn search(
     cfg: &Config,
     query: String,
@@ -56,14 +63,31 @@ pub async fn search(
     Ok(())
 }
 
-/// Alias for `search` with the same interface.
-pub async fn list(
+#[cfg(target_arch = "wasm32")]
+pub async fn search(
     cfg: &Config,
     query: String,
     from: String,
     to: String,
     limit: i32,
 ) -> Result<()> {
+    let from_ms = util::parse_time_to_unix_millis(&from)?;
+    let to_ms = util::parse_time_to_unix_millis(&to)?;
+    let body = serde_json::json!({
+        "filter": {
+            "query": query,
+            "from": from_ms.to_string(),
+            "to": to_ms.to_string()
+        },
+        "page": { "limit": limit },
+        "sort": "-timestamp"
+    });
+    let data = crate::api::post(cfg, "/api/v2/logs/events/search", &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+/// Alias for `search` with the same interface.
+pub async fn list(cfg: &Config, query: String, from: String, to: String, limit: i32) -> Result<()> {
     search(cfg, query, from, to, limit).await
 }
 
@@ -78,12 +102,8 @@ pub async fn query(
     search(cfg, query, from, to, limit).await
 }
 
-pub async fn aggregate(
-    cfg: &Config,
-    query: String,
-    from: String,
-    to: String,
-) -> Result<()> {
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn aggregate(cfg: &Config, query: String, from: String, to: String) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
             "logs aggregate requires API key authentication (DD_API_KEY + DD_APP_KEY).\n\
@@ -115,6 +135,23 @@ pub async fn aggregate(
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn aggregate(cfg: &Config, query: String, from: String, to: String) -> Result<()> {
+    let from_ms = util::parse_time_to_unix_millis(&from)?;
+    let to_ms = util::parse_time_to_unix_millis(&to)?;
+    let body = serde_json::json!({
+        "filter": {
+            "query": query,
+            "from": from_ms.to_string(),
+            "to": to_ms.to_string()
+        },
+        "compute": [{ "type": "count" }]
+    });
+    let data = crate::api::post(cfg, "/api/v2/logs/analytics/aggregate", &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn archives_list(cfg: &Config) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -135,6 +172,13 @@ pub async fn archives_list(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn archives_list(cfg: &Config) -> Result<()> {
+    let data = crate::api::get(cfg, "/api/v2/logs/config/archives", &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn archives_get(cfg: &Config, archive_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -155,6 +199,14 @@ pub async fn archives_get(cfg: &Config, archive_id: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn archives_get(cfg: &Config, archive_id: &str) -> Result<()> {
+    let path = format!("/api/v2/logs/config/archives/{archive_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn archives_delete(cfg: &Config, archive_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -174,6 +226,15 @@ pub async fn archives_delete(cfg: &Config, archive_id: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn archives_delete(cfg: &Config, archive_id: &str) -> Result<()> {
+    let path = format!("/api/v2/logs/config/archives/{archive_id}");
+    crate::api::delete(cfg, &path).await?;
+    println!("Log archive {archive_id} deleted.");
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn custom_destinations_list(cfg: &Config) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -194,6 +255,13 @@ pub async fn custom_destinations_list(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn custom_destinations_list(cfg: &Config) -> Result<()> {
+    let data = crate::api::get(cfg, "/api/v2/logs/config/custom_destinations", &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn custom_destinations_get(cfg: &Config, destination_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -214,6 +282,14 @@ pub async fn custom_destinations_get(cfg: &Config, destination_id: &str) -> Resu
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn custom_destinations_get(cfg: &Config, destination_id: &str) -> Result<()> {
+    let path = format!("/api/v2/logs/config/custom_destinations/{destination_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_list(cfg: &Config) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -234,6 +310,13 @@ pub async fn metrics_list(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_list(cfg: &Config) -> Result<()> {
+    let data = crate::api::get(cfg, "/api/v2/logs/config/metrics", &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -254,6 +337,14 @@ pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_get(cfg: &Config, metric_id: &str) -> Result<()> {
+    let path = format!("/api/v2/logs/config/metrics/{metric_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
     if !cfg.has_api_keys() {
         bail!(
@@ -273,10 +364,19 @@ pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
+    let path = format!("/api/v2/logs/config/metrics/{metric_id}");
+    crate::api::delete(cfg, &path).await?;
+    println!("Log-based metric {metric_id} deleted.");
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // Restriction Queries (raw HTTP - not available in typed client)
 // ---------------------------------------------------------------------------
 
+#[cfg(not(target_arch = "wasm32"))]
 async fn raw_get(cfg: &Config, path: &str) -> Result<serde_json::Value> {
     let url = format!("{}{}", cfg.api_base_url(), path);
     let client = reqwest::Client::new();
@@ -301,13 +401,28 @@ async fn raw_get(cfg: &Config, path: &str) -> Result<serde_json::Value> {
     Ok(resp.json().await?)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn restriction_queries_list(cfg: &Config) -> Result<()> {
     let data = raw_get(cfg, "/api/v2/logs/config/restriction_queries").await?;
     formatter::output(cfg, &data)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn restriction_queries_list(cfg: &Config) -> Result<()> {
+    let data = crate::api::get(cfg, "/api/v2/logs/config/restriction_queries", &[]).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn restriction_queries_get(cfg: &Config, query_id: &str) -> Result<()> {
     let path = format!("/api/v2/logs/config/restriction_queries/{query_id}");
     let data = raw_get(cfg, &path).await?;
     formatter::output(cfg, &data)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn restriction_queries_get(cfg: &Config, query_id: &str) -> Result<()> {
+    let path = format!("/api/v2/logs/config/restriction_queries/{query_id}");
+    let data = crate::api::get(cfg, &path, &[]).await?;
+    crate::formatter::output(cfg, &data)
 }

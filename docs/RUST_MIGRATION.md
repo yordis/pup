@@ -405,11 +405,11 @@ Each command follows a mechanical translation:
 - [x] Output parity validation — run both versions against Datadog sandbox, diff outputs (155/155 API outputs match via mock server comparison)
 - [x] Error message parity — framework-level diffs documented (clap vs cobra format differences noted in [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md))
 - [x] Agent mode parity — JSON schema generation, agent envelope format (390/390 descriptions match)
-- [ ] Config file compatibility — reads existing `~/.config/pup/config.yaml`
-- [ ] Keychain migration — reads tokens stored by Go version
+- [x] Config file compatibility — reads existing `~/.config/pup/config.yaml`
+- [x] Keychain migration — reads tokens stored by Go version
 - [x] Performance benchmarks published — see [BENCHMARKS.md](BENCHMARKS.md) (31% smaller binary, 16% faster startup, 25% less memory)
 - [x] Migration guide for users — see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
-- [ ] Update all docs (README, CLAUDE.md, COMMANDS.md, etc.)
+- [x] Update all docs (README, CLAUDE.md, COMMANDS.md, etc.)
 - [ ] Archive Go version, publish Rust version as `pup`
 
 **Exit criteria:** Rust version passes all acceptance criteria. Go version archived. Users can `brew upgrade pup` seamlessly.

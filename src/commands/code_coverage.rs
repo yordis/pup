@@ -1,5 +1,7 @@
 use anyhow::Result;
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_code_coverage::CodeCoverageAPI;
+#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     BranchCoverageSummaryRequest, BranchCoverageSummaryRequestAttributes,
     BranchCoverageSummaryRequestData, BranchCoverageSummaryRequestType,
@@ -7,10 +9,12 @@ use datadog_api_client::datadogV2::model::{
     CommitCoverageSummaryRequestData, CommitCoverageSummaryRequestType,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn branch_summary(cfg: &Config, repo: String, branch: String) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -28,6 +32,22 @@ pub async fn branch_summary(cfg: &Config, repo: String, branch: String) -> Resul
     formatter::output(cfg, &resp)
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn branch_summary(cfg: &Config, repo: String, branch: String) -> Result<()> {
+    let body = serde_json::json!({
+        "data": {
+            "type": "ci_app_coverage_branch_summary_request",
+            "attributes": {
+                "branch": branch,
+                "repository_url": repo,
+            }
+        }
+    });
+    let data = crate::api::post(cfg, "/api/v2/ci/code-coverage/branch-summary", &body).await?;
+    crate::formatter::output(cfg, &data)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn commit_summary(cfg: &Config, repo: String, commit: String) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -43,4 +63,19 @@ pub async fn commit_summary(cfg: &Config, repo: String, commit: String) -> Resul
         .await
         .map_err(|e| anyhow::anyhow!("failed to get commit summary: {e:?}"))?;
     formatter::output(cfg, &resp)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn commit_summary(cfg: &Config, repo: String, commit: String) -> Result<()> {
+    let body = serde_json::json!({
+        "data": {
+            "type": "ci_app_coverage_commit_summary_request",
+            "attributes": {
+                "commit_sha": commit,
+                "repository_url": repo,
+            }
+        }
+    });
+    let data = crate::api::post(cfg, "/api/v2/ci/code-coverage/commit-summary", &body).await?;
+    crate::formatter::output(cfg, &data)
 }

@@ -1,12 +1,19 @@
+#[cfg(not(target_arch = "wasm32"))]
 use anyhow::{bail, Context, Result};
+#[cfg(not(target_arch = "wasm32"))]
 use chrono::Utc;
+#[cfg(not(target_arch = "wasm32"))]
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::types::{ClientCredentials, TokenSet};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub const DCR_CLIENT_NAME: &str = "datadog-api-claude-plugin";
+#[cfg(not(target_arch = "wasm32"))]
 pub const DCR_REDIRECT_PORTS: &[u16] = &[8000, 8080, 8888, 9000];
 
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 pub fn get_redirect_uris() -> Vec<String> {
     DCR_REDIRECT_PORTS
@@ -15,12 +22,14 @@ pub fn get_redirect_uris() -> Vec<String> {
         .collect()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// DCR + token exchange client.
 pub struct DcrClient {
     site: String,
     http: reqwest::Client,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize)]
 struct RegistrationRequest {
     client_name: String,
@@ -28,6 +37,7 @@ struct RegistrationRequest {
     grant_types: Vec<String>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Deserialize)]
 struct RegistrationResponse {
     client_id: String,
@@ -35,6 +45,7 @@ struct RegistrationResponse {
     redirect_uris: Vec<String>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Deserialize)]
 struct TokenResponse {
     access_token: String,
@@ -46,6 +57,7 @@ struct TokenResponse {
     scope: String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl DcrClient {
     pub fn new(site: &str) -> Self {
         Self {

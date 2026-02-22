@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 
-use crate::auth::{dcr, pkce, storage, types};
+use crate::auth::storage;
 use crate::config::Config;
 
 /// Helper to run a closure with the storage lock held (non-async to avoid holding lock across await).
@@ -14,7 +14,10 @@ where
     f(&mut **store)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn login(cfg: &Config) -> Result<()> {
+    use crate::auth::{dcr, pkce, types};
+
     let site = &cfg.site;
 
     // 1. Start callback server
@@ -92,6 +95,16 @@ pub async fn login(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn login(_cfg: &Config) -> Result<()> {
+    bail!(
+        "OAuth login is not available in WASM builds.\n\
+         Use DD_ACCESS_TOKEN env var for bearer token auth,\n\
+         or DD_API_KEY + DD_APP_KEY for API key auth."
+    )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn logout(cfg: &Config) -> Result<()> {
     let site = &cfg.site;
     with_storage(|store| {
@@ -103,10 +116,37 @@ pub async fn logout(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn logout(_cfg: &Config) -> Result<()> {
+    bail!(
+        "OAuth logout is not available in WASM builds.\n\
+         Token storage is not available — credentials are read from environment variables."
+    )
+}
+
 pub fn status(cfg: &Config) -> Result<()> {
     let site = &cfg.site;
+
+    println!("Site: {site}");
+
+    // In WASM, just report env var status
+    #[cfg(target_arch = "wasm32")]
+    {
+        println!("Runtime: WASM (no persistent storage)");
+        if cfg.has_bearer_token() {
+            println!("Bearer token: configured (DD_ACCESS_TOKEN)");
+        }
+        if cfg.has_api_keys() {
+            println!("API keys: configured");
+        }
+        if !cfg.has_bearer_token() && !cfg.has_api_keys() {
+            println!("Authenticated: no");
+        }
+        return Ok(());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     with_storage(|store| {
-        println!("Site: {site}");
         println!(
             "Storage: {} ({})",
             store.backend_type(),
@@ -148,17 +188,23 @@ pub fn token(cfg: &Config) -> Result<()> {
         return Ok(());
     }
 
-    let site = &cfg.site;
-    with_storage(|store| match store.load_tokens(site)? {
-        Some(tokens) => {
-            if tokens.is_expired() {
-                bail!("token is expired — run 'pup auth login' to refresh");
+    #[cfg(target_arch = "wasm32")]
+    bail!("no token available — set DD_ACCESS_TOKEN env var");
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let site = &cfg.site;
+        with_storage(|store| match store.load_tokens(site)? {
+            Some(tokens) => {
+                if tokens.is_expired() {
+                    bail!("token is expired — run 'pup auth login' to refresh");
+                }
+                println!("{}", tokens.access_token);
+                Ok(())
             }
-            println!("{}", tokens.access_token);
-            Ok(())
-        }
-        None => bail!("no token available — run 'pup auth login' or set DD_ACCESS_TOKEN"),
-    })
+            None => bail!("no token available — run 'pup auth login' or set DD_ACCESS_TOKEN"),
+        })
+    }
 }
 
 pub async fn refresh(_cfg: &Config) -> Result<()> {

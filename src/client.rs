@@ -1,17 +1,22 @@
+#[cfg(not(target_arch = "wasm32"))]
 use async_trait::async_trait;
+#[cfg(not(target_arch = "wasm32"))]
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, Middleware, Next};
+#[cfg(not(target_arch = "wasm32"))]
 use task_local_extensions::Extensions;
 
 use crate::config::Config;
 
 // ---------------------------------------------------------------------------
-// Bearer token middleware
+// Bearer token middleware (native only)
 // ---------------------------------------------------------------------------
 
+#[cfg(not(target_arch = "wasm32"))]
 struct BearerAuthMiddleware {
     token: String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 impl Middleware for BearerAuthMiddleware {
     async fn handle(
@@ -29,13 +34,14 @@ impl Middleware for BearerAuthMiddleware {
 }
 
 // ---------------------------------------------------------------------------
-// DD Configuration builder
+// DD Configuration builder (native only)
 // ---------------------------------------------------------------------------
 
 /// Creates a DD API Configuration with all unstable ops enabled.
 /// `Configuration::new()` reads DD_API_KEY, DD_APP_KEY, DD_SITE from env.
 ///
 /// If PUP_MOCK_SERVER is set, redirects all API calls to the mock server.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn make_dd_config(_cfg: &Config) -> datadog_api_client::datadog::Configuration {
     let mut dd_cfg = datadog_api_client::datadog::Configuration::new();
 
@@ -59,9 +65,7 @@ pub fn make_dd_config(_cfg: &Config) -> datadog_api_client::datadog::Configurati
         dd_cfg
             .server_variables
             .insert("protocol".into(), protocol.into());
-        dd_cfg
-            .server_variables
-            .insert("name".into(), url.into());
+        dd_cfg.server_variables.insert("name".into(), url.into());
     }
 
     dd_cfg
@@ -69,6 +73,7 @@ pub fn make_dd_config(_cfg: &Config) -> datadog_api_client::datadog::Configurati
 
 /// Creates a reqwest middleware client with bearer token injection.
 /// Returns None if no bearer token is configured.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn make_bearer_client(cfg: &Config) -> Option<ClientWithMiddleware> {
     let token = cfg.access_token.as_ref()?;
     let reqwest_client = reqwest::Client::builder()
@@ -83,71 +88,10 @@ pub fn make_bearer_client(cfg: &Config) -> Option<ClientWithMiddleware> {
 }
 
 // ---------------------------------------------------------------------------
-// Auth type detection
+// Unstable operations table (native only — used by make_dd_config)
 // ---------------------------------------------------------------------------
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AuthType {
-    None,
-    OAuth,
-    ApiKeys,
-}
-
-impl std::fmt::Display for AuthType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AuthType::None => write!(f, "None"),
-            AuthType::OAuth => write!(f, "OAuth2 Bearer Token"),
-            AuthType::ApiKeys => write!(f, "API Keys (DD_API_KEY + DD_APP_KEY)"),
-        }
-    }
-}
-
-#[allow(dead_code)]
-pub fn get_auth_type(cfg: &Config) -> AuthType {
-    if cfg.has_bearer_token() {
-        AuthType::OAuth
-    } else if cfg.has_api_keys() {
-        AuthType::ApiKeys
-    } else {
-        AuthType::None
-    }
-}
-
-// ---------------------------------------------------------------------------
-// OAuth-excluded endpoint validation
-// ---------------------------------------------------------------------------
-
-struct EndpointRequirement {
-    path: &'static str,
-    method: &'static str,
-}
-
-/// Returns true if the endpoint doesn't support OAuth and requires API key fallback.
-#[allow(dead_code)]
-pub fn requires_api_key_fallback(method: &str, path: &str) -> bool {
-    find_endpoint_requirement(method, path).is_some()
-}
-
-fn find_endpoint_requirement(method: &str, path: &str) -> Option<&'static EndpointRequirement> {
-    OAUTH_EXCLUDED_ENDPOINTS.iter().find(|req| {
-        if req.method != method {
-            return false;
-        }
-        // Trailing "/" means prefix match (for ID-parameterized paths)
-        if req.path.ends_with('/') {
-            path.starts_with(&req.path[..req.path.len() - 1])
-        } else {
-            req.path == path
-        }
-    })
-}
-
-// ---------------------------------------------------------------------------
-// Static tables
-// ---------------------------------------------------------------------------
-
+#[cfg(not(target_arch = "wasm32"))]
 /// All 63 unstable operations (snake_case for the Rust DD client).
 static UNSTABLE_OPS: &[&str] = &[
     // Incidents (16)
@@ -229,8 +173,78 @@ static UNSTABLE_OPS: &[&str] = &[
     "v2.update_flaky_tests",
 ];
 
+// ---------------------------------------------------------------------------
+// Auth type detection
+// ---------------------------------------------------------------------------
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuthType {
+    None,
+    OAuth,
+    ApiKeys,
+}
+
+impl std::fmt::Display for AuthType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthType::None => write!(f, "None"),
+            AuthType::OAuth => write!(f, "OAuth2 Bearer Token"),
+            AuthType::ApiKeys => write!(f, "API Keys (DD_API_KEY + DD_APP_KEY)"),
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn get_auth_type(cfg: &Config) -> AuthType {
+    if cfg.has_bearer_token() {
+        AuthType::OAuth
+    } else if cfg.has_api_keys() {
+        AuthType::ApiKeys
+    } else {
+        AuthType::None
+    }
+}
+
+// ---------------------------------------------------------------------------
+// OAuth-excluded endpoint validation (native only)
+// ---------------------------------------------------------------------------
+
+#[cfg(not(target_arch = "wasm32"))]
+struct EndpointRequirement {
+    path: &'static str,
+    method: &'static str,
+}
+
+/// Returns true if the endpoint doesn't support OAuth and requires API key fallback.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(dead_code)]
+pub fn requires_api_key_fallback(method: &str, path: &str) -> bool {
+    find_endpoint_requirement(method, path).is_some()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn find_endpoint_requirement(method: &str, path: &str) -> Option<&'static EndpointRequirement> {
+    OAUTH_EXCLUDED_ENDPOINTS.iter().find(|req| {
+        if req.method != method {
+            return false;
+        }
+        // Trailing "/" means prefix match (for ID-parameterized paths)
+        if req.path.ends_with('/') {
+            path.starts_with(&req.path[..req.path.len() - 1])
+        } else {
+            req.path == path
+        }
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Static tables (native only)
+// ---------------------------------------------------------------------------
+
 /// Endpoints that don't support OAuth (52 patterns across 7 API groups).
 /// Trailing "/" means prefix match for ID-parameterized paths.
+#[cfg(not(target_arch = "wasm32"))]
 static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
     // Logs API (11)
     EndpointRequirement {
@@ -524,10 +538,7 @@ mod tests {
     fn test_no_fallback_for_standard_endpoints() {
         assert!(!requires_api_key_fallback("GET", "/api/v1/monitor"));
         assert!(!requires_api_key_fallback("GET", "/api/v1/dashboard"));
-        assert!(!requires_api_key_fallback(
-            "GET",
-            "/api/v2/incidents"
-        ));
+        assert!(!requires_api_key_fallback("GET", "/api/v2/incidents"));
     }
 
     #[test]
