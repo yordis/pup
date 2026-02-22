@@ -25,13 +25,6 @@ struct AgentEnvelope<'a, T: Serialize> {
     metadata: Option<&'a Metadata>,
 }
 
-/// Non-agent success wrapper: { status, data }
-#[derive(Serialize)]
-struct SuccessEnvelope<'a, T: Serialize> {
-    status: &'static str,
-    data: &'a T,
-}
-
 /// Recursively sort all JSON object keys alphabetically.
 fn sort_json_value(v: serde_json::Value) -> serde_json::Value {
     match v {
