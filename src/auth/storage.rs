@@ -282,8 +282,7 @@ pub struct LocalStorageBackend;
 #[cfg(feature = "browser")]
 impl LocalStorageBackend {
     fn storage() -> Result<web_sys::Storage> {
-        let window = web_sys::window()
-            .ok_or_else(|| anyhow::anyhow!("no global window object"))?;
+        let window = web_sys::window().ok_or_else(|| anyhow::anyhow!("no global window object"))?;
         window
             .local_storage()
             .map_err(|_| anyhow::anyhow!("localStorage not available"))?

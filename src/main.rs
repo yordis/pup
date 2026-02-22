@@ -3412,9 +3412,7 @@ async fn main_inner() -> anyhow::Result<()> {
                     commands::app_keys::list(&cfg, all, &filter, &sort, page_size, page_number)
                         .await?
                 }
-                AppKeyActions::Get { key_id } => {
-                    commands::app_keys::get(&cfg, &key_id).await?
-                }
+                AppKeyActions::Get { key_id } => commands::app_keys::get(&cfg, &key_id).await?,
                 AppKeyActions::Create { name, scopes } => {
                     commands::app_keys::create(&cfg, &name, &scopes).await?
                 }

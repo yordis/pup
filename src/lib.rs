@@ -71,13 +71,10 @@ impl PupClient {
     /// Create a new PupClient from options.
     #[wasm_bindgen(constructor)]
     pub fn new(opts: PupClientOptions) -> Result<PupClient, JsError> {
-        let cfg = config::Config::from_params(
-            opts.site,
-            opts.access_token,
-            opts.api_key,
-            opts.app_key,
-        );
-        cfg.validate_auth().map_err(|e| JsError::new(&e.to_string()))?;
+        let cfg =
+            config::Config::from_params(opts.site, opts.access_token, opts.api_key, opts.app_key);
+        cfg.validate_auth()
+            .map_err(|e| JsError::new(&e.to_string()))?;
         Ok(PupClient { cfg })
     }
 
@@ -261,8 +258,8 @@ impl PupClient {
     }
 
     async fn do_post(&self, path: &str, body_json: &str) -> Result<JsValue, JsError> {
-        let body: serde_json::Value =
-            serde_json::from_str(body_json).map_err(|e| JsError::new(&format!("invalid JSON body: {e}")))?;
+        let body: serde_json::Value = serde_json::from_str(body_json)
+            .map_err(|e| JsError::new(&format!("invalid JSON body: {e}")))?;
         let val = api::post(&self.cfg, path, &body)
             .await
             .map_err(|e| JsError::new(&e.to_string()))?;
@@ -270,8 +267,8 @@ impl PupClient {
     }
 
     async fn do_put(&self, path: &str, body_json: &str) -> Result<JsValue, JsError> {
-        let body: serde_json::Value =
-            serde_json::from_str(body_json).map_err(|e| JsError::new(&format!("invalid JSON body: {e}")))?;
+        let body: serde_json::Value = serde_json::from_str(body_json)
+            .map_err(|e| JsError::new(&format!("invalid JSON body: {e}")))?;
         let val = api::put(&self.cfg, path, &body)
             .await
             .map_err(|e| JsError::new(&e.to_string()))?;
@@ -279,8 +276,8 @@ impl PupClient {
     }
 
     async fn do_patch(&self, path: &str, body_json: &str) -> Result<JsValue, JsError> {
-        let body: serde_json::Value =
-            serde_json::from_str(body_json).map_err(|e| JsError::new(&format!("invalid JSON body: {e}")))?;
+        let body: serde_json::Value = serde_json::from_str(body_json)
+            .map_err(|e| JsError::new(&format!("invalid JSON body: {e}")))?;
         let val = api::patch(&self.cfg, path, &body)
             .await
             .map_err(|e| JsError::new(&e.to_string()))?;
@@ -298,5 +295,6 @@ impl PupClient {
 /// Convert a serde_json::Value to a native JS object via serde-wasm-bindgen.
 #[cfg(feature = "browser")]
 fn to_js(val: &serde_json::Value) -> Result<JsValue, JsError> {
-    serde_wasm_bindgen::to_value(val).map_err(|e| JsError::new(&format!("serialization error: {e}")))
+    serde_wasm_bindgen::to_value(val)
+        .map_err(|e| JsError::new(&format!("serialization error: {e}")))
 }

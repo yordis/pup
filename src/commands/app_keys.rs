@@ -25,11 +25,9 @@ fn parse_sort(s: &str) -> ApplicationKeysSort {
         "-name" => ApplicationKeysSort::NAME_DESCENDING,
         "last4" => ApplicationKeysSort::LAST4_ASCENDING,
         "-last4" => ApplicationKeysSort::LAST4_DESCENDING,
-        _ => ApplicationKeysSort::UnparsedObject(
-            datadog_api_client::datadog::UnparsedObject {
-                value: serde_json::Value::String(s.to_string()),
-            },
-        ),
+        _ => ApplicationKeysSort::UnparsedObject(datadog_api_client::datadog::UnparsedObject {
+            value: serde_json::Value::String(s.to_string()),
+        }),
     }
 }
 
