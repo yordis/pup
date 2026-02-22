@@ -21,6 +21,9 @@ Thumbs.db
 .env.local
 .envrc
 
+# wasm-pack output
+pkg/
+
 # Test artifacts
 tests/mockdd/mockdd
 tests/compare_bin

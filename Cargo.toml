@@ -3,6 +3,11 @@ name = "pup"
 version = "0.22.0"
 edition = "2021"
 
+[lib]
+name = "pup_wasm"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
 [features]
 default = ["native"]
 native = [
@@ -13,15 +18,47 @@ native = [
     "dep:reqwest-middleware",
     "dep:async-trait",
     "dep:task-local-extensions",
+    "dep:sha2",
+    "dep:base64",
+    "dep:rand",
+    "dep:url",
+    "dep:aes-gcm",
+    "dep:uuid",
+    "dep:chrono",
+    "dep:regex",
+    "dep:clap",
+    "dep:clap_complete",
     "tokio/full",
     "comfy-table/tty",
 ]
-wasi = ["tokio/rt", "tokio/macros", "reqwest/rustls-tls"]
+wasi = [
+    "dep:sha2",
+    "dep:base64",
+    "dep:rand",
+    "dep:url",
+    "dep:aes-gcm",
+    "dep:uuid",
+    "dep:chrono",
+    "dep:regex",
+    "dep:clap",
+    "dep:clap_complete",
+    "tokio/rt",
+    "tokio/macros",
+    "reqwest/rustls-tls",
+]
+browser = [
+    "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
+    "dep:js-sys",
+    "dep:web-sys",
+    "dep:serde-wasm-bindgen",
+    "dep:getrandom",
+]
 
 [dependencies]
-# CLI
-clap = { version = "4", features = ["derive"] }
-clap_complete = "4.5.66"
+# CLI (optional — not needed for browser WASM library)
+clap = { version = "4", features = ["derive"], optional = true }
+clap_complete = { version = "4.5.66", optional = true }
 
 # Async runtime (features selected by native/wasi feature flags)
 tokio = { version = "1", default-features = false }
@@ -31,30 +68,30 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9"
 
-# HTTP (version-matched to DD client for native; used directly for WASI)
+# HTTP (version-matched to DD client for native; used directly for WASI/browser)
 reqwest = { version = "0.11", features = ["json"] }
 
 # Error handling
 anyhow = "1"
 
 # UUID parsing (version-matched to DD client)
-uuid = "1"
+uuid = { version = "1", optional = true }
 
 # Time
-chrono = "0.4"
-regex = "1"
+chrono = { version = "0.4", optional = true }
+regex = { version = "1", optional = true }
 
 # Output formatting (tty feature disabled for WASM — no crossterm)
 comfy-table = { version = "7", default-features = false }
 
-# Auth — OAuth2 PKCE + token storage
-sha2 = "0.10"
-base64 = "0.22"
-rand = "0.9"
-url = "2"
+# Auth — OAuth2 PKCE + token storage (optional — not needed for browser)
+sha2 = { version = "0.10", optional = true }
+base64 = { version = "0.22", optional = true }
+rand = { version = "0.9", optional = true }
+url = { version = "2", optional = true }
 
-# Crypto for fallback storage
-aes-gcm = "0.10"
+# Crypto for fallback storage (optional — not needed for browser)
+aes-gcm = { version = "0.10", optional = true }
 
 # ---- Native-only dependencies ----
 
@@ -74,3 +111,13 @@ dirs = { version = "6", optional = true }
 
 # Browser opening for OAuth login
 open = { version = "5", optional = true }
+
+# ---- Browser WASM dependencies (wasm-bindgen) ----
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", features = ["Window", "Storage"], optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+
+# RNG support in browser WASM (getrandom 0.2 with JS backend)
+getrandom = { version = "0.2", features = ["js"], optional = true }

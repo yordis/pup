@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+#[cfg(not(feature = "browser"))]
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -43,6 +44,7 @@ impl std::str::FromStr for OutputFormat {
 }
 
 /// Config file structure (~/.config/pup/config.yaml)
+#[cfg(not(feature = "browser"))]
 #[derive(Deserialize, Default)]
 struct FileConfig {
     api_key: Option<String>,
@@ -56,6 +58,7 @@ struct FileConfig {
 impl Config {
     /// Load configuration with precedence: flag overrides > env > file > defaults.
     /// Flag overrides are applied by the caller after this returns.
+    #[cfg(not(feature = "browser"))]
     pub fn from_env() -> Result<Self> {
         let file_cfg = load_config_file().unwrap_or_default();
 
@@ -74,6 +77,26 @@ impl Config {
         };
 
         Ok(cfg)
+    }
+
+    /// Create configuration from explicit parameters (no env vars or filesystem).
+    /// Used by the browser WASM build where `std::env` is unavailable.
+    #[cfg(feature = "browser")]
+    pub fn from_params(
+        site: String,
+        access_token: Option<String>,
+        api_key: Option<String>,
+        app_key: Option<String>,
+    ) -> Self {
+        Config {
+            api_key,
+            app_key,
+            access_token,
+            site,
+            output_format: OutputFormat::Json,
+            auto_approve: false,
+            agent_mode: false,
+        }
     }
 
     /// Validate that sufficient auth credentials are configured.
@@ -98,11 +121,14 @@ impl Config {
 
     /// Returns the API host (e.g., "api.datadoghq.com").
     pub fn api_host(&self) -> String {
-        if let Ok(mock) = std::env::var("PUP_MOCK_SERVER") {
-            let host = mock
-                .trim_start_matches("http://")
-                .trim_start_matches("https://");
-            return host.to_string();
+        #[cfg(not(feature = "browser"))]
+        {
+            if let Ok(mock) = std::env::var("PUP_MOCK_SERVER") {
+                let host = mock
+                    .trim_start_matches("http://")
+                    .trim_start_matches("https://");
+                return host.to_string();
+            }
         }
         if self.site.contains("oncall") {
             self.site.clone()
@@ -112,10 +138,13 @@ impl Config {
     }
 
     /// Returns the full API base URL (e.g., "https://api.datadoghq.com").
-    /// Respects PUP_MOCK_SERVER for testing.
+    /// Respects PUP_MOCK_SERVER for testing (native/WASI only).
     pub fn api_base_url(&self) -> String {
-        if let Ok(mock) = std::env::var("PUP_MOCK_SERVER") {
-            return mock;
+        #[cfg(not(feature = "browser"))]
+        {
+            if let Ok(mock) = std::env::var("PUP_MOCK_SERVER") {
+                return mock;
+            }
         }
         format!("https://{}", self.api_host())
     }
@@ -127,18 +156,26 @@ pub fn config_dir() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("pup"))
 }
 
-/// WASM: use PUP_CONFIG_DIR env var or return None
-#[cfg(target_arch = "wasm32")]
+/// WASI: use PUP_CONFIG_DIR env var or return None
+#[cfg(all(target_arch = "wasm32", not(feature = "browser")))]
 pub fn config_dir() -> Option<PathBuf> {
     std::env::var("PUP_CONFIG_DIR").ok().map(PathBuf::from)
 }
 
+/// Browser WASM: no filesystem access
+#[cfg(feature = "browser")]
+pub fn config_dir() -> Option<PathBuf> {
+    None
+}
+
+#[cfg(not(feature = "browser"))]
 fn load_config_file() -> Option<FileConfig> {
     let path = config_dir()?.join("config.yaml");
     let contents = std::fs::read_to_string(path).ok()?;
     serde_yaml::from_str(&contents).ok()
 }
 
+#[cfg(not(feature = "browser"))]
 fn env_or(key: &str, fallback: Option<String>) -> Option<String> {
     std::env::var(key)
         .ok()
@@ -146,6 +183,7 @@ fn env_or(key: &str, fallback: Option<String>) -> Option<String> {
         .or(fallback)
 }
 
+#[cfg(not(feature = "browser"))]
 fn env_bool(key: &str) -> bool {
     matches!(
         std::env::var(key)

@@ -24,6 +24,8 @@ pub trait Storage: Send + Sync {
 pub enum BackendType {
     Keychain,
     File,
+    #[cfg(feature = "browser")]
+    LocalStorage,
 }
 
 impl std::fmt::Display for BackendType {
@@ -31,6 +33,8 @@ impl std::fmt::Display for BackendType {
         match self {
             BackendType::Keychain => write!(f, "keychain"),
             BackendType::File => write!(f, "file"),
+            #[cfg(feature = "browser")]
+            BackendType::LocalStorage => write!(f, "localStorage"),
         }
     }
 }
@@ -269,6 +273,95 @@ impl Storage for InMemoryStorage {
 }
 
 // ---------------------------------------------------------------------------
+// LocalStorage backend (browser WASM) — persists tokens across page reloads
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "browser")]
+pub struct LocalStorageBackend;
+
+#[cfg(feature = "browser")]
+impl LocalStorageBackend {
+    fn storage() -> Result<web_sys::Storage> {
+        let window = web_sys::window()
+            .ok_or_else(|| anyhow::anyhow!("no global window object"))?;
+        window
+            .local_storage()
+            .map_err(|_| anyhow::anyhow!("localStorage not available"))?
+            .ok_or_else(|| anyhow::anyhow!("localStorage returned None"))
+    }
+
+    fn get_item(key: &str) -> Result<Option<String>> {
+        let storage = Self::storage()?;
+        storage
+            .get_item(key)
+            .map_err(|_| anyhow::anyhow!("failed to read from localStorage"))
+    }
+
+    fn set_item(key: &str, value: &str) -> Result<()> {
+        let storage = Self::storage()?;
+        storage
+            .set_item(key, value)
+            .map_err(|_| anyhow::anyhow!("failed to write to localStorage"))
+    }
+
+    fn remove_item(key: &str) -> Result<()> {
+        let storage = Self::storage()?;
+        storage
+            .remove_item(key)
+            .map_err(|_| anyhow::anyhow!("failed to remove from localStorage"))
+    }
+}
+
+#[cfg(feature = "browser")]
+impl Storage for LocalStorageBackend {
+    fn backend_type(&self) -> BackendType {
+        BackendType::LocalStorage
+    }
+
+    fn storage_location(&self) -> String {
+        "browser localStorage".to_string()
+    }
+
+    fn save_tokens(&self, site: &str, tokens: &TokenSet) -> Result<()> {
+        let key = format!("pup_tokens_{}", sanitize(site));
+        let json = serde_json::to_string(tokens)?;
+        Self::set_item(&key, &json)
+    }
+
+    fn load_tokens(&self, site: &str) -> Result<Option<TokenSet>> {
+        let key = format!("pup_tokens_{}", sanitize(site));
+        match Self::get_item(&key)? {
+            Some(json) => Ok(Some(serde_json::from_str(&json)?)),
+            None => Ok(None),
+        }
+    }
+
+    fn delete_tokens(&self, site: &str) -> Result<()> {
+        let key = format!("pup_tokens_{}", sanitize(site));
+        Self::remove_item(&key)
+    }
+
+    fn save_client_credentials(&self, site: &str, creds: &ClientCredentials) -> Result<()> {
+        let key = format!("pup_client_{}", sanitize(site));
+        let json = serde_json::to_string(creds)?;
+        Self::set_item(&key, &json)
+    }
+
+    fn load_client_credentials(&self, site: &str) -> Result<Option<ClientCredentials>> {
+        let key = format!("pup_client_{}", sanitize(site));
+        match Self::get_item(&key)? {
+            Some(json) => Ok(Some(serde_json::from_str(&json)?)),
+            None => Ok(None),
+        }
+    }
+
+    fn delete_client_credentials(&self, site: &str) -> Result<()> {
+        let key = format!("pup_client_{}", sanitize(site));
+        Self::remove_item(&key)
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Factory — auto-detect backend, with fallback
 // ---------------------------------------------------------------------------
 
@@ -307,9 +400,14 @@ fn detect_backend() -> Box<dyn Storage> {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(feature = "browser")))]
 fn detect_backend() -> Box<dyn Storage> {
     Box::new(InMemoryStorage)
+}
+
+#[cfg(feature = "browser")]
+fn detect_backend() -> Box<dyn Storage> {
+    Box::new(LocalStorageBackend)
 }
 
 // ---------------------------------------------------------------------------

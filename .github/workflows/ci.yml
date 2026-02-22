@@ -100,6 +100,22 @@ jobs:
       - name: Report WASM size
         run: ls -lh target/wasm32-wasip2/release/pup.wasm
 
+  browser-wasm-build:
+    name: Browser WASM Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+      - name: Build
+        run: wasm-pack build --target web --no-default-features --features browser
+      - name: Report size
+        run: ls -lh pkg/pup_wasm_bg.wasm
+
   binary-size:
     name: Binary Size
     runs-on: ubuntu-latest
