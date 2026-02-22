@@ -56,17 +56,24 @@ struct FileConfig {
 }
 
 impl Config {
-    /// Load configuration with precedence: flag overrides > env > file > defaults.
+    /// Load configuration with precedence: flag overrides > env > file > keychain > defaults.
     /// Flag overrides are applied by the caller after this returns.
     #[cfg(not(feature = "browser"))]
     pub fn from_env() -> Result<Self> {
         let file_cfg = load_config_file().unwrap_or_default();
 
+        let access_token = env_or("DD_ACCESS_TOKEN", file_cfg.access_token);
+        let site = env_or("DD_SITE", file_cfg.site).unwrap_or_else(|| "datadoghq.com".into());
+
+        // If no token from env/file, try loading from keychain/storage (where `pup auth login` saves)
+        #[cfg(not(target_arch = "wasm32"))]
+        let access_token = access_token.or_else(|| load_token_from_storage(&site));
+
         let cfg = Config {
             api_key: env_or("DD_API_KEY", file_cfg.api_key),
             app_key: env_or("DD_APP_KEY", file_cfg.app_key),
-            access_token: env_or("DD_ACCESS_TOKEN", file_cfg.access_token),
-            site: env_or("DD_SITE", file_cfg.site).unwrap_or_else(|| "datadoghq.com".into()),
+            access_token,
+            site,
             output_format: env_or("DD_OUTPUT", file_cfg.output)
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(OutputFormat::Json),
@@ -173,6 +180,20 @@ fn load_config_file() -> Option<FileConfig> {
     let path = config_dir()?.join("config.yaml");
     let contents = std::fs::read_to_string(path).ok()?;
     serde_yaml::from_str(&contents).ok()
+}
+
+/// Try to load a valid (non-expired) access token from keychain/file storage.
+/// Returns None silently on any error — callers fall through to other auth methods.
+#[cfg(all(not(feature = "browser"), not(target_arch = "wasm32")))]
+fn load_token_from_storage(site: &str) -> Option<String> {
+    let guard = crate::auth::storage::get_storage().ok()?;
+    let lock = guard.lock().ok()?;
+    let store = lock.as_ref()?;
+    let tokens = store.load_tokens(site).ok()??;
+    if tokens.is_expired() {
+        return None;
+    }
+    Some(tokens.access_token)
 }
 
 #[cfg(not(feature = "browser"))]
