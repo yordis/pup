@@ -1,1 +1,0 @@
-{"id":1234,"name":"Test Monitor","type":"metric alert","query":"avg(last_5m):avg:system.cpu.user{*} > 80","message":"CPU high","tags":["env:test"],"overall_state":"OK"}

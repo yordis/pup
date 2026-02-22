@@ -3,13 +3,9 @@ name: Rust CI
 on:
   push:
     branches: [main, 'refactor/**']
-    paths: ['pup-rs/**']
+    paths: ['src/**', 'Cargo.toml', 'Cargo.lock', 'tests/**']
   pull_request:
-    paths: ['pup-rs/**']
-
-defaults:
-  run:
-    working-directory: pup-rs
+    paths: ['src/**', 'Cargo.toml', 'Cargo.lock', 'tests/**']
 
 jobs:
   check:
@@ -22,7 +18,7 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: pup-rs
+          workspaces: .
       - name: Format check
         run: cargo fmt --check
       - name: Clippy
@@ -41,7 +37,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: pup-rs
+          workspaces: .
       - name: Run tests
         run: cargo test --verbose
 
@@ -66,7 +62,7 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: pup-rs
+          workspaces: .
       - name: Install cross-compilation tools
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
@@ -85,7 +81,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: pup-rs
+          workspaces: .
       - name: Build release
         run: cargo build --release
       - name: Report size

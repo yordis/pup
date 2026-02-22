@@ -1,1 +1,0 @@
-[{"id":1234,"name":"Test Monitor","type":"metric alert","query":"avg:system.cpu.user{*} > 80","overall_state":"OK"}]

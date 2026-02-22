@@ -1,1 +1,0 @@
-{"data":[{"id":"app-1","type":"rum_application","attributes":{"application_id":"app-1","client_token":"pub-token","created_at":1700000000000,"created_by_handle":"test@example.com","name":"Test App","org_id":1,"type":"browser","updated_at":1700000000000,"updated_by_handle":"test@example.com"}}]}
