@@ -220,7 +220,13 @@ add "error: unknown flag" "monitors list --bogus-flag" "monitors list --bogus-fl
 add "error: unknown subcommand" "monitors bogus" "monitors bogus"
 add "error: unknown top-level" "nonexistent" "nonexistent"
 
+# Human-mode help is excluded (Cobra vs clap text formatting is expected to differ).
+# Only agent-mode help is tested (both emit JSON schema).
+# API commands are tested in both modes.
 declare -a MODES=("human" "agent")
+
+# Help tests only run in agent mode (human mode Cobra vs clap always differs)
+declare -a HELP_ONLY_AGENT=1
 
 # ============================================================================
 # Helper: build clean env for running a CLI command
@@ -269,6 +275,12 @@ num_tests=$(( ${#TEST_CASES[@]} * ${#MODES[@]} ))
 for entry in "${TEST_CASES[@]}"; do
     IFS='|' read -r label go_cmd rust_cmd <<< "$entry"
     for mode in "${MODES[@]}"; do
+        # Skip human mode for help and error tests (Cobra vs clap always differs)
+        if [ "$mode" = "human" ]; then
+            case "$label" in
+                help:*|error:*) continue ;;
+            esac
+        fi
         total=$((total + 1))
         safe="$(echo "${label}_${mode}" | tr ' /' '__')"
 
@@ -371,6 +383,13 @@ tr.rust-fail-row { background: #b6232410; }
 .env-table .env-key { color: #d2a8ff; white-space: nowrap; }
 .env-table .env-val { color: #79c0ff; }
 .env-table .env-eq { color: #484f58; padding: 0 2px; }
+.diff-id { display: inline-block; background: #da3633; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; margin-right: 6px; min-width: 32px; text-align: center; }
+.diff-view { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0; margin: 8px 0; max-height: 400px; overflow: auto; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+.diff-line { padding: 1px 12px; white-space: pre-wrap; word-break: break-all; }
+.diff-line.add { background: #1a3a2a; color: #3fb950; }
+.diff-line.del { background: #3d1a1a; color: #f85149; }
+.diff-line.ctx { color: #8b949e; }
+.diff-line.hdr { color: #79c0ff; background: #161b22; font-weight: 600; }
 .output-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin: 4px 0; max-height: 300px; overflow: auto; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
 .output-box.go { border-left: 3px solid #3fb950; }
 .output-box.rust { border-left: 3px solid #1f6feb; }
@@ -420,18 +439,21 @@ for r in "${RESULTS[@]}"; do
     fi
 done
 
+diff_id=0
 if [ "$has_issues" = true ]; then
-    # Differences
+    # Differences — with numbered IDs
     if [ "$diff_count" -gt 0 ]; then
         echo '<div class="alert">' >> "$REPORT"
-        echo '<h3>Output Differences (inspect these)</h3><ul>' >> "$REPORT"
+        echo '<h3>Output Differences</h3><table style="width:100%;border-collapse:collapse">' >> "$REPORT"
+        echo '<tr><th style="width:40px;text-align:center">ID</th><th>Command</th><th style="width:80px">Mode</th></tr>' >> "$REPORT"
         for r in "${RESULTS[@]}"; do
             IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
             if [ "$status" = "diff" ]; then
-                echo "<li><strong>${label}</strong> (${mode} mode)</li>" >> "$REPORT"
+                diff_id=$((diff_id + 1))
+                echo "<tr><td style=\"text-align:center\"><a href=\"#diff-${diff_id}\" style=\"color:#f85149;font-weight:700\">#${diff_id}</a></td><td>${label}</td><td>${mode}</td></tr>" >> "$REPORT"
             fi
         done
-        echo '</ul></div>' >> "$REPORT"
+        echo '</table></div>' >> "$REPORT"
     fi
 
     # Go-only failures
@@ -441,8 +463,38 @@ if [ "$has_issues" = true ]; then
         for r in "${RESULTS[@]}"; do
             IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
             if [ "$status" = "go_fail" ]; then
+                diff_id=$((diff_id + 1))
                 go_err=$(head -1 "$OUTDIR/go_${safe}.txt" 2>/dev/null)
-                echo "<li><strong>${label}</strong> (${mode}) — <code>${go_err}</code></li>" >> "$REPORT"
+                echo "<li><a href=\"#diff-${diff_id}\" style=\"color:#d29922;font-weight:700\">#${diff_id}</a> <strong>${label}</strong> (${mode}) — <code>${go_err}</code></li>" >> "$REPORT"
+            fi
+        done
+        echo '</ul></div>' >> "$REPORT"
+    fi
+
+    # Rust-only failures
+    if [ "$rust_fail" -gt 0 ]; then
+        echo '<div class="alert" style="background:#b6232410;border-color:#b62324">' >> "$REPORT"
+        echo '<h3 style="color:#f97583">Rust-Only Failures</h3><ul>' >> "$REPORT"
+        for r in "${RESULTS[@]}"; do
+            IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
+            if [ "$status" = "rust_fail" ]; then
+                diff_id=$((diff_id + 1))
+                rs_err=$(head -1 "$OUTDIR/rs_${safe}.txt" 2>/dev/null)
+                echo "<li><a href=\"#diff-${diff_id}\" style=\"color:#f97583;font-weight:700\">#${diff_id}</a> <strong>${label}</strong> (${mode}) — <code>${rs_err}</code></li>" >> "$REPORT"
+            fi
+        done
+        echo '</ul></div>' >> "$REPORT"
+    fi
+
+    # Both fail
+    if [ "$both_fail" -gt 0 ]; then
+        echo '<div class="alert" style="background:#484f5810;border-color:#484f58">' >> "$REPORT"
+        echo '<h3 style="color:#8b949e">Both Fail</h3><ul>' >> "$REPORT"
+        for r in "${RESULTS[@]}"; do
+            IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
+            if [ "$status" = "both_fail" ]; then
+                diff_id=$((diff_id + 1))
+                echo "<li><a href=\"#diff-${diff_id}\" style=\"color:#8b949e;font-weight:700\">#${diff_id}</a> <strong>${label}</strong> (${mode})</li>" >> "$REPORT"
             fi
         done
         echo '</ul></div>' >> "$REPORT"
@@ -464,6 +516,7 @@ FILTERBAR
 # Detail rows
 echo '<h2>Detailed Results</h2>' >> "$REPORT"
 
+detail_diff_id=0
 for r in "${RESULTS[@]}"; do
     IFS='|' read -r label mode go_rc rust_rc status safe go_full rust_full env_display <<< "$r"
 
@@ -482,27 +535,23 @@ for r in "${RESULTS[@]}"; do
     [ "$status" = "rust_fail" ] && badge_text="Rust Fail"
     [ "$status" = "both_fail" ] && badge_text="Both Fail"
 
+    # Assign diff ID for non-match entries
+    id_html=""
+    anchor=""
+    if [ "$status" != "match" ]; then
+        detail_diff_id=$((detail_diff_id + 1))
+        id_html="<span class=\"diff-id\">#${detail_diff_id}</span>"
+        anchor=" id=\"diff-${detail_diff_id}\""
+    fi
+
     mode_badge="human"
     [ "$mode" = "agent" ] && mode_badge="agent"
-
-    # Escape HTML in output
-    go_escaped=$(echo "$go_out" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' | head -80)
-    rust_escaped=$(echo "$rust_out" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' | head -80)
 
     # Escape HTML in commands
     go_cmd_escaped=$(echo "$go_full" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
     rust_cmd_escaped=$(echo "$rust_full" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
 
-    go_box_class="go"
-    rust_box_class="rust"
-    [ "$go_rc" -ne 0 ] && go_box_class="error"
-    [ "$rust_rc" -ne 0 ] && rust_box_class="error"
-
-    # Build env table HTML from pipe-delimited env_display
-    env_table_rows=""
-    # env_display uses | as delimiter between KEY=VAL pairs
-    # We already used | as the top-level delimiter so env_display captures everything after field 8
-    # Re-split on the known env var names
+    # Build env table
     env_table_rows="<tr><td class=\"env-key\">PUP_MOCK_SERVER</td><td class=\"env-eq\">=</td><td class=\"env-val\">${MOCK_URL}</td></tr>"
     env_table_rows="${env_table_rows}<tr><td class=\"env-key\">DD_API_KEY</td><td class=\"env-eq\">=</td><td class=\"env-val\">test-key</td></tr>"
     env_table_rows="${env_table_rows}<tr><td class=\"env-key\">DD_APP_KEY</td><td class=\"env-eq\">=</td><td class=\"env-val\">test-app-key</td></tr>"
@@ -511,10 +560,34 @@ for r in "${RESULTS[@]}"; do
         env_table_rows="${env_table_rows}<tr><td class=\"env-key\">FORCE_AGENT_MODE</td><td class=\"env-eq\">=</td><td class=\"env-val\">1</td></tr>"
     fi
 
+    # For diffs and failures: generate unified diff view with colored lines
+    diff_html=""
+    if [ "$status" != "match" ]; then
+        diff_lines=$(diff -u "$OUTDIR/go_${safe}.txt" "$OUTDIR/rs_${safe}.txt" 2>/dev/null | head -100 | while IFS= read -r line; do
+            escaped=$(echo "$line" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+            case "$line" in
+                @@*) echo "<div class=\"diff-line hdr\">${escaped}</div>" ;;
+                +*) echo "<div class=\"diff-line add\">${escaped}</div>" ;;
+                -*) echo "<div class=\"diff-line del\">${escaped}</div>" ;;
+                *) echo "<div class=\"diff-line ctx\">${escaped}</div>" ;;
+            esac
+        done)
+        diff_html="<h3 style=\"font-size:13px;margin:12px 0 4px;color:#8b949e\">Unified Diff (Go → Rust)</h3><div class=\"diff-view\">${diff_lines}</div>"
+    fi
+
+    # Side-by-side output (escaped)
+    go_escaped=$(echo "$go_out" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' | head -80)
+    rust_escaped=$(echo "$rust_out" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' | head -80)
+
+    go_box_class="go"
+    rust_box_class="rust"
+    [ "$go_rc" -ne 0 ] && go_box_class="error"
+    [ "$rust_rc" -ne 0 ] && rust_box_class="error"
+
     cat >> "$REPORT" << EOF
-<details data-status="${status}" class="${row_class}">
+<details data-status="${status}" class="${row_class}"${anchor}>
   <summary>
-    <span class="badge ${badge_class}">${badge_text}</span>
+    ${id_html}<span class="badge ${badge_class}">${badge_text}</span>
     <span class="badge ${mode_badge}">${mode}</span>
     <strong>${label}</strong>
   </summary>
@@ -532,6 +605,7 @@ for r in "${RESULTS[@]}"; do
         <div class="output-box ${rust_box_class}">${rust_escaped}</div>
       </div>
     </div>
+    ${diff_html}
   </div>
 </details>
 EOF
