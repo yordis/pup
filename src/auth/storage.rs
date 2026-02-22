@@ -8,6 +8,7 @@ use super::types::{ClientCredentials, TokenSet};
 // ---------------------------------------------------------------------------
 
 pub trait Storage: Send + Sync {
+    #[allow(dead_code)]
     fn backend_type(&self) -> BackendType;
     fn storage_location(&self) -> String;
 
@@ -20,6 +21,7 @@ pub trait Storage: Send + Sync {
     fn delete_client_credentials(&self, site: &str) -> Result<()>;
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackendType {
     Keychain,
