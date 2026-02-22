@@ -28,6 +28,12 @@ jobs:
         run: cargo clippy -- -D warnings
       - name: Build
         run: cargo build --release
+      - name: Report binary size
+        run: |
+          ls -lh target/release/pup
+          strip target/release/pup
+          echo "Stripped:"
+          ls -lh target/release/pup
 
   test:
     name: Test
@@ -66,38 +72,7 @@ jobs:
           path: lcov.info
 
   cross-compile:
-    name: Cross Compile (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-apple-darwin
-            os: macos-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-          rustup target add ${{ matrix.target }}
-      - name: Install cross-compilation tools
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }} --features vendored-openssl
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-
-  wasi-build:
-    name: WASI Build
+    name: Cross Compile (4 targets)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,43 +80,46 @@ jobs:
         run: |
           rustup toolchain install stable --profile minimal
           rustup default stable
-          rustup target add wasm32-wasip2
+      - name: Install Zig
+        run: |
+          ZIG_VERSION="0.13.0"
+          curl -sL "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz" | tar xJ
+          echo "$PWD/zig-linux-x86_64-${ZIG_VERSION}" >> "$GITHUB_PATH"
+      - name: Install cargo-zigbuild
+        run: cargo install --locked cargo-zigbuild
+      - name: Build all targets
+        run: |
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
+            echo "::group::Building ${target}"
+            cargo zigbuild --release --target "${target}"
+            echo "::endgroup::"
+          done
+      - name: Report sizes
+        run: |
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
+            echo "${target}:"
+            ls -lh "target/${target}/release/pup"
+          done
+
+  wasm:
+    name: WASM (WASI + Browser)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip2 wasm32-unknown-unknown
       - name: Build WASI
         run: cargo build --target wasm32-wasip2 --no-default-features --features wasi --release
-      - name: Report WASM size
-        run: ls -lh target/wasm32-wasip2/release/pup.wasm
-
-  browser-wasm-build:
-    name: Browser WASM Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-          rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
         run: cargo install wasm-pack
-      - name: Build
+      - name: Build browser WASM
         run: wasm-pack build --target web --no-default-features --features browser
-      - name: Report size
-        run: ls -lh pkg/pup_wasm_bg.wasm
-
-  binary-size:
-    name: Binary Size
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
+      - name: Report sizes
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
-      - name: Build release
-        run: cargo build --release
-      - name: Report size
-        run: |
-          ls -lh target/release/pup
-          strip target/release/pup
-          echo "Stripped:"
-          ls -lh target/release/pup
+          echo "WASI:"
+          ls -lh target/wasm32-wasip2/release/pup.wasm
+          echo "Browser WASM:"
+          ls -lh pkg/pup_wasm_bg.wasm
