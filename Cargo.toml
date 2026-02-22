@@ -46,6 +46,7 @@ wasi = [
     "tokio/macros",
     "reqwest/rustls-tls",
 ]
+vendored-openssl = ["dep:openssl"]
 browser = [
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",
@@ -89,6 +90,9 @@ sha2 = { version = "0.10", optional = true }
 base64 = { version = "0.22", optional = true }
 rand = { version = "0.9", optional = true }
 url = { version = "2", optional = true }
+
+# Vendored OpenSSL for cross-compilation (optional — only for CI cross-builds)
+openssl = { version = "0.10", features = ["vendored"], optional = true }
 
 # Crypto for fallback storage (optional — not needed for browser)
 aes-gcm = { version = "0.10", optional = true }
