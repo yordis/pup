@@ -39,9 +39,9 @@ pup metrics query --query="avg:system.cpu.user{*}"   # Track the metrics tail
 
 ## API Coverage
 
-<!-- Last updated: 2026-02-10 | API Client: v2.54.0 -->
+<!-- Last updated: 2026-02-22 | API Client: datadog-api-client-rust v0.27 -->
 
-Pup implements **39 of 85+ available Datadog APIs** (45.9% coverage).
+Pup implements **45 of 85+ available Datadog APIs** (53% coverage) with **300+ subcommands** across **42 command groups**.
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
@@ -50,14 +50,14 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 ---
 
 <details>
-<summary><b>📊 Core Observability (6/9 implemented)</b></summary>
+<summary><b>📊 Core Observability (5/9 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
 | Metrics | ✅ | `metrics search`, `metrics query`, `metrics list`, `metrics get` | V1 and V2 APIs supported |
 | Logs | ✅ | `logs search`, `logs list`, `logs aggregate` | V1 and V2 APIs supported |
 | Events | ✅ | `events list`, `events search`, `events get` | Infrastructure event management |
-| RUM | ✅ | `rum apps`, `rum sessions`, `rum metrics list/get`, `rum retention-filters list/get` | Apps, sessions, metrics, retention filters (create/update pending) |
+| RUM | ✅ | `rum apps`, `rum sessions`, `rum metrics`, `rum retention-filters`, `rum playlists`, `rum heatmaps` | Apps, sessions, metrics, retention filters, replay playlists, heatmaps |
 | APM Services | ✅ | `apm services`, `apm entities`, `apm dependencies`, `apm flow-map` | Services stats, operations, resources; entity queries; dependencies; flow visualization |
 | Traces | ❌ | - | Not yet implemented |
 | Profiling | ❌ | - | Not yet implemented |
@@ -67,16 +67,17 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 </details>
 
 <details>
-<summary><b>🔔 Monitoring & Alerting (6/9 implemented)</b></summary>
+<summary><b>🔔 Monitoring & Alerting (7/10 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
 | Monitors | ✅ | `monitors list`, `monitors get`, `monitors delete`, `monitors search` | Full CRUD support with advanced search |
 | Dashboards | ✅ | `dashboards list`, `dashboards get`, `dashboards delete`, `dashboards url` | Full management capabilities |
-| SLOs | ✅ | `slos list`, `slos get`, `slos create`, `slos update`, `slos delete`, `slos corrections` | Full CRUD plus corrections |
-| Synthetics | ✅ | `synthetics tests list`, `synthetics locations list` | Test management support |
+| SLOs | ✅ | `slos list`, `slos get`, `slos delete`, `slos status` | Full CRUD plus V2 status query |
+| Synthetics | ✅ | `synthetics tests`, `synthetics locations`, `synthetics suites` | Tests, locations, and V2 suites management |
 | Downtimes | ✅ | `downtime list`, `downtime get`, `downtime cancel` | Full downtime management |
 | Notebooks | ✅ | `notebooks list`, `notebooks get`, `notebooks delete` | Investigation notebooks supported |
+| Status Pages | ✅ | `status-pages pages`, `status-pages components`, `status-pages degradations` | **New** — Pages, components, and degradation management |
 | Dashboard Lists | ❌ | - | Not yet implemented |
 | Powerpacks | ❌ | - | Not yet implemented |
 | Workflow Automation | ❌ | - | Not yet implemented |
@@ -84,11 +85,11 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 </details>
 
 <details>
-<summary><b>🔒 Security & Compliance (6/9 implemented)</b></summary>
+<summary><b>🔒 Security & Compliance (4/8 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
-| Security Monitoring | ✅ | `security rules list`, `security signals search`, `security findings search` | Rules, signals, findings with advanced search |
+| Security Monitoring | ✅ | `security rules`, `security signals`, `security findings`, `security content-packs`, `security risk-scores` | Rules, signals, findings, content packs, entity risk scores |
 | Static Analysis | ✅ | `static-analysis ast`, `static-analysis custom-rulesets`, `static-analysis sca`, `static-analysis coverage` | Code security analysis |
 | Audit Logs | ✅ | `audit-logs list`, `audit-logs search` | Full audit log search and listing |
 | Data Governance | ✅ | `data-governance scanner-rules list` | Sensitive data scanner rules |
@@ -100,45 +101,48 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 </details>
 
 <details>
-<summary><b>☁️ Infrastructure & Cloud (6/8 implemented)</b></summary>
+<summary><b>☁️ Infrastructure & Cloud (7/9 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
 | Infrastructure | ✅ | `infrastructure hosts list`, `infrastructure hosts get` | Host inventory management |
 | Tags | ✅ | `tags list`, `tags get`, `tags add`, `tags update`, `tags delete` | Host tag operations |
-| Network | ⏳ | `network flows list`, `network devices list` | Placeholder - API endpoints pending |
+| Network | ⏳ | `network flows list`, `network devices list` | Placeholder — API endpoints pending |
 | Cloud (AWS) | ✅ | `cloud aws list` | AWS integration management |
 | Cloud (GCP) | ✅ | `cloud gcp list` | GCP integration management |
 | Cloud (Azure) | ✅ | `cloud azure list` | Azure integration management |
+| Cloud (OCI) | ✅ | `cloud oci` | **New** — Oracle Cloud tenancy configs and products |
 | Containers | ❌ | - | Not yet implemented |
 | Processes | ❌ | - | Not yet implemented |
 
 </details>
 
 <details>
-<summary><b>🚨 Incident & Operations (7/8 implemented)</b></summary>
+<summary><b>🚨 Incident & Operations (8/9 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
-| Incidents | ✅ | `incidents list`, `incidents get`, `incidents attachments` | Incident management with attachment support |
+| Incidents | ✅ | `incidents list`, `incidents get`, `incidents attachments`, `incidents settings`, `incidents handles`, `incidents postmortem-templates` | Incident management with settings, handles, and postmortem templates |
 | On-Call (Teams) | ✅ | `on-call teams` (CRUD, memberships with roles) | Full team management system with admin/member roles |
-| Case Management | ✅ | `cases` (create, search, assign, archive, projects) | Complete case management with priorities P1-P5 |
+| Case Management | ✅ | `cases` (create, search, assign, archive, projects, jira, servicenow, move) | Complete case management with Jira/ServiceNow linking |
 | Error Tracking | ✅ | `error-tracking issues search`, `error-tracking issues get` | Error issue search and details |
 | Service Catalog | ✅ | `service-catalog list`, `service-catalog get` | Service registry management |
 | Scorecards | ✅ | `scorecards list`, `scorecards get` | Service quality scores |
 | Fleet Automation | ✅ | `fleet agents`, `fleet deployments`, `fleet schedules` | Agent management, deployments, schedules (Preview) |
+| HAMR | ✅ | `hamr connections get`, `hamr connections create` | **New** — High Availability Multi-Region connections |
 | Incident Services/Teams | ❌ | - | Not yet implemented |
 
 </details>
 
 <details>
-<summary><b>🔧 CI/CD & Development (1/3 implemented)</b></summary>
+<summary><b>🔧 CI/CD & Development (4/4 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
 | CI Visibility | ✅ | `cicd pipelines list`, `cicd events list` | CI/CD pipeline visibility and events |
-| Test Optimization | ❌ | - | Not yet implemented |
-| DORA Metrics | ❌ | - | Not yet implemented |
+| Test Optimization | ✅ | `cicd tests`, `cicd flaky-tests` | **New** — Test events and flaky test management |
+| DORA Metrics | ✅ | `cicd dora` | **New** — DORA deployment patching |
+| Code Coverage | ✅ | `code-coverage branch-summary`, `code-coverage commit-summary` | **New** — Branch and commit-level coverage summaries |
 
 </details>
 
@@ -150,22 +154,22 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 | Users | ✅ | `users list`, `users get`, `users roles` | User and role management |
 | Organizations | ✅ | `organizations get`, `organizations list` | Organization settings management |
 | API Keys | ✅ | `api-keys list`, `api-keys get`, `api-keys create`, `api-keys delete` | Full API key CRUD |
-| App Keys | ✅ | `app-keys list`, `app-keys get`, `app-keys register`, `app-keys unregister` | App key registration for Action Connections |
+| App Keys | ✅ | `app-keys list`, `app-keys get`, `app-keys create`, `app-keys update`, `app-keys delete` | Full application key CRUD |
 | Service Accounts | ✅ | - | Managed via users commands |
 | Roles | ❌ | - | Only list via users |
 
 </details>
 
 <details>
-<summary><b>⚙️ Platform & Configuration (7/9 implemented)</b></summary>
+<summary><b>⚙️ Platform & Configuration (6/8 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
 | Usage Metering | ✅ | `usage summary`, `usage hourly` | Usage and billing metrics |
 | Cost Management | ✅ | `cost projected`, `cost attribution`, `cost by-org` | Cost attribution by tags and organizations |
 | Product Analytics | ✅ | `product-analytics events send` | Server-side product analytics events |
-| Integrations | ✅ | `integrations slack`, `integrations pagerduty`, `integrations webhooks` | Third-party integrations support |
-| Observability Pipelines | ⏳ | `obs-pipelines list`, `obs-pipelines get` | Placeholder - API endpoints pending |
+| Integrations | ✅ | `integrations slack`, `integrations pagerduty`, `integrations webhooks`, `integrations jira`, `integrations servicenow` | Third-party integrations with Jira and ServiceNow support |
+| Observability Pipelines | ⏳ | `obs-pipelines list`, `obs-pipelines get` | Placeholder — API endpoints pending |
 | Miscellaneous | ✅ | `misc ip-ranges`, `misc status` | IP ranges and status |
 | Key Management | ❌ | - | Not yet implemented |
 | IP Allowlist | ❌ | - | Not yet implemented |
