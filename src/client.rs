@@ -467,6 +467,73 @@ static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
     },
 ];
 
+// ---------------------------------------------------------------------------
+// Raw HTTP helpers (native only)
+// ---------------------------------------------------------------------------
+
+/// Makes an authenticated GET request directly via reqwest.
+/// Used for endpoints not covered by the typed DD API client.
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn raw_get(cfg: &Config, path: &str) -> anyhow::Result<serde_json::Value> {
+    let url = format!("{}{}", cfg.api_base_url(), path);
+    let client = reqwest::Client::new();
+    let mut req = client.get(&url);
+
+    if let Some(token) = &cfg.access_token {
+        req = req.header("Authorization", format!("Bearer {token}"));
+    } else if let (Some(api_key), Some(app_key)) = (&cfg.api_key, &cfg.app_key) {
+        req = req
+            .header("DD-API-KEY", api_key.as_str())
+            .header("DD-APPLICATION-KEY", app_key.as_str());
+    } else {
+        anyhow::bail!("no authentication configured");
+    }
+
+    let resp = req.header("Accept", "application/json").send().await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        anyhow::bail!("API error (HTTP {status}): {body}");
+    }
+    Ok(resp.json().await?)
+}
+
+/// Makes an authenticated POST request directly via reqwest.
+/// Used for endpoints not covered by the typed DD API client.
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn raw_post(
+    cfg: &Config,
+    path: &str,
+    body: serde_json::Value,
+) -> anyhow::Result<serde_json::Value> {
+    let url = format!("{}{}", cfg.api_base_url(), path);
+    let client = reqwest::Client::new();
+    let mut req = client.post(&url);
+
+    if let Some(token) = &cfg.access_token {
+        req = req.header("Authorization", format!("Bearer {token}"));
+    } else if let (Some(api_key), Some(app_key)) = (&cfg.api_key, &cfg.app_key) {
+        req = req
+            .header("DD-API-KEY", api_key.as_str())
+            .header("DD-APPLICATION-KEY", app_key.as_str());
+    } else {
+        anyhow::bail!("no authentication configured");
+    }
+
+    let resp = req
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        anyhow::bail!("API error (HTTP {status}): {body}");
+    }
+    Ok(resp.json().await?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

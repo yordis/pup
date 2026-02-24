@@ -112,7 +112,7 @@ impl Config {
             bail!(
                 "authentication required: set DD_ACCESS_TOKEN for bearer auth, \
                  run 'pup auth login' for OAuth2, \
-                 or set DD_API_KEY and DD_APP_KEY for API key auth"
+                 or set DD_API_KEY and DD_APP_KEY for API+APP key auth"
             );
         }
         Ok(())
