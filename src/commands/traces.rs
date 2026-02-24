@@ -133,16 +133,16 @@ pub async fn search(
         SpansListRequestData::new()
             .type_(SpansListRequestType::SEARCH_REQUEST)
             .attributes(
-            SpansListRequestAttributes::new()
-                .filter(
-                    SpansQueryFilter::new()
-                        .query(query)
-                        .from(from_ms.to_string())
-                        .to(to_ms.to_string()),
-                )
-                .page(SpansListRequestPage::new().limit(page_limit))
-                .sort(spans_sort),
-        ),
+                SpansListRequestAttributes::new()
+                    .filter(
+                        SpansQueryFilter::new()
+                            .query(query)
+                            .from(from_ms.to_string())
+                            .to(to_ms.to_string()),
+                    )
+                    .page(SpansListRequestPage::new().limit(page_limit))
+                    .sort(spans_sort),
+            ),
     );
 
     let resp = api
