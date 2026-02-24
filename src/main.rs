@@ -12,6 +12,14 @@ mod version;
 #[cfg(test)]
 mod test_commands;
 
+/// Shared test utilities — only compiled in test builds.
+#[cfg(test)]
+pub(crate) mod test_utils {
+    use std::sync::Mutex;
+    /// Serialize tests that mutate global env vars (PUP_MOCK_SERVER, DD_API_KEY, etc.).
+    pub static ENV_LOCK: Mutex<()> = Mutex::new(());
+}
+
 use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]

@@ -218,6 +218,7 @@ fn env_bool(key: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::ENV_LOCK;
 
     fn make_cfg(api_key: Option<&str>, app_key: Option<&str>, token: Option<&str>) -> Config {
         Config {
@@ -289,12 +290,16 @@ mod tests {
 
     #[test]
     fn test_api_host_standard() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
         let cfg = make_cfg(None, None, Some("t"));
         assert_eq!(cfg.api_host(), "api.datadoghq.com");
     }
 
     #[test]
     fn test_api_host_eu() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
         let mut cfg = make_cfg(None, None, Some("t"));
         cfg.site = "datadoghq.eu".into();
         assert_eq!(cfg.api_host(), "api.datadoghq.eu");
@@ -302,6 +307,8 @@ mod tests {
 
     #[test]
     fn test_api_host_oncall() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
         let mut cfg = make_cfg(None, None, Some("t"));
         cfg.site = "navy.oncall.datadoghq.com".into();
         assert_eq!(cfg.api_host(), "navy.oncall.datadoghq.com");
@@ -322,14 +329,15 @@ mod tests {
 
     #[test]
     fn test_api_base_url_standard() {
-        let cfg = make_cfg(None, None, Some("t"));
-        // Clear mock server env if set
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         std::env::remove_var("PUP_MOCK_SERVER");
+        let cfg = make_cfg(None, None, Some("t"));
         assert_eq!(cfg.api_base_url(), "https://api.datadoghq.com");
     }
 
     #[test]
     fn test_api_base_url_eu() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         std::env::remove_var("PUP_MOCK_SERVER");
         let mut cfg = make_cfg(None, None, Some("t"));
         cfg.site = "datadoghq.eu".into();
@@ -338,6 +346,7 @@ mod tests {
 
     #[test]
     fn test_api_base_url_oncall() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         std::env::remove_var("PUP_MOCK_SERVER");
         let mut cfg = make_cfg(None, None, Some("t"));
         cfg.site = "navy.oncall.datadoghq.com".into();
@@ -346,6 +355,7 @@ mod tests {
 
     #[test]
     fn test_api_base_url_mock_server() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         std::env::set_var("PUP_MOCK_SERVER", "http://127.0.0.1:1234");
         let cfg = make_cfg(None, None, Some("t"));
         assert_eq!(cfg.api_base_url(), "http://127.0.0.1:1234");
@@ -354,6 +364,7 @@ mod tests {
 
     #[test]
     fn test_api_host_mock_server() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         std::env::set_var("PUP_MOCK_SERVER", "http://127.0.0.1:5678");
         let cfg = make_cfg(None, None, Some("t"));
         assert_eq!(cfg.api_host(), "127.0.0.1:5678");
