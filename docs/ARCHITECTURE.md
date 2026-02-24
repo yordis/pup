@@ -150,8 +150,8 @@ pup/v0.1.0 (rust; os darwin; arch arm64; ai-agent claude-code)  # With agent
 
 **AI Agent Detection** (`src/useragent.rs`):
 
-Table-driven registry detecting 11 agents via environment variables. First match wins:
-- Claude Code (`CLAUDECODE`, `CLAUDE_CODE`), Cursor (`CURSOR_AGENT`), Codex (`CODEX`, `OPENAI_CODEX`), OpenCode (`OPENCODE`), Aider (`AIDER`), Cline (`CLINE`), Windsurf (`WINDSURF_AGENT`), GitHub Copilot (`GITHUB_COPILOT`), Amazon Q (`AMAZON_Q`, `AWS_Q_DEVELOPER`), Gemini Code Assist (`GEMINI_CODE_ASSIST`), Sourcegraph Cody (`SRC_CODY`)
+Table-driven registry detecting 12 agents via environment variables. First match wins:
+- Claude Code (`CLAUDECODE`, `CLAUDE_CODE`), Cursor (`CURSOR_AGENT`), Codex (`CODEX`, `OPENAI_CODEX`), OpenCode (`OPENCODE`), Aider (`AIDER`), Cline (`CLINE`), Windsurf (`WINDSURF_AGENT`), GitHub Copilot (`GITHUB_COPILOT`), Amazon Q (`AMAZON_Q`, `AWS_Q_DEVELOPER`), Gemini Code Assist (`GEMINI_CODE_ASSIST`), Sourcegraph Cody (`SRC_CODY`), Generic Agent (`AGENT`)
 - Manual override: `FORCE_AGENT_MODE=1` or `--agent` flag
 
 **Agent Mode Behavior** (when detected):

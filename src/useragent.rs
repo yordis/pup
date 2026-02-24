@@ -57,6 +57,10 @@ static AGENT_DETECTORS: &[AgentDetector] = &[
         name: "sourcegraph-cody",
         env_vars: &["SRC_CODY"],
     },
+    AgentDetector {
+        name: "generic-agent",
+        env_vars: &["AGENT"],
+    },
 ];
 
 fn is_env_truthy(key: &str) -> bool {
@@ -228,6 +232,20 @@ mod tests {
             "ua should not contain agent info: {ua}"
         );
         assert!(ua.ends_with(')'));
+    }
+
+    #[test]
+    fn test_detect_agent_info_generic_agent() {
+        for det in AGENT_DETECTORS {
+            for var in det.env_vars {
+                std::env::remove_var(var);
+            }
+        }
+        std::env::set_var("AGENT", "1");
+        let info = detect_agent_info();
+        assert!(info.detected);
+        assert_eq!(info.name, "generic-agent");
+        std::env::remove_var("AGENT");
     }
 
     #[test]

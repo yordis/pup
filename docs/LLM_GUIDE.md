@@ -10,7 +10,7 @@ Pup auto-detects AI coding agents and switches to **agent mode**, which changes 
 
 | Method | Example |
 |--------|---------|
-| Auto-detect | `CLAUDECODE=1`, `CLAUDE_CODE=1`, `CURSOR_AGENT=1`, `CODEX=1`, `OPENAI_CODEX=1`, `OPENCODE=1`, `AIDER=1`, `CLINE=1`, `WINDSURF_AGENT=1`, `GITHUB_COPILOT=1`, `AMAZON_Q=1`, `AWS_Q_DEVELOPER=1`, `GEMINI_CODE_ASSIST=1`, `SRC_CODY=1` |
+| Auto-detect | `CLAUDECODE=1`, `CLAUDE_CODE=1`, `CURSOR_AGENT=1`, `CODEX=1`, `OPENAI_CODEX=1`, `OPENCODE=1`, `AIDER=1`, `CLINE=1`, `WINDSURF_AGENT=1`, `GITHUB_COPILOT=1`, `AMAZON_Q=1`, `AWS_Q_DEVELOPER=1`, `GEMINI_CODE_ASSIST=1`, `SRC_CODY=1`, `AGENT=1` |
 | Explicit flag | `pup --agent <command>` |
 | Environment override | `FORCE_AGENT_MODE=1` |
 
@@ -338,7 +338,7 @@ Error responses in agent mode:
 
 | File | Purpose |
 |------|---------|
-| `src/useragent.rs` | Agent detection (11 agents + FORCE_AGENT_MODE) |
+| `src/useragent.rs` | Agent detection (12 agents + FORCE_AGENT_MODE) |
 | `src/commands/agent.rs` | Schema generation, `pup agent schema`, `pup agent guide` |
 | `src/formatter.rs` | Agent envelope and structured errors |
 | `src/config.rs` | `agent_mode` field on Config |
