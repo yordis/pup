@@ -471,6 +471,7 @@ static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
 mod tests {
     use super::*;
     use crate::config::Config;
+    use crate::test_utils::ENV_LOCK;
 
     fn test_cfg() -> Config {
         Config {
@@ -589,6 +590,7 @@ mod tests {
 
     #[test]
     fn test_make_dd_config_returns_valid() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let cfg = test_cfg();
         // Ensure env vars are set for DD client
         std::env::set_var("DD_API_KEY", "test-key");
@@ -603,6 +605,7 @@ mod tests {
 
     #[test]
     fn test_make_dd_config_with_mock_server() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let cfg = test_cfg();
         std::env::set_var("DD_API_KEY", "test-key");
         std::env::set_var("DD_APP_KEY", "test-app-key");
@@ -621,6 +624,7 @@ mod tests {
 
     #[test]
     fn test_make_dd_config_https_mock() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let cfg = test_cfg();
         std::env::set_var("DD_API_KEY", "test-key");
         std::env::set_var("DD_APP_KEY", "test-app-key");
