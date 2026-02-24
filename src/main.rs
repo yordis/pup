@@ -2237,9 +2237,17 @@ enum SyntheticsSuiteActions {
 enum EventActions {
     /// List recent events
     List {
-        #[arg(long, default_value = "1h", help = "Start time (1h, 30m, 7d, Unix timestamp, or RFC3339)")]
+        #[arg(
+            long,
+            default_value = "1h",
+            help = "Start time (1h, 30m, 7d, Unix timestamp, or RFC3339)"
+        )]
         from: String,
-        #[arg(long, default_value = "now", help = "End time (now, Unix timestamp, or RFC3339)")]
+        #[arg(
+            long,
+            default_value = "now",
+            help = "End time (now, Unix timestamp, or RFC3339)"
+        )]
         to: String,
         #[arg(long, help = "Filter query")]
         filter: Option<String>,
@@ -2786,14 +2794,22 @@ enum AppKeyActions {
 enum UsageActions {
     /// Get usage summary
     Summary {
-        #[arg(long, default_value = "30d", help = "Start time (30d, 60d, YYYY-MM-DD, or RFC3339)")]
+        #[arg(
+            long,
+            default_value = "30d",
+            help = "Start time (30d, 60d, YYYY-MM-DD, or RFC3339)"
+        )]
         from: String,
         #[arg(long, help = "End time (now, YYYY-MM-DD, or RFC3339)")]
         to: Option<String>,
     },
     /// Get hourly usage
     Hourly {
-        #[arg(long, default_value = "1d", help = "Start time (1d, 7d, YYYY-MM-DD, or RFC3339)")]
+        #[arg(
+            long,
+            default_value = "1d",
+            help = "Start time (1d, 7d, YYYY-MM-DD, or RFC3339)"
+        )]
         from: String,
         #[arg(long, help = "End time (now, YYYY-MM-DD, or RFC3339)")]
         to: Option<String>,
@@ -4910,9 +4926,7 @@ async fn main_inner() -> anyhow::Result<()> {
         Commands::Events { action } => {
             cfg.validate_auth()?;
             match action {
-                EventActions::List {
-                    from, to, tags, ..
-                } => {
+                EventActions::List { from, to, tags, .. } => {
                     let start = util::parse_time_to_unix_millis(&from)? / 1000;
                     let end = util::parse_time_to_unix_millis(&to)? / 1000;
                     commands::events::list(&cfg, start, end, tags).await?;
