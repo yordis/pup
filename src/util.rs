@@ -81,6 +81,11 @@ pub fn read_json_file<T: serde::de::DeserializeOwned>(path: &str) -> Result<T> {
         .map_err(|e| anyhow::anyhow!("failed to parse JSON from {path:?}: {e}"))
 }
 
+/// Parses a UUID string, returning a descriptive error if invalid.
+pub fn parse_uuid(id: &str, label: &str) -> anyhow::Result<uuid::Uuid> {
+    uuid::Uuid::parse_str(id).map_err(|e| anyhow::anyhow!("invalid {label} UUID '{id}': {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

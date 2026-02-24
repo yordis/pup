@@ -1,3 +1,8 @@
+#[cfg(not(target_arch = "wasm32"))]
+use crate::client;
+use crate::config::Config;
+use crate::formatter;
+use crate::util;
 use anyhow::{bail, Result};
 #[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_status_pages::{
@@ -12,21 +17,23 @@ use datadog_api_client::datadogV2::model::{
     CreateComponentRequest, CreateDegradationRequest, CreateStatusPageRequest,
     PatchComponentRequest, PatchDegradationRequest, PatchStatusPageRequest,
 };
-use uuid::Uuid;
+
+// ---------------------------------------------------------------------------
+// Helper: build a StatusPagesAPI with bearer-token support
+// ---------------------------------------------------------------------------
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::client;
-use crate::config::Config;
-use crate::formatter;
-use crate::util;
+fn make_api(cfg: &Config) -> StatusPagesAPI {
+    let dd_cfg = client::make_dd_config(cfg);
+    match client::make_bearer_client(cfg) {
+        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
+        None => StatusPagesAPI::with_config(dd_cfg),
+    }
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn pages_list(cfg: &Config) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .list_status_pages(ListStatusPagesOptionalParams::default())
         .await
@@ -42,13 +49,8 @@ pub async fn pages_list(cfg: &Config) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn pages_get(cfg: &Config, page_id: &str) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
-    let uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let api = make_api(cfg);
+    let uuid = util::parse_uuid(page_id, "page")?;
     let resp = api
         .get_status_page(uuid, GetStatusPageOptionalParams::default())
         .await
@@ -58,21 +60,15 @@ pub async fn pages_get(cfg: &Config, page_id: &str) -> Result<()> {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn pages_get(cfg: &Config, page_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
     let data = crate::api::get(cfg, &format!("/api/v2/status_pages/{page_id}"), &[]).await?;
     crate::formatter::output(cfg, &data)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn pages_delete(cfg: &Config, page_id: &str) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
-    let uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let api = make_api(cfg);
+    let uuid = util::parse_uuid(page_id, "page")?;
     api.delete_status_page(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete status page: {e:?}"))?;
@@ -82,8 +78,7 @@ pub async fn pages_delete(cfg: &Config, page_id: &str) -> Result<()> {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn pages_delete(cfg: &Config, page_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
     crate::api::delete(cfg, &format!("/api/v2/status_pages/{page_id}")).await?;
     println!("Status page {page_id} deleted.");
     Ok(())
@@ -91,14 +86,9 @@ pub async fn pages_delete(cfg: &Config, page_id: &str) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn pages_update(cfg: &Config, page_id: &str, file: &str) -> Result<()> {
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let page_uuid = util::parse_uuid(page_id, "page")?;
     let body: PatchStatusPageRequest = util::read_json_file(file)?;
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .update_status_page(page_uuid, body, UpdateStatusPageOptionalParams::default())
         .await
@@ -108,8 +98,7 @@ pub async fn pages_update(cfg: &Config, page_id: &str, file: &str) -> Result<()>
 
 #[cfg(target_arch = "wasm32")]
 pub async fn pages_update(cfg: &Config, page_id: &str, file: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
     let body: serde_json::Value = util::read_json_file(file)?;
     let data = crate::api::patch(cfg, &format!("/api/v2/status_pages/{page_id}"), &body).await?;
     crate::formatter::output(cfg, &data)
@@ -117,13 +106,8 @@ pub async fn pages_update(cfg: &Config, page_id: &str, file: &str) -> Result<()>
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn components_list(cfg: &Config, page_id: &str) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
-    let uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let api = make_api(cfg);
+    let uuid = util::parse_uuid(page_id, "page")?;
     let resp = api
         .list_components(uuid, ListComponentsOptionalParams::default())
         .await
@@ -133,8 +117,7 @@ pub async fn components_list(cfg: &Config, page_id: &str) -> Result<()> {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn components_list(cfg: &Config, page_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/status_pages/{page_id}/components"),
@@ -146,15 +129,9 @@ pub async fn components_list(cfg: &Config, page_id: &str) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn components_get(cfg: &Config, page_id: &str, component_id: &str) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let component_uuid = Uuid::parse_str(component_id)
-        .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
+    let api = make_api(cfg);
+    let page_uuid = util::parse_uuid(page_id, "page")?;
+    let component_uuid = util::parse_uuid(component_id, "component")?;
     let resp = api
         .get_component(
             page_uuid,
@@ -168,10 +145,8 @@ pub async fn components_get(cfg: &Config, page_id: &str, component_id: &str) -> 
 
 #[cfg(target_arch = "wasm32")]
 pub async fn components_get(cfg: &Config, page_id: &str, component_id: &str) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let _component_uuid = Uuid::parse_str(component_id)
-        .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
+    util::parse_uuid(component_id, "component")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/status_pages/{page_id}/components/{component_id}"),
@@ -188,16 +163,10 @@ pub async fn components_update(
     component_id: &str,
     file: &str,
 ) -> Result<()> {
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let component_uuid = Uuid::parse_str(component_id)
-        .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
+    let page_uuid = util::parse_uuid(page_id, "page")?;
+    let component_uuid = util::parse_uuid(component_id, "component")?;
     let body: PatchComponentRequest = util::read_json_file(file)?;
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .update_component(
             page_uuid,
@@ -217,10 +186,8 @@ pub async fn components_update(
     component_id: &str,
     file: &str,
 ) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let _component_uuid = Uuid::parse_str(component_id)
-        .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
+    util::parse_uuid(component_id, "component")?;
     let body: serde_json::Value = util::read_json_file(file)?;
     let data = crate::api::patch(
         cfg,
@@ -233,11 +200,7 @@ pub async fn components_update(
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn degradations_list(cfg: &Config) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .list_degradations(ListDegradationsOptionalParams::default())
         .await
@@ -253,15 +216,9 @@ pub async fn degradations_list(cfg: &Config) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let degradation_uuid = Uuid::parse_str(degradation_id)
-        .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
+    let api = make_api(cfg);
+    let page_uuid = util::parse_uuid(page_id, "page")?;
+    let degradation_uuid = util::parse_uuid(degradation_id, "degradation")?;
     let resp = api
         .get_degradation(
             page_uuid,
@@ -275,10 +232,8 @@ pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str)
 
 #[cfg(target_arch = "wasm32")]
 pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let _degradation_uuid = Uuid::parse_str(degradation_id)
-        .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
+    util::parse_uuid(degradation_id, "degradation")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/status_pages/{page_id}/degradations/{degradation_id}"),
@@ -290,14 +245,9 @@ pub async fn degradations_get(cfg: &Config, page_id: &str, degradation_id: &str)
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn degradations_create(cfg: &Config, page_id: &str, file: &str) -> Result<()> {
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let page_uuid = util::parse_uuid(page_id, "page")?;
     let body: CreateDegradationRequest = util::read_json_file(file)?;
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .create_degradation(page_uuid, body, CreateDegradationOptionalParams::default())
         .await
@@ -307,8 +257,7 @@ pub async fn degradations_create(cfg: &Config, page_id: &str, file: &str) -> Res
 
 #[cfg(target_arch = "wasm32")]
 pub async fn degradations_create(cfg: &Config, page_id: &str, file: &str) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
     let body: serde_json::Value = util::read_json_file(file)?;
     let data = crate::api::post(
         cfg,
@@ -326,16 +275,10 @@ pub async fn degradations_update(
     degradation_id: &str,
     file: &str,
 ) -> Result<()> {
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let degradation_uuid = Uuid::parse_str(degradation_id)
-        .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
+    let page_uuid = util::parse_uuid(page_id, "page")?;
+    let degradation_uuid = util::parse_uuid(degradation_id, "degradation")?;
     let body: PatchDegradationRequest = util::read_json_file(file)?;
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .update_degradation(
             page_uuid,
@@ -355,10 +298,8 @@ pub async fn degradations_update(
     degradation_id: &str,
     file: &str,
 ) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let _degradation_uuid = Uuid::parse_str(degradation_id)
-        .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
+    util::parse_uuid(degradation_id, "degradation")?;
     let body: serde_json::Value = util::read_json_file(file)?;
     let data = crate::api::patch(
         cfg,
@@ -371,15 +312,9 @@ pub async fn degradations_update(
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn components_delete(cfg: &Config, page_id: &str, component_id: &str) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let component_uuid = Uuid::parse_str(component_id)
-        .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
+    let api = make_api(cfg);
+    let page_uuid = util::parse_uuid(page_id, "page")?;
+    let component_uuid = util::parse_uuid(component_id, "component")?;
     api.delete_component(page_uuid, component_uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete component: {e:?}"))?;
@@ -389,10 +324,8 @@ pub async fn components_delete(cfg: &Config, page_id: &str, component_id: &str) 
 
 #[cfg(target_arch = "wasm32")]
 pub async fn components_delete(cfg: &Config, page_id: &str, component_id: &str) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let _component_uuid = Uuid::parse_str(component_id)
-        .map_err(|e| anyhow::anyhow!("invalid component UUID '{component_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
+    util::parse_uuid(component_id, "component")?;
     crate::api::delete(
         cfg,
         &format!("/api/v2/status_pages/{page_id}/components/{component_id}"),
@@ -404,15 +337,9 @@ pub async fn components_delete(cfg: &Config, page_id: &str, component_id: &str) 
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn degradations_delete(cfg: &Config, page_id: &str, degradation_id: &str) -> Result<()> {
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let degradation_uuid = Uuid::parse_str(degradation_id)
-        .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
+    let api = make_api(cfg);
+    let page_uuid = util::parse_uuid(page_id, "page")?;
+    let degradation_uuid = util::parse_uuid(degradation_id, "degradation")?;
     api.delete_degradation(page_uuid, degradation_uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete degradation: {e:?}"))?;
@@ -422,10 +349,8 @@ pub async fn degradations_delete(cfg: &Config, page_id: &str, degradation_id: &s
 
 #[cfg(target_arch = "wasm32")]
 pub async fn degradations_delete(cfg: &Config, page_id: &str, degradation_id: &str) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
-    let _degradation_uuid = Uuid::parse_str(degradation_id)
-        .map_err(|e| anyhow::anyhow!("invalid degradation UUID '{degradation_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
+    util::parse_uuid(degradation_id, "degradation")?;
     crate::api::delete(
         cfg,
         &format!("/api/v2/status_pages/{page_id}/degradations/{degradation_id}"),
@@ -442,11 +367,7 @@ pub async fn degradations_delete(cfg: &Config, page_id: &str, degradation_id: &s
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn pages_create(cfg: &Config, file: &str) -> Result<()> {
     let body: CreateStatusPageRequest = util::read_json_file(file)?;
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .create_status_page(body, CreateStatusPageOptionalParams::default())
         .await
@@ -467,14 +388,9 @@ pub async fn pages_create(cfg: &Config, file: &str) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn components_create(cfg: &Config, page_id: &str, file: &str) -> Result<()> {
-    let page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    let page_uuid = util::parse_uuid(page_id, "page")?;
     let body: CreateComponentRequest = util::read_json_file(file)?;
-    let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => StatusPagesAPI::with_client_and_config(dd_cfg, c),
-        None => StatusPagesAPI::with_config(dd_cfg),
-    };
+    let api = make_api(cfg);
     let resp = api
         .create_component(page_uuid, body, CreateComponentOptionalParams::default())
         .await
@@ -484,8 +400,7 @@ pub async fn components_create(cfg: &Config, page_id: &str, file: &str) -> Resul
 
 #[cfg(target_arch = "wasm32")]
 pub async fn components_create(cfg: &Config, page_id: &str, file: &str) -> Result<()> {
-    let _page_uuid = Uuid::parse_str(page_id)
-        .map_err(|e| anyhow::anyhow!("invalid page UUID '{page_id}': {e}"))?;
+    util::parse_uuid(page_id, "page")?;
     let body: serde_json::Value = util::read_json_file(file)?;
     let data = crate::api::post(
         cfg,

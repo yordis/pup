@@ -1,3 +1,8 @@
+#[cfg(not(target_arch = "wasm32"))]
+use crate::client;
+use crate::config::Config;
+use crate::formatter;
+use crate::util;
 use anyhow::Result;
 #[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_slack_integration::SlackIntegrationAPI;
@@ -12,12 +17,6 @@ use datadog_api_client::datadogV2::model::{
     JiraIssueTemplateCreateRequest, JiraIssueTemplateUpdateRequest,
     ServiceNowTemplateCreateRequest, ServiceNowTemplateUpdateRequest,
 };
-use uuid::Uuid;
-
-#[cfg(not(target_arch = "wasm32"))]
-use crate::client;
-use crate::config::Config;
-use crate::formatter;
 
 // ---- Jira ----
 
@@ -68,8 +67,7 @@ pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
         Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
         None => JiraIntegrationAPI::with_config(dd_cfg),
     };
-    let uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let uuid = util::parse_uuid(template_id, "template")?;
     let resp = api
         .get_jira_issue_template(uuid)
         .await
@@ -79,8 +77,7 @@ pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    util::parse_uuid(template_id, "template")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/integration/jira/issue_templates/{template_id}"),
@@ -97,8 +94,7 @@ pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> 
         Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
         None => JiraIntegrationAPI::with_config(dd_cfg),
     };
-    let uuid = Uuid::parse_str(account_id)
-        .map_err(|e| anyhow::anyhow!("invalid account UUID '{account_id}': {e}"))?;
+    let uuid = util::parse_uuid(account_id, "account")?;
     api.delete_jira_account(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete Jira account: {e:?}"))?;
@@ -108,8 +104,7 @@ pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> 
 
 #[cfg(target_arch = "wasm32")]
 pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(account_id)
-        .map_err(|e| anyhow::anyhow!("invalid account UUID '{account_id}': {e}"))?;
+    util::parse_uuid(account_id, "account")?;
     crate::api::delete(
         cfg,
         &format!("/api/v2/integration/jira/accounts/{account_id}"),
@@ -148,8 +143,7 @@ pub async fn jira_templates_update(cfg: &Config, template_id: &str, file: &str) 
         Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
         None => JiraIntegrationAPI::with_config(dd_cfg),
     };
-    let uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let uuid = util::parse_uuid(template_id, "template")?;
     let body: JiraIssueTemplateUpdateRequest = crate::util::read_json_file(file)?;
     let resp = api
         .update_jira_issue_template(uuid, body)
@@ -160,8 +154,7 @@ pub async fn jira_templates_update(cfg: &Config, template_id: &str, file: &str) 
 
 #[cfg(target_arch = "wasm32")]
 pub async fn jira_templates_update(cfg: &Config, template_id: &str, file: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    util::parse_uuid(template_id, "template")?;
     let body: serde_json::Value = crate::util::read_json_file(file)?;
     let data = crate::api::patch(
         cfg,
@@ -179,8 +172,7 @@ pub async fn jira_templates_delete(cfg: &Config, template_id: &str) -> Result<()
         Some(c) => JiraIntegrationAPI::with_client_and_config(dd_cfg, c),
         None => JiraIntegrationAPI::with_config(dd_cfg),
     };
-    let uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let uuid = util::parse_uuid(template_id, "template")?;
     api.delete_jira_issue_template(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete Jira template: {e:?}"))?;
@@ -190,8 +182,7 @@ pub async fn jira_templates_delete(cfg: &Config, template_id: &str) -> Result<()
 
 #[cfg(target_arch = "wasm32")]
 pub async fn jira_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    util::parse_uuid(template_id, "template")?;
     crate::api::delete(
         cfg,
         &format!("/api/v2/integration/jira/issue_templates/{template_id}"),
@@ -250,8 +241,7 @@ pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result
         Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
         None => ServiceNowIntegrationAPI::with_config(dd_cfg),
     };
-    let uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let uuid = util::parse_uuid(template_id, "template")?;
     let resp = api
         .get_service_now_template(uuid)
         .await
@@ -261,8 +251,7 @@ pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result
 
 #[cfg(target_arch = "wasm32")]
 pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    util::parse_uuid(template_id, "template")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/integration/servicenow/templates/{template_id}"),
@@ -305,8 +294,7 @@ pub async fn servicenow_templates_update(
         Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
         None => ServiceNowIntegrationAPI::with_config(dd_cfg),
     };
-    let uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let uuid = util::parse_uuid(template_id, "template")?;
     let body: ServiceNowTemplateUpdateRequest = crate::util::read_json_file(file)?;
     let resp = api
         .update_service_now_template(uuid, body)
@@ -321,8 +309,7 @@ pub async fn servicenow_templates_update(
     template_id: &str,
     file: &str,
 ) -> Result<()> {
-    let _uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    util::parse_uuid(template_id, "template")?;
     let body: serde_json::Value = crate::util::read_json_file(file)?;
     let data = crate::api::patch(
         cfg,
@@ -340,8 +327,7 @@ pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Res
         Some(c) => ServiceNowIntegrationAPI::with_client_and_config(dd_cfg, c),
         None => ServiceNowIntegrationAPI::with_config(dd_cfg),
     };
-    let uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    let uuid = util::parse_uuid(template_id, "template")?;
     api.delete_service_now_template(uuid)
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete ServiceNow template: {e:?}"))?;
@@ -351,8 +337,7 @@ pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Res
 
 #[cfg(target_arch = "wasm32")]
 pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
-    let _uuid = Uuid::parse_str(template_id)
-        .map_err(|e| anyhow::anyhow!("invalid template UUID '{template_id}': {e}"))?;
+    util::parse_uuid(template_id, "template")?;
     crate::api::delete(
         cfg,
         &format!("/api/v2/integration/servicenow/templates/{template_id}"),
@@ -370,10 +355,7 @@ pub async fn servicenow_users_list(cfg: &Config, instance_name: &str) -> Result<
         None => ServiceNowIntegrationAPI::with_config(dd_cfg),
     };
     let resp = api
-        .list_service_now_users(
-            uuid::Uuid::parse_str(instance_name)
-                .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?,
-        )
+        .list_service_now_users(util::parse_uuid(instance_name, "instance")?)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list ServiceNow users: {e:?}"))?;
     formatter::output(cfg, &resp)
@@ -381,8 +363,7 @@ pub async fn servicenow_users_list(cfg: &Config, instance_name: &str) -> Result<
 
 #[cfg(target_arch = "wasm32")]
 pub async fn servicenow_users_list(cfg: &Config, instance_name: &str) -> Result<()> {
-    let _uuid = uuid::Uuid::parse_str(instance_name)
-        .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?;
+    util::parse_uuid(instance_name, "instance")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/integration/servicenow/instances/{instance_name}/users"),
@@ -400,10 +381,7 @@ pub async fn servicenow_assignment_groups_list(cfg: &Config, instance_name: &str
         None => ServiceNowIntegrationAPI::with_config(dd_cfg),
     };
     let resp = api
-        .list_service_now_assignment_groups(
-            uuid::Uuid::parse_str(instance_name)
-                .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?,
-        )
+        .list_service_now_assignment_groups(util::parse_uuid(instance_name, "instance")?)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list ServiceNow assignment groups: {e:?}"))?;
     formatter::output(cfg, &resp)
@@ -411,8 +389,7 @@ pub async fn servicenow_assignment_groups_list(cfg: &Config, instance_name: &str
 
 #[cfg(target_arch = "wasm32")]
 pub async fn servicenow_assignment_groups_list(cfg: &Config, instance_name: &str) -> Result<()> {
-    let _uuid = uuid::Uuid::parse_str(instance_name)
-        .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?;
+    util::parse_uuid(instance_name, "instance")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/integration/servicenow/instances/{instance_name}/assignment_groups"),
@@ -430,10 +407,7 @@ pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str
         None => ServiceNowIntegrationAPI::with_config(dd_cfg),
     };
     let resp = api
-        .list_service_now_business_services(
-            uuid::Uuid::parse_str(instance_name)
-                .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?,
-        )
+        .list_service_now_business_services(util::parse_uuid(instance_name, "instance")?)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list ServiceNow business services: {e:?}"))?;
     formatter::output(cfg, &resp)
@@ -441,8 +415,7 @@ pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str
 
 #[cfg(target_arch = "wasm32")]
 pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str) -> Result<()> {
-    let _uuid = uuid::Uuid::parse_str(instance_name)
-        .map_err(|e| anyhow::anyhow!("invalid instance UUID '{instance_name}': {e}"))?;
+    util::parse_uuid(instance_name, "instance")?;
     let data = crate::api::get(
         cfg,
         &format!("/api/v2/integration/servicenow/instances/{instance_name}/business_services"),

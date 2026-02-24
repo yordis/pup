@@ -73,7 +73,7 @@ fn apply_auth(req: reqwest::RequestBuilder, cfg: &Config) -> Result<reqwest::Req
     } else {
         bail!(
             "authentication required: set DD_ACCESS_TOKEN for bearer auth, \
-             or set DD_API_KEY and DD_APP_KEY for API key auth"
+             or set DD_API_KEY and DD_APP_KEY for API+APP key auth"
         )
     }
 }

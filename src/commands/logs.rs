@@ -30,7 +30,7 @@ pub async fn search(
     // Logs search API doesn't support OAuth/bearer - force API keys
     if !cfg.has_api_keys() {
         bail!(
-            "logs search requires API key authentication (DD_API_KEY + DD_APP_KEY).\n\
+            "logs search requires API+APP key authentication (DD_API_KEY + DD_APP_KEY).\n\
              This endpoint does not support bearer token auth."
         );
     }
@@ -396,33 +396,8 @@ pub async fn metrics_delete(cfg: &Config, metric_id: &str) -> Result<()> {
 // ---------------------------------------------------------------------------
 
 #[cfg(not(target_arch = "wasm32"))]
-async fn raw_get(cfg: &Config, path: &str) -> Result<serde_json::Value> {
-    let url = format!("{}{}", cfg.api_base_url(), path);
-    let client = reqwest::Client::new();
-    let mut req = client.get(&url);
-
-    if let Some(token) = &cfg.access_token {
-        req = req.header("Authorization", format!("Bearer {token}"));
-    } else if let (Some(api_key), Some(app_key)) = (&cfg.api_key, &cfg.app_key) {
-        req = req
-            .header("DD-API-KEY", api_key.as_str())
-            .header("DD-APPLICATION-KEY", app_key.as_str());
-    } else {
-        bail!("no authentication configured");
-    }
-
-    let resp = req.header("Accept", "application/json").send().await?;
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        bail!("API error (HTTP {status}): {body}");
-    }
-    Ok(resp.json().await?)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn restriction_queries_list(cfg: &Config) -> Result<()> {
-    let data = raw_get(cfg, "/api/v2/logs/config/restriction_queries").await?;
+    let data = client::raw_get(cfg, "/api/v2/logs/config/restriction_queries").await?;
     formatter::output(cfg, &data)
 }
 
@@ -435,7 +410,7 @@ pub async fn restriction_queries_list(cfg: &Config) -> Result<()> {
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn restriction_queries_get(cfg: &Config, query_id: &str) -> Result<()> {
     let path = format!("/api/v2/logs/config/restriction_queries/{query_id}");
-    let data = raw_get(cfg, &path).await?;
+    let data = client::raw_get(cfg, &path).await?;
     formatter::output(cfg, &data)
 }
 
