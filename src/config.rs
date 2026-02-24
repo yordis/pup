@@ -118,6 +118,18 @@ impl Config {
         Ok(())
     }
 
+    /// Validate that API key + app key credentials are configured.
+    /// Used for endpoints that do not support OAuth2 bearer tokens.
+    pub fn validate_api_keys(&self) -> Result<()> {
+        if self.api_key.is_none() || self.app_key.is_none() {
+            bail!(
+                "API key authentication required: set DD_API_KEY and DD_APP_KEY \
+                 (this command does not support OAuth2 bearer tokens)"
+            );
+        }
+        Ok(())
+    }
+
     pub fn has_api_keys(&self) -> bool {
         self.api_key.is_some() && self.app_key.is_some()
     }
@@ -249,6 +261,24 @@ mod tests {
         assert_eq!(OutputFormat::Json.to_string(), "json");
         assert_eq!(OutputFormat::Table.to_string(), "table");
         assert_eq!(OutputFormat::Yaml.to_string(), "yaml");
+    }
+
+    #[test]
+    fn test_validate_api_keys_ok() {
+        let cfg = make_cfg(Some("key"), Some("app"), None);
+        assert!(cfg.validate_api_keys().is_ok());
+    }
+
+    #[test]
+    fn test_validate_api_keys_bearer_only_fails() {
+        let cfg = make_cfg(None, None, Some("token"));
+        assert!(cfg.validate_api_keys().is_err());
+    }
+
+    #[test]
+    fn test_validate_api_keys_missing_app_key_fails() {
+        let cfg = make_cfg(Some("key"), None, None);
+        assert!(cfg.validate_api_keys().is_err());
     }
 
     #[test]
